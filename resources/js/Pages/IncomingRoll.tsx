@@ -1,39 +1,51 @@
 import { useState } from 'react'
-import { Camera, CheckCircle, AlertCircle, Loader, RefreshCw, Save } from 'lucide-react'
+import { CheckCircle, Save, Scale, Edit3 } from 'lucide-react'
+import WeightDetectionEngine from '../OCR/WeightDetectionEngine'
 
-type OcrState = 'idle' | 'processing' | 'success' | 'error'
-type OcrError = 'far' | 'blur' | 'obstructed' | 'undetected'
+// ─── ROI Configuration ────────────────────────────────────────────────────────
+//
+// Adjust these values once the camera is physically mounted above the scale:
+//
+//   x      — left edge of scale display as fraction of frame width  (0–1)
+//   y      — top edge of scale display as fraction of frame height  (0–1)
+//   width  — display width  as fraction of frame width   (0–1)
+//   height — display height as fraction of frame height  (0–1)
+//
+// Example: scale display occupies centre horizontal band of frame:
+//   { x: 0.05, y: 0.25, width: 0.90, height: 0.50 }
+//
+// Default (full frame — safe starting point during development):
+const SCALE_ROI = { x: 0, y: 0, width: 1, height: 1 }
 
-const ocrErrors: Record<OcrError, { title: string; message: string }> = {
-  far: { title: 'Image Too Far', message: 'Move the camera closer to the weighing display.' },
-  blur: { title: 'Camera Image Blurred', message: 'Clean the camera lens or reposition the camera.' },
-  obstructed: { title: 'Display Obstructed', message: 'Make sure the weighing display is clearly visible.' },
-  undetected: { title: 'Unable to Detect Weight', message: 'The displayed number could not be recognized.' },
-}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const steps = ['Camera & Weight Detection', 'Roll Data Entry', 'Review & Save']
 
+interface WeightState {
+  value: number
+  display: string
+  source: 'ocr' | 'manual' | 'none'
+}
+
 export default function IncomingRoll() {
   const [step, setStep] = useState(0)
-  const [ocrState, setOcrState] = useState<OcrState>('idle')
-  const [ocrError, setOcrError] = useState<OcrError>('blur')
-  const [detectedWeight] = useState(1007)
+
+  // Persisted weight — survives step navigation until final Save
+  const [weight, setWeight] = useState<WeightState>({ value: 0, display: '', source: 'none' })
+
+  // Roll data form
   const [form, setForm] = useState({
     rollNumber: '', formNumber: '', shift: 'A', grade: 'KLB-150',
     gsm: '', plybond: '', thickness: '', bulk: '', width: '',
     diameter: '', core: '76', cobb: '', exMaterial: 'OCC', visual: 'OK', jop: '', pic: '',
   })
+
   const [saved, setSaved] = useState(false)
 
-  function simulateOcr() {
-    setOcrState('processing')
-    setTimeout(() => {
-      setOcrState('success')
-    }, 2200)
-  }
-
-  function simulateError() {
-    setOcrState('error')
+  // Called by WeightDetectionEngine when administrator confirms the weight
+  function handleWeightConfirmed(value: number, display: string, source: 'ocr' | 'manual') {
+    setWeight({ value, display, source })
+    setStep(1)
   }
 
   function handleSave() {
@@ -41,7 +53,9 @@ export default function IncomingRoll() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  function Field({ label, name, type = 'text', options }: { label: string; name: keyof typeof form; type?: string; options?: string[] }) {
+  function Field({ label, name, type = 'text', options }: {
+    label: string; name: keyof typeof form; type?: string; options?: string[]
+  }) {
     return (
       <div>
         <label className="form-label">{label}</label>
@@ -60,7 +74,7 @@ export default function IncomingRoll() {
     <div style={{ padding: '20px 24px' }}>
       <h2 className="page-title" style={{ marginBottom: 20 }}>Incoming Roll</h2>
 
-      {/* Step indicator */}
+      {/* ── Step Indicator ── */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 0 }}>
         {steps.map((s, i) => (
           <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : undefined }}>
@@ -78,117 +92,79 @@ export default function IncomingRoll() {
         ))}
       </div>
 
-      {/* Step 0: Camera */}
+      {/* ════════════════════════════════════════════════════
+          STEP 0: Camera & Weight Detection
+          WeightDetectionEngine handles the entire camera
+          + OCR lifecycle. IncomingRoll only receives the
+          confirmed weight via onWeightConfirmed().
+          ════════════════════════════════════════════════════ */}
       {step === 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 900 }} className="max-[679px]:grid-cols-1!">
-          <div className="card" style={{ padding: 16 }}>
-            <h3 className="section-title" style={{ marginBottom: 12 }}>Camera Preview</h3>
-            <div style={{
-              background: '#1a2332', borderRadius: 6, height: 220, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 12, position: 'relative', overflow: 'hidden',
-            }}>
-              {ocrState === 'idle' && (
-                <>
-                  <Camera size={40} style={{ color: 'rgba(255,255,255,0.3)' }} />
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Camera feed not active</span>
-                </>
-              )}
-              {ocrState === 'processing' && (
-                <>
-                  <div style={{ width: '80%', height: '60%', border: '2px dashed rgba(255,255,255,0.4)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                    <div style={{ position: 'absolute', inset: -2, borderRadius: 4, border: '2px solid #337AB7', animation: 'none', opacity: 0.8 }} />
-                    <div style={{ background: '#1e1e1e', color: '#e0e0e0', fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, padding: '8px 20px', borderRadius: 4 }}>
-                      1.007
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#5CB85C', fontSize: 13 }}>
-                    <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                    Processing weight...
-                  </div>
-                </>
-              )}
-              {ocrState === 'success' && (
-                <>
-                  <CheckCircle size={32} style={{ color: '#5CB85C' }} />
-                  <span style={{ color: '#5CB85C', fontSize: 14, fontWeight: 600 }}>Weight detected</span>
-                </>
-              )}
-              {ocrState === 'error' && (
-                <>
-                  <AlertCircle size={32} style={{ color: '#e74c3c' }} />
-                  <span style={{ color: '#e74c3c', fontSize: 14, fontWeight: 600 }}>Detection failed</span>
-                </>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button className="btn btn-primary" onClick={simulateOcr} style={{ flex: 1, justifyContent: 'center' }} disabled={ocrState === 'processing'}>
-                <Camera size={13} /> {ocrState === 'processing' ? 'Processing...' : 'Start Detection'}
-              </button>
-              <button className="btn btn-secondary btn-sm" onClick={simulateError} title="Simulate error"><RefreshCw size={13} /></button>
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: 16 }}>
-            <h3 className="section-title" style={{ marginBottom: 12 }}>Weight Detection Result</h3>
-            {ocrState === 'idle' && (
-              <div style={{ textAlign: 'center', padding: 40, color: '#999', fontSize: 13 }}>Start camera detection to read weight.</div>
-            )}
-            {ocrState === 'processing' && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, gap: 10, color: '#777', fontSize: 13 }}>
-                <Loader size={18} style={{ color: '#337AB7' }} /> Processing weight from camera...
-              </div>
-            )}
-            {ocrState === 'success' && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f2f9f2', border: '1px solid #d4edda', borderRadius: 4, marginBottom: 12 }}>
-                  <CheckCircle size={16} style={{ color: '#5CB85C' }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#3C763D' }}>Recognition Successful — 98.4% confidence</span>
-                </div>
-                <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                  <div style={{ fontSize: 11, color: '#777', marginBottom: 4 }}>OCR Detected Weight</div>
-                  <div style={{ fontSize: 48, fontWeight: 700, color: '#286090', fontFamily: 'JetBrains Mono, monospace', lineHeight: 1 }}>
-                    {detectedWeight.toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 16, color: '#555', fontWeight: 500, marginTop: 4 }}>kg</div>
-                </div>
-                <div style={{ fontSize: 12, color: '#777', textAlign: 'center' }}>This value is auto-filled and cannot be manually changed.</div>
-              </div>
-            )}
-            {ocrState === 'error' && (
-              <div style={{ padding: '14px 16px', background: '#fdf2f2', border: '1px solid #f5c6cb', borderRadius: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <AlertCircle size={16} style={{ color: '#C0392B' }} />
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#C0392B' }}>{ocrErrors[ocrError].title}</span>
-                </div>
-                <p style={{ fontSize: 13, color: '#555', margin: 0 }}>{ocrErrors[ocrError].message}</p>
-                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                  {(['far', 'blur', 'obstructed', 'undetected'] as OcrError[]).map(e => (
-                    <button key={e} className={`btn btn-sm ${ocrError === e ? 'btn-danger' : 'btn-secondary'}`} onClick={() => setOcrError(e)} style={{ fontSize: 11 }}>{e}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {ocrState === 'success' && (
-              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 12 }} onClick={() => setStep(1)}>
-                Continue to Roll Data Entry →
-              </button>
-            )}
-          </div>
-        </div>
+        <WeightDetectionEngine
+          onWeightConfirmed={handleWeightConfirmed}
+          roi={SCALE_ROI}
+        />
       )}
 
-      {/* Step 1: Form */}
+      {/* ════════════════════════════════════════════════════
+          STEP 1: Roll Data Entry
+          Weight is prominently displayed and persisted.
+          ════════════════════════════════════════════════════ */}
       {step === 1 && (
         <div style={{ maxWidth: 900 }}>
-          <div className="card" style={{ padding: 16, marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f0f7ff', border: '1px solid #c5dff5', borderRadius: 4 }}>
-              <div style={{ fontSize: 11, color: '#777' }}>OCR Detected Weight (read-only)</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#286090', fontFamily: 'JetBrains Mono, monospace' }}>{detectedWeight.toLocaleString()} kg</div>
+
+          {/* ── Prominent Weight Display ── */}
+          <div className="card" style={{ padding: 16, marginBottom: 14 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 16,
+              padding: '14px 18px',
+              background: 'linear-gradient(135deg, #f0f7ff 0%, #e8f3fc 100%)',
+              border: '1px solid #c5dff5',
+              borderRadius: 8,
+            }}>
+              {/* Scale icon */}
+              <div style={{
+                width: 48, height: 48, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #286090, #337ab7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(40,96,144,0.3)',
+              }}>
+                <Scale size={22} color="#fff" />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#777', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
+                  Roll Weight
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#286090', fontFamily: 'JetBrains Mono, Consolas, monospace', lineHeight: 1 }}>
+                  {weight.display} <span style={{ fontSize: 16, fontWeight: 600, color: '#555' }}>kg</span>
+                </div>
+                <div style={{ fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {weight.source === 'ocr' ? (
+                    <><CheckCircle size={10} style={{ color: '#5CB85C' }} />
+                    <span style={{ color: '#5CB85C' }}>Detected by OCR</span></>
+                  ) : (
+                    <><Edit3 size={10} style={{ color: '#F0AD4E' }} />
+                    <span style={{ color: '#F0AD4E' }}>Entered manually by administrator</span></>
+                  )}
+                </div>
+              </div>
+
+              {/* Back to re-detect */}
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setStep(0)}
+                title="Go back to re-detect weight"
+                style={{ fontSize: 11 }}
+              >
+                Re-detect
+              </button>
             </div>
           </div>
+
+          {/* ── Roll Data Form ── */}
           <div className="card" style={{ padding: 16 }}>
-            <h3 className="section-title" style={{ marginBottom: 14 }}>Manual Roll Data Entry</h3>
+            <h3 className="section-title" style={{ marginBottom: 14 }}>Roll Data Entry</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
               <Field label="Roll Number" name="rollNumber" />
               <Field label="Form Number" name="formNumber" />
@@ -215,7 +191,10 @@ export default function IncomingRoll() {
         </div>
       )}
 
-      {/* Step 2: Review */}
+      {/* ════════════════════════════════════════════════════
+          STEP 2: Review & Save
+          Weight persisted from Step 0 through to final save.
+          ════════════════════════════════════════════════════ */}
       {step === 2 && (
         <div style={{ maxWidth: 700 }}>
           {saved && (
@@ -224,6 +203,33 @@ export default function IncomingRoll() {
               <span style={{ fontWeight: 600, fontSize: 13, color: '#3C763D' }}>Roll information saved successfully.</span>
             </div>
           )}
+
+          {/* Weight highlight at top of review */}
+          <div className="card" style={{ padding: 14, marginBottom: 12 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 16px',
+              background: 'linear-gradient(135deg, #f0f7ff 0%, #e8f3fc 100%)',
+              border: '1px solid #c5dff5',
+              borderRadius: 6,
+            }}>
+              <Scale size={18} style={{ color: '#286090', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Roll Weight</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#286090', fontFamily: 'JetBrains Mono, Consolas, monospace' }}>
+                  {weight.display} kg
+                </div>
+                <div style={{ fontSize: 11, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {weight.source === 'ocr' ? (
+                    <><CheckCircle size={9} style={{ color: '#5CB85C' }} /><span style={{ color: '#5CB85C' }}>Detected by OCR</span></>
+                  ) : (
+                    <><Edit3 size={9} style={{ color: '#F0AD4E' }} /><span style={{ color: '#F0AD4E' }}>Edited by administrator</span></>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="card" style={{ padding: 16 }}>
             <h3 className="section-title" style={{ marginBottom: 14 }}>Review Roll Entry</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
@@ -233,7 +239,7 @@ export default function IncomingRoll() {
                 ['Shift', form.shift],
                 ['Grade', form.grade],
                 ['GSM', form.gsm || '(not entered)'],
-                ['Weight (OCR)', `${detectedWeight.toLocaleString()} kg`],
+                ['Weight', `${weight.display} kg`],
                 ['Plybond', form.plybond || '(not entered)'],
                 ['Thickness', form.thickness || '(not entered)'],
                 ['Roll Width', form.width || '(not entered)'],
