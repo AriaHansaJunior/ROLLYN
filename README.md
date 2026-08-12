@@ -1,6 +1,6 @@
 # IDX AI WISE — Rollyn
 
-**Rollyn** is the working name for Project 2, derived from **Roll + Intelligence**.
+**Rollyn** is the working name from **Roll + Intelligence**.
 
 **IDX AI WISE** is an AI-assisted warehouse system designed to reduce human error in the handling and recording of finished-goods paper rolls. The system is intended for internal warehouse administration and focuses on improving data accuracy, traceability, and operational visibility.
 
@@ -259,61 +259,6 @@ rollyn/
 ```
 
 Header and footer styles are intentionally separated from the main stylesheet to keep the frontend structure organized.
-
----
-
-## Development Scope
-
-### Current Scope
-
-The current development focus consists of:
-
-1. Laravel 13 base application.
-2. PHP 8.3+ runtime.
-3. Tailwind CSS frontend setup.
-4. MySQL database integration.
-5. Internal admin interface.
-6. Finished-goods roll data management.
-7. Stage 1 camera-based weighing display capture.
-8. OCR-based reading of weighing information.
-9. Computer-vision assistance for real-time capture.
-
-### Future Scope
-
-The following belongs to the later development stage:
-
-- AI-based storage location determination.
-- Smart warehouse location recommendations.
-- Automated warehouse location optimization.
-- Additional AI capabilities related to warehouse operations.
-
-The future scope is documented for project context and is not part of the Stage 1 implementation.
-
----
-
-## Project Boundary
-
-IDX AI WISE does not modify the production process itself.
-
-The system begins from the warehouse-side handling of finished-good rolls after production.
-
-The initial AI implementation is limited to obtaining weighing information automatically from the physical weighing display.
-
-Warehouse location determination is intentionally separated from Stage 1.
-
-The warehouse layout shown in the application is initially represented as a dummy map because the exact physical dimensions of Warehouses A–G have not yet been provided.
-
----
-
-## Current Project Status
-
-**Project:** IDX AI WISE  
-**Working Name:** Rollyn  
-**Current Stage:** Initial system setup and Stage 1 analysis  
-**Primary Focus:** Finished-goods warehouse data and automated weighing-data capture  
-**System Type:** Internal administration web application
-
-The database structure, application workflow, user interface, and AI implementation will be defined progressively based on the actual warehouse process and available operational data.
 
 ---
 
