@@ -1,0 +1,141 @@
+import { X, LayoutDashboard, Warehouse, Package, MapPin, TruckIcon, Eye, Target, FileText, Settings, Users, User, ChevronRight, Layers } from 'lucide-react'
+import { Link } from '@inertiajs/react'
+
+const navSections = [
+  {
+    label: 'Main',
+    items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }]
+  },
+  {
+    label: 'Warehouse',
+    items: [
+      { id: 'warehouse-map', label: 'Warehouse Map', icon: MapPin },
+      { id: 'roll-inventory', label: 'Roll Inventory', icon: Package },
+      { id: 'slot-status', label: 'Slot Status', icon: Layers },
+    ]
+  },
+  {
+    label: 'Production',
+    items: [
+      { id: 'incoming-roll', label: 'Incoming Roll', icon: TruckIcon },
+      { id: 'ocr-monitoring', label: 'OCR Monitoring', icon: Eye },
+    ]
+  },
+  {
+    label: 'Orders',
+    items: [
+      { id: 'target-order', label: 'Target Order', icon: Target },
+      { id: 'jop', label: 'JOP', icon: FileText },
+      { id: 'spk-po', label: 'SPK / PO', icon: FileText },
+    ]
+  },
+  {
+    label: 'Reports',
+    items: [{ id: 'reports', label: 'Reports', icon: FileText }]
+  },
+  {
+    label: 'Administration',
+    items: [
+      { id: 'user-management', label: 'User Management', icon: Users },
+      { id: 'profile', label: 'Profile', icon: User },
+    ]
+  },
+]
+
+interface SidebarProps {
+  activePage: string
+  collapsed: boolean
+  mobileOpen: boolean
+  onClose: () => void
+}
+
+export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: SidebarProps) {
+  return (
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50"
+          style={{ display: 'block' }}
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        style={{
+          width: collapsed ? 56 : 220,
+          minWidth: collapsed ? 56 : 220,
+          background: '#1e2d3d',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '100vh',
+          zIndex: 40,
+          transition: 'transform 0.2s ease, width 0.2s ease',
+          transform: mobileOpen ? 'translateX(0)' : undefined,
+        }}
+        className="max-[679px]:translate-x-[-100%] max-[679px]:w-[220px]!"
+      >
+        {/* Logo */}
+        <div style={{ padding: '0 12px', height: 56, display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 4,
+            background: 'linear-gradient(135deg, #337AB7, #286090)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, fontWeight: 700, color: '#fff', fontSize: 14
+          }}>R</div>
+          {(!collapsed) && (
+            <span style={{ fontWeight: 700, fontSize: 16, color: '#ffffff', letterSpacing: '0.04em' }}>ROLLYN</span>
+          )}
+          <button
+            className="max-[679px]:flex hidden ml-auto"
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: 4 }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingTop: 12 }}>
+          {navSections.map(section => (
+            <div key={section.label} style={{ marginBottom: 16 }}>
+              {!collapsed && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 4 }}>
+                  {section.label}
+                </div>
+              )}
+              {section.items.map(item => {
+                const Icon = item.icon
+                const isActive = activePage === item.id
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/${item.id}`}
+                    className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
+                    style={{ width: '100%', justifyContent: collapsed ? 'center' : 'flex-start' }}
+                    onClick={() => mobileOpen && onClose()}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <Icon size={16} style={{ flexShrink: 0 }} />
+                    {!collapsed && <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>}
+                    {!collapsed && isActive && <ChevronRight size={12} style={{ opacity: 0.6 }} />}
+                  </Link>
+                )
+              })}
+            </div>
+          ))}
+        </nav>
+
+        {/* Version */}
+        {!collapsed && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+            ROLLYN v1.0.0
+          </div>
+        )}
+      </aside>
+    </>
+  )
+}

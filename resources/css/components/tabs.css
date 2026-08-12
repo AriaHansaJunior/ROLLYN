@@ -1,0 +1,25 @@
+.tab-button {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #DDDDDD;
+  background: #ffffff;
+  color: #777777;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.tab-button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+.tab-button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+.tab-button.active {
+  background: #286090;
+  color: #ffffff;
+  border-color: #286090;
+}
+.tab-button:not(.active):hover {
+  background: #F5F5F5;
+}
