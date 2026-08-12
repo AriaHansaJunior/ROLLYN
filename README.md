@@ -184,40 +184,6 @@ The Excel file is treated as the reference for understanding the existing data s
 
 ---
 
-## Existing Data Characteristics
-
-The current source data contains real operational patterns that need to be represented correctly by the application.
-
-Examples include:
-
-- Multiple warehouse shifts.
-- Multiple roll grades.
-- Different GSM values.
-- Different thickness values.
-- Different roll widths and diameters.
-- Roll weight information.
-- Cobb specification values.
-- Storage locations such as `A01-01`, `E05-03`, and similar location codes.
-- JOP references such as `JOP-0726-00001`.
-- PIC records associated with warehouse activity.
-- Visual inspection information.
-
-The existing report also contains incomplete or placeholder values in some records, including values such as `0`, `JOP-0`, blank fields, and source calculation errors such as `#VALUE!`.
-
-These values are observations from the source report and are documented here to preserve the characteristics of the current data.
-
----
-
-## Administrative Scope
-
-IDX AI WISE is designed as an **internal administration system**.
-
-There is no public-facing customer or general-user interface in the current project scope.
-
-The system is intended for authorized warehouse personnel who manage and monitor finished-goods roll information.
-
----
-
 ## Technology Stack
 
 The current application stack is:
