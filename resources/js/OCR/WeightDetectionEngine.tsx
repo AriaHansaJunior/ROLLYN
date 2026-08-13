@@ -211,8 +211,6 @@ export default function WeightDetectionEngine({
                 SystemUI.toast({
                     message: "Weight detected successfully!",
                     type: "success",
-<<<<<<< HEAD
-=======
                 });
             } else {
                 setOcrError(outcome.error);
@@ -439,7 +437,6 @@ export default function WeightDetectionEngine({
                         if (confirmed) startCamera();
                     },
                     onCancel: () => setEngineState('camera_denied')
->>>>>>> cf14350645cb445c0455172572824bb32fc3f473
                 });
             }}
             style={{ flex: 1, justifyContent: 'center' }}

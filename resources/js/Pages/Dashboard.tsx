@@ -4,57 +4,60 @@ import { demandForecast, warehouseData, alerts } from '../data/dummy'
 import { router } from '@inertiajs/react'
 
 const kpis = [
-  { label: 'Total Rolls', value: '1,248', sub: '+12 today', color: '#286090', icon: Package },
-  { label: 'Total Weight (ton)', value: '1,253.4', sub: 'in warehouse', color: '#286090', icon: Weight },
-  { label: 'Received Today', value: '24', sub: 'rolls', color: '#5CB85C', icon: Boxes },
-  { label: 'Needs Verification', value: '3', sub: 'pending', color: '#8A6D3B', icon: AlertTriangle },
-  { label: 'Occupied Slots', value: '260', sub: 'of 420 total', color: '#286090', icon: BarChart2 },
-  { label: 'Available Slots', value: '160', sub: 'across all WH', color: '#5CB85C', icon: Boxes },
-  { label: 'Shipment Plan', value: '62', sub: 'rolls', color: '#337AB7', icon: Package },
-  { label: 'Hold', value: '15', sub: 'rolls', color: '#31708F', icon: Package },
-  { label: 'Non-PO', value: '18', sub: 'rolls', color: '#C0392B', icon: Package },
-  { label: 'Move Warehouse', value: '9', sub: 'rolls', color: '#8A6D3B', icon: Package },
+  { label: 'Total Rolls', value: '1,248', sub: '+12 today', color: '#2563EB', bg: 'bg-blue-50', text: 'text-blue-700', icon: Package },
+  { label: 'Total Weight (ton)', value: '1,253.4', sub: 'in warehouse', color: '#0284C7', bg: 'bg-sky-50', text: 'text-sky-700', icon: Weight },
+  { label: 'Received Today', value: '24', sub: 'rolls', color: '#16A34A', bg: 'bg-green-50', text: 'text-green-700', icon: Boxes },
+  { label: 'Needs Verification', value: '3', sub: 'pending', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-700', icon: AlertTriangle },
+  { label: 'Occupied Slots', value: '260', sub: 'of 420 total', color: '#4F46E5', bg: 'bg-indigo-50', text: 'text-indigo-700', icon: BarChart2 },
+  { label: 'Available Slots', value: '160', sub: 'across all WH', color: '#059669', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Boxes },
+  { label: 'Shipment Plan', value: '62', sub: 'rolls', color: '#2563EB', bg: 'bg-blue-50', text: 'text-blue-700', icon: Package },
+  { label: 'Hold', value: '15', sub: 'rolls', color: '#1D4ED8', bg: 'bg-blue-50', text: 'text-blue-800', icon: Package },
+  { label: 'Non-PO', value: '18', sub: 'rolls', color: '#DC2626', bg: 'bg-red-50', text: 'text-red-700', icon: Package },
+  { label: 'Move Warehouse', value: '9', sub: 'rolls', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-800', icon: Package },
 ]
 
 function AlertIcon({ type }: { type: string }) {
-  if (type === 'error') return <XCircle size={16} style={{ color: '#C0392B', flexShrink: 0 }} />
-  if (type === 'warning') return <AlertTriangle size={16} style={{ color: '#8A6D3B', flexShrink: 0 }} />
-  if (type === 'info') return <Info size={16} style={{ color: '#31708F', flexShrink: 0 }} />
-  return <CheckCircle size={16} style={{ color: '#5CB85C', flexShrink: 0 }} />
+  if (type === 'error') return <XCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
+  if (type === 'warning') return <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+  if (type === 'info') return <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+  return <CheckCircle size={16} className="text-green-600 shrink-0 mt-0.5" />
 }
 
 const alertBg: Record<string, string> = {
-  error: '#fdf2f2',
-  warning: '#fdf8f0',
-  info: '#f0f6fb',
-  success: '#f2f9f2',
-}
-const alertBorder: Record<string, string> = {
-  error: '#C0392B',
-  warning: '#8A6D3B',
-  info: '#31708F',
-  success: '#5CB85C',
+  error: 'bg-red-50/60 border-red-500',
+  warning: 'bg-amber-50/60 border-amber-500',
+  info: 'bg-blue-50/60 border-blue-500',
+  success: 'bg-green-50/60 border-green-500',
 }
 
 export default function Dashboard() {
   return (
-    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* KPI Row */}
+    <div className="py-4 px-2.5 sm:px-6 space-y-5 max-w-full overflow-x-hidden">
+      {/* Header & KPI Section */}
       <div>
-        <h2 className="page-title" style={{ marginBottom: 14 }}>Operations Overview</h2>
-        <div style={{ display: 'grid', gap: 10 }} className="grid-cols-2 min-[680px]:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
+        <div className="mb-3">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Operations Overview</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Real-time metrics & operational status</p>
+        </div>
+
+        <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
           {kpis.map(kpi => {
             const Icon = kpi.icon
             return (
-              <div key={kpi.label} className="kpi-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: '#777', fontWeight: 500, marginBottom: 4 }}>{kpi.label}</div>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: kpi.color, lineHeight: 1.1 }}>{kpi.value}</div>
-                    <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{kpi.sub}</div>
+              <div
+                key={kpi.label}
+                className="bg-white rounded-xl border border-slate-200/80 p-3 shadow-2xs hover:shadow-xs transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-semibold text-slate-500 truncate">{kpi.label}</div>
+                    <div className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mt-1 leading-none">
+                      {kpi.value}
+                    </div>
+                    <div className="text-[10px] font-medium text-slate-400 mt-1 truncate">{kpi.sub}</div>
                   </div>
-                  <div style={{ width: 32, height: 32, borderRadius: 4, background: kpi.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={15} style={{ color: kpi.color }} />
+                  <div className={`w-7 h-7 rounded-lg ${kpi.bg} flex items-center justify-center shrink-0`}>
+                    <Icon size={14} className={kpi.text} />
                   </div>
                 </div>
               </div>
@@ -63,50 +66,80 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main row: WH Overview + Alerts */}
-      <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-[1fr_280px] min-[1180px]:grid-cols-[1fr_340px]">
-        {/* Warehouse overview */}
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h3 className="section-title">Warehouse Condition</h3>
-            <button className="btn btn-secondary btn-sm" onClick={() => router.visit('/warehouse-map')}>
-              View Map <ArrowUpRight size={12} />
+      {/* Main Grid: Warehouse Condition Table + Operational Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        
+        {/* Warehouse Overview */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Warehouse Condition</h3>
+              <p className="text-[11px] text-slate-400">Current occupancy & status by warehouse</p>
+            </div>
+            <button
+              onClick={() => router.visit('/warehouse-map')}
+              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg flex items-center gap-1 transition-colors"
+            >
+              <span>Map</span>
+              <ArrowUpRight size={13} />
             </button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+
+          <div className="overflow-x-auto no-scrollbar">
+            <table className="w-full text-left text-xs border-collapse min-w-[580px]">
               <thead>
-                <tr>
-                  <th>WH</th>
-                  <th>Occupied</th>
-                  <th>Available</th>
-                  <th>Utilization</th>
-                  <th>Shipment</th>
-                  <th>Non-PO</th>
-                  <th>Move WH</th>
-                  <th>Hold</th>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-semibold">
+                  <th className="py-2.5 px-3 rounded-l-lg">WH</th>
+                  <th className="py-2.5 px-2">Occupied</th>
+                  <th className="py-2.5 px-2">Available</th>
+                  <th className="py-2.5 px-2 w-36">Utilization</th>
+                  <th className="py-2.5 px-2">Shipment</th>
+                  <th className="py-2.5 px-2">Non-PO</th>
+                  <th className="py-2.5 px-2">Move WH</th>
+                  <th className="py-2.5 px-2 rounded-r-lg">Hold</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {warehouseData.map(wh => {
                   const util = Math.round((wh.occupied / wh.total) * 100)
                   return (
-                    <tr key={wh.id}>
-                      <td><span style={{ fontWeight: 700, color: '#286090' }}>WH {wh.id}</span></td>
-                      <td>{wh.occupied}</td>
-                      <td>{wh.available}</td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ flex: 1, height: 6, background: '#EEEEEE', borderRadius: 3, minWidth: 60 }}>
-                            <div style={{ width: `${util}%`, height: '100%', background: util > 85 ? '#C0392B' : util > 60 ? '#8A6D3B' : '#5CB85C', borderRadius: 3 }} />
+                    <tr key={wh.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-blue-700">WH {wh.id}</td>
+                      <td className="py-2.5 px-2">{wh.occupied}</td>
+                      <td className="py-2.5 px-2">{wh.available}</td>
+                      <td className="py-2.5 px-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden min-w-[50px]">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                util > 85 ? 'bg-red-500' : util > 60 ? 'bg-amber-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${util}%` }}
+                            />
                           </div>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#555', width: 34 }}>{util}%</span>
+                          <span className="text-[11px] font-bold text-slate-600 w-8">{util}%</span>
                         </div>
                       </td>
-                      <td><span className="badge" style={{ background: '#d4edda', color: '#3C763D' }}>{wh.shipment}</span></td>
-                      <td><span className="badge" style={{ background: '#fde8e8', color: '#C0392B' }}>{wh.nonPO}</span></td>
-                      <td><span className="badge" style={{ background: '#fff3cd', color: '#8A6D3B' }}>{wh.moveWH}</span></td>
-                      <td><span className="badge" style={{ background: '#d0e8f5', color: '#286090' }}>{wh.hold}</span></td>
+                      <td className="py-2.5 px-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                          {wh.shipment}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                          {wh.nonPO}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                          {wh.moveWH}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                          {wh.hold}
+                        </span>
+                      </td>
                     </tr>
                   )
                 })}
@@ -115,17 +148,24 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Alerts */}
-        <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <h3 className="section-title" style={{ marginBottom: 12 }}>Operational Alerts</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', maxHeight: 320 }}>
+        {/* Operational Alerts */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs flex flex-col">
+          <div className="pb-2.5 mb-3 border-b border-slate-100">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">Operational Alerts</h3>
+            <p className="text-[11px] text-slate-400">System warnings & required actions</p>
+          </div>
+
+          <div className="space-y-2.5 overflow-y-auto max-h-[300px] pr-1">
             {alerts.map(alert => (
-              <div key={alert.id} style={{ background: alertBg[alert.type], borderLeft: `3px solid ${alertBorder[alert.type]}`, borderRadius: '0 4px 4px 0', padding: '8px 10px', display: 'flex', gap: 8 }}>
+              <div
+                key={alert.id}
+                className={`p-2.5 rounded-xl border-l-4 ${alertBg[alert.type]} border border-slate-100 flex items-start gap-2.5`}
+              >
                 <AlertIcon type={alert.type} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 12, color: '#333' }}>{alert.title}</div>
-                  <div style={{ fontSize: 12, color: '#555', marginTop: 2 }}>{alert.message}</div>
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>{alert.time}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-xs text-slate-900 truncate">{alert.title}</div>
+                  <div className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{alert.message}</div>
+                  <div className="text-[10px] text-slate-400 mt-1 font-mono">{alert.time}</div>
                 </div>
               </div>
             ))}
@@ -133,74 +173,80 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts row */}
-      <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-[1fr_280px] min-[1180px]:grid-cols-[1fr_320px]">
-        {/* Demand Forecast */}
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      {/* Analytics Row: Demand Forecast & AI Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        {/* Demand Forecast Chart */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">
             <div>
-              <h3 className="section-title">Demand Forecast</h3>
-              <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>Historical + AI-projected demand (rolls/month)</div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Demand Forecast</h3>
+              <p className="text-[11px] text-slate-400">Historical + AI-projected demand (rolls/month)</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0f7ff', border: '1px solid #c5dff5', borderRadius: 4, padding: '4px 10px' }}>
-              <TrendingUp size={14} style={{ color: '#286090' }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#286090' }}>AI Forecast Active</span>
+            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-100 text-[11px] font-semibold">
+              <TrendingUp size={13} />
+              <span>AI Forecast Active</span>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={demandForecast} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#777' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#777' }} />
-              <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #DDDDDD' }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="actual" stroke="#337AB7" strokeWidth={2} dot={{ r: 3 }} name="Actual" connectNulls={false} />
-              <Line type="monotone" dataKey="forecast" stroke="#5CB85C" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="Forecast (AI)" connectNulls={false} />
-            </LineChart>
-          </ResponsiveContainer>
+
+          <div className="w-full h-56 pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={demandForecast} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748B' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#64748B' }} />
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} name="Actual" connectNulls={false} />
+                <Line type="monotone" dataKey="forecast" stroke="#16A34A" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3 }} name="Forecast (AI)" connectNulls={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* AI Insight */}
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 4, background: '#286090', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <TrendingUp size={14} style={{ color: '#fff' }} />
+        {/* AI Insights Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
+          <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-slate-100">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              <TrendingUp size={14} />
             </div>
             <div>
-              <h3 className="section-title" style={{ marginBottom: 0 }}>AI Insight</h3>
-              <div style={{ fontSize: 11, color: '#777' }}>Generated from warehouse data</div>
+              <h3 className="text-sm font-bold text-slate-900">AI Insights</h3>
+              <p className="text-[11px] text-slate-400">Warehouse analytics summary</p>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          <div className="space-y-2 text-xs">
             {[
               { icon: '📈', text: 'Demand is trending upward over the current period. An average 8.2% month-over-month increase has been observed since Q1.' },
               { icon: '👥', text: 'Customer order activity is increasing compared with the same period last year. Three key accounts are driving higher volume.' },
               { icon: '⚠️', text: 'Inventory pressure may increase over the next 60 days if current demand continues. Consider reviewing slot capacity for WH-C.' },
-              { icon: '📦', text: 'Peak demand is projected in December 2024. Production planning should account for a 22% volume increase vs current capacity.' },
+              { icon: '📦', text: 'Peak demand is projected in December. Production planning should account for a 22% volume increase vs current capacity.' },
             ].map((insight, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, padding: '10px', background: '#F5F5F5', borderRadius: 4 }}>
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{insight.icon}</span>
-                <p style={{ fontSize: 12, color: '#444', lineHeight: 1.5, margin: 0 }}>{insight.text}</p>
+              <div key={i} className="flex gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-sm shrink-0">{insight.icon}</span>
+                <p className="text-[11px] text-slate-600 leading-relaxed m-0">{insight.text}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Warehouse utilization bar chart */}
-      <div className="card" style={{ padding: 16 }}>
-        <h3 className="section-title" style={{ marginBottom: 12 }}>Warehouse Slot Distribution</h3>
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={warehouseData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#EEEEEE" />
-            <XAxis dataKey="id" tick={{ fontSize: 11, fill: '#777' }} tickFormatter={v => `WH ${v}`} />
-            <YAxis tick={{ fontSize: 11, fill: '#777' }} />
-            <Tooltip contentStyle={{ fontSize: 12, border: '1px solid #DDDDDD' }} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="occupied" stackId="a" fill="#286090" name="Occupied" />
-            <Bar dataKey="available" stackId="a" fill="#EEEEEE" name="Available" />
-          </BarChart>
-        </ResponsiveContainer>
+      {/* Warehouse Slot Distribution Bar Chart */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
+        <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-2">Warehouse Slot Distribution</h3>
+        <div className="w-full h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={warehouseData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+              <XAxis dataKey="id" tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={v => `WH ${v}`} />
+              <YAxis tick={{ fontSize: 10, fill: '#64748B' }} />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E2E8F0' }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="occupied" stackId="a" fill="#2563EB" name="Occupied" radius={[0, 0, 4, 4]} />
+              <Bar dataKey="available" stackId="a" fill="#E2E8F0" name="Available" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

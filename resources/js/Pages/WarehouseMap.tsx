@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Package } from 'lucide-react'
+import { X, Package, MoveRight, Layers, ShieldAlert, CheckCircle2 } from 'lucide-react'
 
 type SlotStatus = 'free' | 'planning' | 'slotted' | 'shipment' | 'nonpo' | 'move' | 'hold'
 
@@ -16,14 +16,14 @@ interface Slot {
   orderStatus?: string
 }
 
-const statusConfig: Record<SlotStatus, { label: string; bg: string; border: string; text: string }> = {
-  free: { label: 'Free Space', bg: '#FFFFFF', border: '#DDDDDD', text: '#333' },
-  planning: { label: 'Slot Planning', bg: '#CCCCCC', border: '#AAAAAA', text: '#333' },
-  slotted: { label: 'Slotted', bg: '#9ecae1', border: '#5b9fcf', text: '#1a4e70' },
-  shipment: { label: 'Shipment Plan', bg: '#5CB85C', border: '#3C763D', text: '#fff' },
-  nonpo: { label: 'Non-PO', bg: '#e74c3c', border: '#c0392b', text: '#fff' },
-  move: { label: 'Move Warehouse', bg: '#f39c12', border: '#d68910', text: '#fff' },
-  hold: { label: 'Hold', bg: '#337AB7', border: '#286090', text: '#fff' },
+const statusConfig: Record<SlotStatus, { label: string; bg: string; border: string; text: string; dot: string }> = {
+  free: { label: 'Free Space', bg: '#FFFFFF', border: '#E2E8F0', text: '#475569', dot: '#94A3B8' },
+  planning: { label: 'Slot Planning', bg: '#F1F5F9', border: '#CBD5E1', text: '#334155', dot: '#64748B' },
+  slotted: { label: 'Slotted', bg: '#E0F2FE', border: '#7DD3FC', text: '#0369A1', dot: '#0284C7' },
+  shipment: { label: 'Shipment Plan', bg: '#DCFCE7', border: '#86EFAC', text: '#15803D', dot: '#16A34A' },
+  nonpo: { label: 'Non-PO', bg: '#FEE2E2', border: '#FCA5A5', text: '#B91C1C', dot: '#DC2626' },
+  move: { label: 'Move Warehouse', bg: '#FEF3C7', border: '#FDE047', text: '#B45309', dot: '#D97706' },
+  hold: { label: 'Hold', bg: '#DBEAFE', border: '#93C5FD', text: '#1D4ED8', dot: '#2563EB' },
 }
 
 function generateSlots(whId: string): Slot[][] {
@@ -65,49 +65,82 @@ export default function WarehouseMap() {
   const cols = slots[0]?.length ?? 0
 
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <h2 className="page-title" style={{ marginBottom: 16 }}>Warehouse Map</h2>
-
-      {/* WH Tabs */}
-      <div style={{ display: 'flex', overflowX: 'auto', gap: 4, marginBottom: 16, paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
-        {warehouses.map(wh => (
-          <button
-            key={wh}
-            className={`tab-button ${activeWH === wh ? 'active' : ''}`}
-            style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
-            onClick={() => { setActiveWH(wh); setSelectedSlot(null) }}
-          >
-            Warehouse {wh}
-          </button>
-        ))}
+    <div className="py-4 px-2.5 sm:px-6 max-w-full overflow-x-hidden">
+      {/* Header Title */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Warehouse Map</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Real-time slot allocation & roll position tracking</p>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 16 }} className={selectedSlot ? "grid-cols-1 min-[680px]:grid-cols-[1fr_280px]" : "grid-cols-1"}>
-        {/* Map */}
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h3 className="section-title">Warehouse {activeWH} — Slot Layout</h3>
-            <div style={{ display: 'flex', gap: 4, fontSize: 11, color: '#777' }}>
-              <span>Rows: {slots.length}</span>
-              <span style={{ color: '#DDD' }}>|</span>
-              <span>Cols: {cols}</span>
+      {/* Modern Horizontal Pill Scroll for WH Tabs */}
+      <div className="mb-4 overflow-x-auto pb-1 flex gap-2 no-scrollbar scroll-smooth">
+        <div className="flex gap-1.5 p-1 bg-slate-200/70 backdrop-blur-xs rounded-2xl border border-slate-200/80 shrink-0 min-w-full sm:min-w-0">
+          {warehouses.map(wh => {
+            const isActive = activeWH === wh
+            return (
+              <button
+                key={wh}
+                onClick={() => { setActiveWH(wh); setSelectedSlot(null) }}
+                className={`px-4 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all duration-200 shrink-0 ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-[1.02]'
+                    : 'bg-white/80 text-slate-700 hover:bg-white hover:text-slate-900 border border-slate-200/50'
+                }`}
+              >
+                Warehouse {wh}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Main Grid Layout Container */}
+      <div className={selectedSlot ? "grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4" : "grid grid-cols-1 gap-4"}>
+        
+        {/* Map Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5">
+          {/* Card Title & Specs */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                {activeWH}
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-800">
+                  Warehouse {activeWH} — Slot Layout
+                </h3>
+                <div className="text-[11px] text-slate-400 font-medium">8 Rows × 10 Columns (80 Total Slots)</div>
+              </div>
+            </div>
+
+            {/* Mobile Touch Swipe Indicator */}
+            <div className="flex sm:hidden items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+              <span>Geser ke kanan</span>
+              <MoveRight size={13} />
             </div>
           </div>
 
-          {/* Column headers */}
-          <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
-            <div style={{ minWidth: cols * 52 + 40 }}>
-              <div style={{ display: 'flex', gap: 3, marginLeft: 40, marginBottom: 4 }}>
+          {/* Interactive Scrollable Grid Layout */}
+          <div className="overflow-x-auto pb-3 pt-1 touch-pan-x no-scrollbar">
+            <div className="inline-block min-w-[560px]">
+              {/* Column Headers */}
+              <div className="flex gap-1.5 ml-10 mb-2">
                 {Array.from({ length: cols }, (_, i) => (
-                  <div key={i} style={{ width: 48, textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#999', fontFamily: 'JetBrains Mono, monospace' }}>
+                  <div
+                    key={i}
+                    className="w-12 text-center text-[10px] font-extrabold text-slate-400 font-mono tracking-tighter"
+                  >
                     C{String(i + 1).padStart(2, '0')}
                   </div>
                 ))}
               </div>
 
+              {/* Rows & Slot Cells */}
               {slots.map((row, rowIdx) => (
-                <div key={rowIdx} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 3 }}>
-                  <div style={{ width: 36, fontSize: 10, fontWeight: 700, color: '#999', textAlign: 'right', marginRight: 4, fontFamily: 'JetBrains Mono, monospace' }}>
+                <div key={rowIdx} className="flex items-center gap-1.5 mb-1.5">
+                  <div className="w-8 text-right text-[10px] font-bold text-slate-400 font-mono pr-1 shrink-0">
                     R{rowIdx + 1}
                   </div>
                   {row.map(slot => {
@@ -119,24 +152,13 @@ export default function WarehouseMap() {
                         onClick={() => setSelectedSlot(isSelected ? null : slot)}
                         title={`${slot.code} — ${cfg.label}`}
                         style={{
-                          width: 48,
-                          height: 28,
-                          borderRadius: 3,
-                          background: cfg.bg,
-                          border: `1px solid ${isSelected ? '#333' : cfg.border}`,
-                          cursor: 'pointer',
-                          fontSize: 9,
+                          backgroundColor: cfg.bg,
+                          borderColor: isSelected ? '#1E293B' : cfg.border,
                           color: cfg.text,
-                          fontFamily: 'JetBrains Mono, monospace',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: isSelected ? '0 0 0 2px #333' : 'none',
-                          transition: 'box-shadow 0.1s',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          padding: '0 2px',
                         }}
+                        className={`w-12 h-8 rounded-lg border text-[10px] font-bold font-mono flex items-center justify-center transition-all duration-150 active:scale-95 shadow-2xs ${
+                          isSelected ? 'ring-2 ring-slate-900 ring-offset-1 z-10 scale-105 shadow-md' : 'hover:scale-102 hover:shadow-xs'
+                        }`}
                       >
                         {slot.code.split('-')[0].slice(-3)}
                       </button>
@@ -147,32 +169,60 @@ export default function WarehouseMap() {
             </div>
           </div>
 
-          {/* Legend */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 16, paddingTop: 12, borderTop: '1px solid #EEEEEE' }}>
-            {Object.entries(statusConfig).map(([key, cfg]) => (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 14, height: 14, borderRadius: 2, background: cfg.bg, border: `1px solid ${cfg.border}` }} />
-                <span style={{ fontSize: 11, color: '#555' }}>{cfg.label}</span>
-              </div>
-            ))}
+          {/* Modern Responsive Legend */}
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Slot Legend</div>
+            <div className="grid grid-cols-2 xs:grid-cols-3 sm:flex sm:flex-wrap gap-2 text-xs">
+              {Object.entries(statusConfig).map(([key, cfg]) => (
+                <div
+                  key={key}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50/50"
+                  style={{ borderColor: cfg.border }}
+                >
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cfg.dot }} />
+                  <span className="text-[11px] font-medium text-slate-700 truncate">{cfg.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Mobile Backdrop for Detail Panel */}
+        {/* Mobile Backdrop Overlay for Bottom Sheet */}
         {selectedSlot && (
-          <div className="fixed inset-0 bg-black/50 z-40 min-[680px]:hidden" onClick={() => setSelectedSlot(null)} />
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden"
+            onClick={() => setSelectedSlot(null)}
+          />
         )}
 
-        {/* Slot Detail Panel */}
+        {/* Slot Detail Mobile Bottom Sheet / Desktop Sidebar Card */}
         {selectedSlot && (
-          <div className="card max-[679px]:fixed max-[679px]:bottom-0 max-[679px]:left-0 max-[679px]:right-0 max-[679px]:z-50 max-[679px]:rounded-t-2xl max-[679px]:rounded-b-none max-[679px]:shadow-[0_-4px_24px_rgba(0,0,0,0.15)] max-[679px]:max-h-[85vh] max-[679px]:overflow-y-auto" style={{ padding: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 className="section-title">Slot Detail</h3>
-              <button onClick={() => setSelectedSlot(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#777', padding: 4 }}>
-                <X size={16} />
+          <div className="bg-white rounded-t-3xl lg:rounded-2xl border-t lg:border border-slate-200/80 shadow-2xl lg:shadow-xs p-4 sm:p-5 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:max-h-[85vh] max-lg:overflow-y-auto transition-all">
+            
+            {/* Mobile Drag Handle Bar */}
+            <div className="w-12 h-1 bg-slate-300 rounded-full mx-auto mb-3 lg:hidden" />
+
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                  <Layers size={15} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Slot Details</h3>
+                  <div className="text-[11px] font-mono text-slate-500">{selectedSlot.code}</div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedSlot(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X size={18} />
               </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+
+            {/* Detail Rows */}
+            <div className="space-y-2 text-xs">
               {[
                 { label: 'Slot Code', value: selectedSlot.code },
                 { label: 'Warehouse', value: `Warehouse ${activeWH}` },
@@ -185,21 +235,31 @@ export default function WarehouseMap() {
                 { label: 'Customer', value: selectedSlot.customer || '—' },
                 { label: 'Order Status', value: selectedSlot.orderStatus || '—' },
               ].map(row => (
-                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #EEEEEE' }}>
-                  <span style={{ fontSize: 12, color: '#777', fontWeight: 500 }}>{row.label}</span>
+                <div key={row.label} className="flex items-center justify-between py-1.5 border-b border-slate-100/80">
+                  <span className="text-slate-500 font-medium text-[11px]">{row.label}</span>
                   {row.isStatus && row.status ? (
-                    <span className="badge" style={{ background: statusConfig[row.status].bg, color: statusConfig[row.status].text, border: `1px solid ${statusConfig[row.status].border}` }}>
+                    <span
+                      className="px-2.5 py-0.5 rounded-full text-[11px] font-bold border"
+                      style={{
+                        backgroundColor: statusConfig[row.status].bg,
+                        color: statusConfig[row.status].text,
+                        borderColor: statusConfig[row.status].border,
+                      }}
+                    >
                       {row.value}
                     </span>
                   ) : (
-                    <span style={{ fontSize: 12, color: '#333', fontWeight: 600, textAlign: 'right' }}>{row.value}</span>
+                    <span className="font-semibold text-slate-800 text-[11px] text-right truncate max-w-[170px]">
+                      {row.value}
+                    </span>
                   )}
                 </div>
               ))}
             </div>
+
             {selectedSlot.status !== 'free' && selectedSlot.status !== 'planning' && (
-              <button className="btn btn-primary btn-sm" style={{ marginTop: 12, width: '100%', justifyContent: 'center' }}>
-                <Package size={13} /> View Roll Detail
+              <button className="w-full mt-4 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-98">
+                <Package size={15} /> View Roll Detail
               </button>
             )}
           </div>

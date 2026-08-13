@@ -1,22 +1,6 @@
 import { Bell, Search, ChevronDown, PanelLeftClose, Menu, X } from 'lucide-react'
-import { router } from '@inertiajs/core'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-
-const mobileNavItems = [
-  { label: 'Dashboard', value: '/dashboard' },
-  { label: 'Warehouse Map', value: '/warehouse-map' },
-  { label: 'Roll Inventory', value: '/roll-inventory' },
-  { label: 'Slot Status', value: '/slot-status' },
-  { label: 'Incoming Roll', value: '/incoming-roll' },
-  { label: 'OCR Monitoring', value: '/ocr-monitoring' },
-  { label: 'Target Order', value: '/target-order' },
-  { label: 'JOP', value: '/jop' },
-  { label: 'SPK / PO', value: '/spk-po' },
-  { label: 'Reports', value: '/reports' },
-  { label: 'User Management', value: '/user-management' },
-  { label: 'Profile', value: '/profile' },
-]
 
 const pageLabels: Record<string, string[]> = {
   'dashboard': ['Dashboard'],
@@ -42,160 +26,139 @@ interface HeaderProps {
 
 export default function Header({ activePage, onMenuClick, onToggleSidebar, sidebarCollapsed }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const crumbs = pageLabels[activePage] || ['Dashboard']
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 679)
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  const currentPageTitle = crumbs[crumbs.length - 1]
 
   return (
-    <header style={{
-      height: 56,
-      background: '#ffffff',
-      borderBottom: '1px solid #DDDDDD',
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0 20px',
-      gap: 12,
-      position: 'sticky',
-      top: 0,
-      zIndex: 20,
-    }}>
-      {isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-          <button
-            onClick={onMenuClick}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 36,
-              height: 36,
-              borderRadius: 6,
-              background: 'transparent',
-              border: 'none',
-              color: '#333',
-              cursor: 'pointer',
-              padding: 0,
-            }}
-            aria-label="Open mobile navigation"
-          >
-            <Menu size={22} />
-          </button>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: 4,
-              background: 'linear-gradient(135deg, #337AB7, #286090)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, color: '#fff', fontSize: 12
-            }}>R</div>
-            <span style={{ fontWeight: 800, fontSize: 15, color: '#1a4e80', letterSpacing: '0.02em' }}>ROLLYN</span>
-          </div>
-        </div>
-      )}
-
-      {!isMobile && (
+    <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 min-[680px]:px-5 flex items-center justify-between gap-2 shadow-xs select-none">
+      {/* Mobile Brand / Toggle */}
+      <div className="flex min-[680px]:hidden items-center gap-2.5 min-w-0 flex-1">
         <button
-          onClick={onToggleSidebar}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#777' }}
-          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={onMenuClick}
+          className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-100 active:bg-slate-200 text-slate-700 transition-colors shrink-0"
+          aria-label="Open mobile navigation"
         >
-          {sidebarCollapsed ? <PanelLeftClose size={18} /> : <PanelLeftClose size={18} />}
+          <Menu size={20} />
         </button>
-      )}
 
-      {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, flex: 1 }}>
-          {crumbs.map((c, i) => (
-            <span key={c} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {i > 0 && <span style={{ color: '#CCCCCC' }}>/</span>}
-              <span style={{ color: i === crumbs.length - 1 ? '#333333' : '#777777', fontWeight: i === crumbs.length - 1 ? 600 : 400 }}>
-                {c}
-              </span>
-            </span>
-          ))}
+        <div className="flex items-center gap-2 min-w-0 shrink-0">
+          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center font-extrabold text-white text-xs shadow-xs">
+            R
+          </div>
+          <span className="font-extrabold text-sm tracking-tight text-blue-900 truncate">ROLLYN</span>
         </div>
-      )}
 
-      {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F5F5', border: '1px solid #DDDDDD', borderRadius: 4, padding: '6px 10px', width: 200 }}>
-          <Search size={14} style={{ color: '#999' }} />
-          <input placeholder="Search..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#333', width: '100%', fontFamily: 'inherit' }} />
+        <div className="hidden xs:flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold text-[11px] truncate max-w-[130px] border border-blue-100">
+          {currentPageTitle}
         </div>
-      )}
+      </div>
 
-      {isMobile && (
-        <button onClick={() => setMobileSearchOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#555' }}>
-          <Search size={18} />
-        </button>
-      )}
-
-      {/* Notification */}
-      <button style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#555' }}>
-        <Bell size={18} />
-        <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: '50%', background: '#C0392B', border: '2px solid #fff' }} />
+      {/* Desktop Toggle Button */}
+      <button
+        onClick={onToggleSidebar}
+        className="hidden min-[680px]:flex items-center justify-center p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <PanelLeftClose size={18} className={sidebarCollapsed ? "rotate-180 transition-transform" : "transition-transform"} />
       </button>
 
-      {/* Profile */}
-      <div style={{ position: 'relative' }}>
+      {/* Desktop Breadcrumbs */}
+      <div className="hidden min-[680px]:flex items-center gap-1.5 text-xs flex-1 min-w-0 ml-2">
+        {crumbs.map((c, i) => (
+          <span key={c} className="flex items-center gap-1.5 text-slate-500 font-medium whitespace-nowrap">
+            {i > 0 && <span className="text-slate-300">/</span>}
+            <span className={i === crumbs.length - 1 ? 'text-slate-900 font-semibold' : 'text-slate-500'}>
+              {c}
+            </span>
+          </span>
+        ))}
+      </div>
+
+      {/* Right Controls */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Desktop Search Bar */}
+        <div className="hidden min-[680px]:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 w-44 focus-within:w-56 focus-within:bg-white focus-within:border-blue-500 transition-all">
+          <Search size={14} className="text-slate-400 shrink-0" />
+          <input
+            placeholder="Search..."
+            className="bg-transparent border-none outline-none text-xs text-slate-800 w-full placeholder:text-slate-400"
+          />
+        </div>
+
+        {/* Mobile Search Icon Button */}
         <button
-          onClick={() => setProfileOpen(!profileOpen)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 4 }}
+          onClick={() => setMobileSearchOpen(true)}
+          className="flex min-[680px]:hidden items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+          aria-label="Search"
         >
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#286090', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 600 }}>
-            BS
-          </div>
-          <span className="max-[679px]:hidden" style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>Budi S.</span>
-          <ChevronDown size={14} style={{ color: '#777' }} />
+          <Search size={18} />
         </button>
-        {profileOpen && (
-          <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid #DDDDDD', borderRadius: 4, minWidth: 160, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', zIndex: 50 }}>
-            <div style={{ padding: '10px 14px', borderBottom: '1px solid #EEEEEE' }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Budi Santoso</div>
-              <div style={{ fontSize: 11, color: '#777' }}>Administrator</div>
+
+        {/* Notification Bell */}
+        <button className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors">
+          <Bell size={18} />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+        </button>
+
+        {/* User Profile */}
+        <div className="relative">
+          <button
+            onClick={() => setProfileOpen(!profileOpen)}
+            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <div className="w-7 h-7 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold shadow-xs">
+              BS
             </div>
-            <button style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', color: '#333' }}
-              onClick={() => { setProfileOpen(false) }}>Profile Settings</button>
-            <button style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', color: '#C0392B', borderTop: '1px solid #EEEEEE' }}>
-              Sign Out
-            </button>
-          </div>
-        )}
+            <span className="hidden min-[680px]:inline text-xs font-medium text-slate-700 ml-0.5">Budi S.</span>
+            <ChevronDown size={14} className="text-slate-400" />
+          </button>
+
+          {profileOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl min-w-[170px] shadow-xl z-50 overflow-hidden py-1">
+              <div className="px-3.5 py-2.5 border-b border-slate-100">
+                <div className="text-xs font-semibold text-slate-900">Budi Santoso</div>
+                <div className="text-[11px] text-slate-500">Administrator</div>
+              </div>
+              <button
+                className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                onClick={() => setProfileOpen(false)}
+              >
+                Profile Settings
+              </button>
+              <button
+                className="w-full text-left px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 border-t border-slate-100 transition-colors"
+                onClick={() => setProfileOpen(false)}
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Mobile Search Overlay */}
       <AnimatePresence>
         {mobileSearchOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 100,
-              backgroundColor: 'rgba(255, 255, 255, 0.6)',
-              backdropFilter: 'blur(8px)',
-              display: 'flex',
-              flexDirection: 'column',
-              padding: '20px',
-            }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs p-3 flex flex-col"
           >
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', width: '100%' }}>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #DDD', borderRadius: 8, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                <Search size={18} style={{ color: '#999' }} />
-                <input autoFocus placeholder="Search something..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 16, width: '100%', color: '#333' }} />
-              </div>
-              <button onClick={() => setMobileSearchOpen(false)} style={{ padding: '8px', background: 'none', border: 'none', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={24} />
+            <div className="bg-white rounded-xl shadow-2xl p-2.5 flex items-center gap-2">
+              <Search size={18} className="text-slate-400 ml-1 shrink-0" />
+              <input
+                autoFocus
+                placeholder="Search warehouse, rolls, orders..."
+                className="flex-1 bg-transparent border-none outline-none text-sm text-slate-900 py-1"
+              />
+              <button
+                onClick={() => setMobileSearchOpen(false)}
+                className="p-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100"
+              >
+                <X size={20} />
               </button>
             </div>
           </motion.div>
