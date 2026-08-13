@@ -51,17 +51,27 @@ export default function OcrMonitoring() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[850px] text-left border-collapse text-xs">
+        <table className="data-table w-full min-w-[1200px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col className="w-[110px]" />
+            <col className="w-[210px]" />
+            <col className="w-[110px]" />
+            <col className="w-[170px]" />
+            <col className="w-[130px]" />
+            <col className="w-[180px]" />
+            <col className="w-[170px]" />
+            <col className="w-[120px]" />
+          </colgroup>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Timestamp</th>
-              <th>Roll</th>
-              <th>Detected Weight</th>
-              <th>Status</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>ID</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Timestamp</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Roll</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Detected Weight</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Status</th>
               <th>Error Reason</th>
-              <th>Administrator</th>
-              <th>Result</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Administrator</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Result</th>
             </tr>
           </thead>
           <tbody>
@@ -69,14 +79,18 @@ export default function OcrMonitoring() {
               const sc = statusBadge[r.status] || { bg: '#EEEEEE', color: '#333' }
               return (
                 <tr key={r.id}>
-                  <td className="font-mono text-xs text-slate-500">{r.id}</td>
-                  <td className="text-xs text-slate-600">{r.timestamp}</td>
-                  <td className="font-bold text-blue-700 font-mono text-xs">{r.roll}</td>
-                  <td className="font-mono text-xs font-bold text-slate-900">{r.detectedWeight}</td>
-                  <td><span className="badge" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span></td>
+                  <td className="text-center font-mono text-xs text-slate-500">{r.id}</td>
+                  <td className="text-center text-xs text-slate-600">{r.timestamp}</td>
+                  <td className="text-center font-bold text-blue-700 font-mono text-xs">{r.roll}</td>
+                  <td className="text-center font-mono text-xs font-bold text-slate-900">{r.detectedWeight}</td>
+                  <td className="text-center">
+                    <div className="flex w-full justify-center">
+                      <span className="badge inline-flex min-w-[82px] justify-center" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span>
+                    </div>
+                  </td>
                   <td className={`text-xs ${r.error === '-' ? 'text-slate-400' : 'text-red-600 font-semibold'}`}>{r.error}</td>
-                  <td className="text-xs text-slate-700">{r.admin}</td>
-                  <td className="text-xs text-slate-700">{r.result}</td>
+                  <td className="text-center text-xs text-slate-700">{r.admin}</td>
+                  <td className="text-center text-xs text-slate-700">{r.result}</td>
                 </tr>
               )
             })}
