@@ -34,7 +34,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F5F5' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F5F5', width: '100vw', maxWidth: '100vw' }}>
       <Sidebar
         activePage={activePage}
         collapsed={sidebarCollapsed}
@@ -49,14 +49,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
+          width: '100%',
+          maxWidth: '100%',
           marginLeft: isMobile ? 0 : sidebarWidth,
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
         }}
         className="max-[679px]:ml-0!"
       >
         <Header
           activePage={activePage}
-          onMenuClick={() => setMobileMenuOpen(true)}
+          onMenuClick={() => setMobileMenuOpen(prev => !prev)}
           onToggleSidebar={() => setSidebarCollapsed(c => !c)}
           sidebarCollapsed={sidebarCollapsed}
         />
