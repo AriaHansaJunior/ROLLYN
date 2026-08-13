@@ -101,35 +101,36 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         </div>
       )}
 
-      {/* Desktop collapse toggle */}
-      <button
-        className="max-[679px]:hidden"
-        onClick={onToggleSidebar}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#777' }}
-        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {sidebarCollapsed ? <PanelLeftClose size={18} /> : <PanelLeftClose size={18} />}
-      </button>
+      {!isMobile && (
+        <button
+          onClick={onToggleSidebar}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#777' }}
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {sidebarCollapsed ? <PanelLeftClose size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+      )}
 
-      {/* Breadcrumb */}
-      <div className="max-[679px]:hidden" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, flex: 1 }}>
-        {crumbs.map((c, i) => (
-          <span key={c} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {i > 0 && <span style={{ color: '#CCCCCC' }}>/</span>}
-            <span style={{ color: i === crumbs.length - 1 ? '#333333' : '#777777', fontWeight: i === crumbs.length - 1 ? 600 : 400 }}>
-              {c}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, flex: 1 }}>
+          {crumbs.map((c, i) => (
+            <span key={c} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {i > 0 && <span style={{ color: '#CCCCCC' }}>/</span>}
+              <span style={{ color: i === crumbs.length - 1 ? '#333333' : '#777777', fontWeight: i === crumbs.length - 1 ? 600 : 400 }}>
+                {c}
+              </span>
             </span>
-          </span>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Desktop Search */}
-      <div className="max-[679px]:hidden" style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F5F5', border: '1px solid #DDDDDD', borderRadius: 4, padding: '6px 10px', width: 200 }}>
-        <Search size={14} style={{ color: '#999' }} />
-        <input placeholder="Search..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#333', width: '100%', fontFamily: 'inherit' }} />
-      </div>
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F5F5', border: '1px solid #DDDDDD', borderRadius: 4, padding: '6px 10px', width: 200 }}>
+          <Search size={14} style={{ color: '#999' }} />
+          <input placeholder="Search..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#333', width: '100%', fontFamily: 'inherit' }} />
+        </div>
+      )}
 
-      {/* Mobile Search Toggle */}
       {isMobile && (
         <button onClick={() => setMobileSearchOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#555' }}>
           <Search size={18} />

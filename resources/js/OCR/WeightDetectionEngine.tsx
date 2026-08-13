@@ -40,6 +40,7 @@ import {
     initOCRWorker,
     recogniseWeight,
     terminateOCRWorker,
+    calibrateScaleFont,
     type OcrResult,
     type OcrError,
 } from "./OCRService";
@@ -201,67 +202,68 @@ export default function WeightDetectionEngine({
             // 3. Multi-pass OCR
             const outcome = await recogniseWeight(variants, quality);
 
-<<<<<<< HEAD
-      // 2. Analyse image quality for diagnostic generation
-      const quality = analyseImageQuality(rawCanvas);
+            if ("result" in outcome) {
+                setOcrResult(outcome.result);
+                setEditedWeight(String(outcome.result.weight));
+                setIsManuallyEdited(false);
+                setEngineState("success");
+                SystemUI.toast({
+                    message: "Weight detected successfully!",
+                    type: "success",
+                });
+            } else {
+                setOcrError(outcome.error);
+                setEngineState("error");
+                SystemUI.alert({
+                    title: outcome.error.title,
+                    message: outcome.error.message,
+                });
+            }
+        } catch (err) {
+            console.error("[OCR] Unexpected error during recognition:", err);
+            const errorTitle = "Processing Error";
+            const errorMessage =
+                "An unexpected error occurred while processing the image. Please try again.";
+            setOcrError({
+                title: errorTitle,
+                message: errorMessage,
+            });
+            setEngineState("error");
+            SystemUI.alert({ title: errorTitle, message: errorMessage });
+        }
+    }, [roi]);
 
-      // 3. Multi-pass OCR
-      const outcome = await recogniseWeight(variants, quality);
+    // ---------------------------------------------------------------------------
+    // Retry — go back to camera_active without reloading page
+    // ---------------------------------------------------------------------------
 
-      if ('result' in outcome) {
-        setOcrResult(outcome.result);
-        setEditedWeight(String(outcome.result.weight));
+    function retryCapture() {
+        setOcrResult(null);
+        setOcrError(null);
+        setEditedWeight("");
         setIsManuallyEdited(false);
-        setEngineState('success');
-        SystemUI.toast({ message: 'Weight detected successfully!', type: 'success' });
-      } else {
-        setOcrError(outcome.error);
-        setEngineState('error');
-        SystemUI.alert({
-            title: outcome.error.title,
-            message: outcome.error.message,
-        });
-      }
-    } catch (err) {
-      console.error('[OCR] Unexpected error during recognition:', err);
-      const errorTitle = 'Processing Error';
-      const errorMessage = 'An unexpected error occurred while processing the image. Please try again.';
-      setOcrError({
-        title: errorTitle,
-        message: errorMessage,
-      });
-      setEngineState('error');
-      SystemUI.alert({ title: errorTitle, message: errorMessage });
+        setEngineState("camera_active");
     }
-  }, [roi]);
 
-  // ---------------------------------------------------------------------------
-  // Retry — go back to camera_active without reloading page
-  // ---------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------
+    // Confirm weight
+    // ---------------------------------------------------------------------------
 
-  function retryCapture() {
-    setOcrResult(null);
-    setOcrError(null);
-    setEditedWeight('');
-    setIsManuallyEdited(false);
-    setEngineState('camera_active');
-  }
+    function confirmWeight() {
+        const numericWeight = parseFloat(editedWeight.replace(/,/g, ""));
+        if (isNaN(numericWeight) || numericWeight <= 0) return;
 
-  // ---------------------------------------------------------------------------
-  // Confirm weight
-  // ---------------------------------------------------------------------------
+        const display = numericWeight.toLocaleString("en-US", {
+            maximumFractionDigits: 2,
+            minimumFractionDigits: 0,
+        });
 
-  function confirmWeight() {
-    const numericWeight = parseFloat(editedWeight.replace(/,/g, ''));
-    if (isNaN(numericWeight) || numericWeight <= 0) return;
-
-    const display = numericWeight.toLocaleString('en-US', {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 0,
-    });
-
-    onWeightConfirmed(numericWeight, display, isManuallyEdited ? 'manual' : 'ocr');
-  }
+        onWeightConfirmed(
+            numericWeight,
+            display,
+            isManuallyEdited ? "manual" : "ocr",
+        );
+    }
 
   // ---------------------------------------------------------------------------
   // Render helpers
@@ -434,38 +436,100 @@ export default function WeightDetectionEngine({
                         if (confirmed) startCamera();
                     },
                     onCancel: () => setEngineState('camera_denied')
-=======
-            if ("result" in outcome) {
-                setOcrResult(outcome.result);
-                setEditedWeight(String(outcome.result.weight));
-                setIsManuallyEdited(false);
-                setEngineState("success");
-                SystemUI.toast({
-                    message: "Weight detected successfully!",
-                    type: "success",
->>>>>>> 9f1bfccf7d3de4b3d352bfa54c9674a0ccdc8e2e
                 });
-            } else {
-                setOcrError(outcome.error);
-                setEngineState("error");
-                SystemUI.alert({
-                    title: outcome.error.title,
-                    message: outcome.error.message,
-                });
-            }
-        } catch (err) {
-            console.error("[OCR] Unexpected error during recognition:", err);
-            const errorTitle = "Processing Error";
-            const errorMessage =
-                "An unexpected error occurred while processing the image. Please try again.";
-            setOcrError({
-                title: errorTitle,
-                message: errorMessage,
-            });
-            setEngineState("error");
-            SystemUI.alert({ title: errorTitle, message: errorMessage });
-        }
-    }, [roi]);
+            }}
+            style={{ flex: 1, justifyContent: 'center' }}
+          >
+            <Camera size={13} /> Try Again
+          </button>
+        )}
+      </div>
+    </div>
+
+    {/* ════ RIGHT PANEL: Weight Detection Result ════ */}
+    <div className="card" style={{ padding: 16 }}>
+      <h3 className="section-title" style={{ marginBottom: 12 }}>Weight Detection Result</h3>
+
+      {/* States without active video */}
+      {(engineState === 'permission_modal' || engineState === 'requesting' || engineState === 'camera_active' || engineState === 'camera_denied') && (
+        <div style={{ textAlign: 'center', padding: '36px 20px', color: '#999', fontSize: 13 }}>
+          <Camera size={32} style={{ color: '#ddd', marginBottom: 12 }} />
+          <p style={{ margin: 0 }}>Point the camera at the weighing display, then click <strong>Take Photo</strong>.</p>
+        </div>
+      )}
+
+      {engineState === 'processing' && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, gap: 10, color: '#777', fontSize: 13 }}>
+          <Loader size={20} style={{ color: '#337AB7' }} />
+          Running local OCR — processing image…
+        </div>
+      )}
+
+      {engineState === 'success' && ocrResult && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 13px', background: '#f2f9f2', border: '1px solid #d4edda', borderRadius: 6, marginBottom: 14 }}>
+            <CheckCircle size={15} style={{ color: '#5CB85C', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#3C763D' }}>Recognition Successful — {ocrResult.confidence.toFixed(1)}% confidence</span>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '20px 0 16px' }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Detected Weight</div>
+            <div style={{ fontSize: 56, fontWeight: 800, color: '#286090', fontFamily: 'JetBrains Mono, Consolas, monospace', lineHeight: 1, letterSpacing: '-0.02em' }}>{ocrResult.weightDisplay}</div>
+            <div style={{ fontSize: 18, color: '#555', fontWeight: 600, marginTop: 4 }}>kg</div>
+          </div>
+
+          <div style={{ fontSize: 10, color: '#999', marginBottom: 14, padding: 8, background: '#f9f9f9', border: '1px solid #eee', borderRadius: 4, fontFamily: 'monospace', lineHeight: 1.4 }}>
+            <div><strong>Raw OCR:</strong> "{ocrResult.rawText}"</div>
+            <div><strong>Variant:</strong> {ocrResult.variantLabel}</div>
+            <div style={{ marginTop: 8 }}><strong>Preprocessed Image:</strong>
+              <img src={ocrResult.variantDataUrl} alt="Preprocessed OCR input" style={{ width: '100%', marginTop: 4, borderRadius: 2, border: '1px solid #ddd' }} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5 }}>
+              <Edit3 size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+              Automatically detected. You may edit this value if needed.
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input id="ocr-weight-edit-input" type="number" value={editedWeight} min={0} step={0.1} onChange={(e) => { setEditedWeight(e.target.value); setIsManuallyEdited(true); }} className="form-input" style={{ flex: 1 }} />
+              <span style={{ fontSize: 14, color: '#555', fontWeight: 600 }}>kg</span>
+            </div>
+            {isManuallyEdited && <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Value edited by administrator.</div>}
+          </div>
+
+          <button id="ocr-continue-btn" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={confirmWeight} disabled={!editedWeight || parseFloat(editedWeight) <= 0}>Continue to Roll Data Entry →</button>
+        </div>
+      )}
+
+      {engineState === 'error' && ocrError && (
+        <div>
+          <div style={{ padding: '14px 16px', background: '#fdf2f2', border: '1px solid #f5c6cb', borderRadius: 6, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+              <AlertCircle size={16} style={{ color: '#C0392B', flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#C0392B' }}>{ocrError.title}</span>
+            </div>
+            <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.5 }}>{ocrError.message}</p>
+          </div>
+
+          <p style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>You can click <strong>Take Photo</strong> again to retry, or enter the weight manually below.</p>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5 }}>Enter weight manually (kg)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input id="ocr-manual-weight-input" type="number" value={editedWeight} min={0} step={0.1} placeholder="e.g. 1900" onChange={(e) => { setEditedWeight(e.target.value); setIsManuallyEdited(true); }} className="form-input" style={{ flex: 1 }} />
+              <span style={{ fontSize: 14, color: '#555', fontWeight: 600 }}>kg</span>
+            </div>
+          </div>
+
+          {editedWeight && parseFloat(editedWeight) > 0 && (
+            <button id="ocr-manual-continue-btn" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={confirmWeight}>Continue with Manual Weight →</button>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+);
 
     // ---------------------------------------------------------------------------
     // Retry — go back to camera_active without reloading page
@@ -517,9 +581,6 @@ export default function WeightDetectionEngine({
     // ---------------------------------------------------------------------------
     // Render helpers
     // ---------------------------------------------------------------------------
-
-    const isProcessing = engineState === "processing";
-    const showConfirmButton = engineState === "success";
 
     // ---------------------------------------------------------------------------
     // Render
