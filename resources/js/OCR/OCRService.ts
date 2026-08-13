@@ -24,6 +24,9 @@
 import { createWorker, OEM, PSM } from 'tesseract.js';
 import type { ImageQualityReport } from './ImageProcessor';
 import type { PreprocessedVariant } from './ImageProcessor';
+import { recogniseSegments } from './SegmentMatcher';
+import { classifyWithTemplates } from './TemplateClassifier';
+import { calibrateDigitTemplate, normaliseDigitRegion } from './DigitTemplateStore';
 
 // ---------------------------------------------------------------------------
 // Tesseract local resource paths (served from public/tesseract/)
@@ -74,6 +77,8 @@ export interface OcrResult {
   confidence: number;
   /** Which preprocessing variant produced this result */
   variantLabel: string;
+  /** The data-URL of the preprocessed image that won */
+  variantDataUrl: string;
   /** Raw OCR text before normalisation */
   rawText: string;
 }
@@ -262,126 +267,184 @@ function diagnoseError(quality: ImageQualityReport, rawOcrText: string): OcrErro
 }
 
 // ---------------------------------------------------------------------------
-// OCR Worker Singleton
+// OCR Worker Management — Dual Engine Architecture
+// ---------------------------------------------------------------------------
+// 
+// Worker 1: eng + LSTM — for printed text / labels / handwriting
+// Worker 2: letsgodigital + Legacy — specifically trained on 7-segment displays
+//
+// Both workers process all variants in parallel. The best result wins.
 // ---------------------------------------------------------------------------
 
-let workerInstance: any = null;
-let workerInitialising = false;
-let workerReady = false;
+interface WorkerState {
+  instance: any;
+  ready: boolean;
+  initialising: boolean;
+  failed: boolean;
+}
+
+const engWorker: WorkerState = { instance: null, ready: false, initialising: false, failed: false };
+const digitalWorker: WorkerState = { instance: null, ready: false, initialising: false, failed: false };
 
 /**
- * Get (or create) the shared Tesseract.js worker.
- * Reused across captures — creating a new worker per capture is expensive.
+ * Create or retrieve the English LSTM worker.
  */
-async function getWorker(): Promise<any> {
-  if (workerReady && workerInstance) return workerInstance;
+async function getEngWorker(): Promise<any> {
+  if (engWorker.ready && engWorker.instance) return engWorker.instance;
+  if (engWorker.failed) throw new Error('eng worker previously failed');
 
-  if (workerInitialising) {
+  if (engWorker.initialising) {
     return new Promise((resolve, reject) => {
       const interval = setInterval(() => {
-        if (workerReady && workerInstance) {
+        if (engWorker.ready && engWorker.instance) {
           clearInterval(interval);
-          resolve(workerInstance!);
+          resolve(engWorker.instance);
+        }
+        if (engWorker.failed) {
+          clearInterval(interval);
+          reject(new Error('eng worker failed'));
         }
       }, 100);
       setTimeout(() => {
         clearInterval(interval);
-        reject(new Error('Tesseract worker initialisation timed out.'));
+        reject(new Error('eng worker timed out'));
       }, 30_000);
     });
   }
 
-  workerInitialising = true;
-
+  engWorker.initialising = true;
   try {
-    // In Tesseract.js v7, pass all options (including load_system_dawg, load_freq_dawg)
-    // as part of the options object (3rd argument).
-    const worker = await createWorker(
-      'eng',
-      OEM.LSTM_ONLY,
-      buildLocalOptions(),
-    );
-
-    // PSM.SINGLE_LINE = '7'
-    // WorkerParams.tessedit_pageseg_mode expects PSM enum value
+    const worker = await createWorker('eng', OEM.LSTM_ONLY, buildLocalOptions());
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_LINE,
-      tessedit_char_whitelist: '0123456789.,',
+      tessedit_char_whitelist: '0123456789.,OoIlSBZ',
     });
-
-    workerInstance = worker;
-    workerReady = true;
-    workerInitialising = false;
+    engWorker.instance = worker;
+    engWorker.ready = true;
+    engWorker.initialising = false;
     return worker;
   } catch (err) {
-    workerInitialising = false;
+    engWorker.initialising = false;
+    engWorker.failed = true;
     throw err;
   }
 }
 
 /**
- * Pre-initialise the worker in the background.
- * Call this when the page loads so the worker is ready before first capture.
+ * Create or retrieve the letsgodigital Legacy worker.
+ * This model was specifically trained on 7-segment digital display fonts.
+ * It uses the LEGACY Tesseract engine (OEM.TESSERACT_ONLY), not LSTM.
  */
-export async function initOCRWorker(): Promise<void> {
+async function getDigitalWorker(): Promise<any> {
+  if (digitalWorker.ready && digitalWorker.instance) return digitalWorker.instance;
+  if (digitalWorker.failed) throw new Error('digital worker previously failed');
+
+  if (digitalWorker.initialising) {
+    return new Promise((resolve, reject) => {
+      const interval = setInterval(() => {
+        if (digitalWorker.ready && digitalWorker.instance) {
+          clearInterval(interval);
+          resolve(digitalWorker.instance);
+        }
+        if (digitalWorker.failed) {
+          clearInterval(interval);
+          reject(new Error('digital worker failed'));
+        }
+      }, 100);
+      setTimeout(() => {
+        clearInterval(interval);
+        reject(new Error('digital worker timed out'));
+      }, 30_000);
+    });
+  }
+
+  digitalWorker.initialising = true;
   try {
-    await getWorker();
+    const worker = await createWorker(
+      'letsgodigital',
+      OEM.TESSERACT_ONLY,
+      buildLocalOptions(),
+    );
+    await worker.setParameters({
+      tessedit_pageseg_mode: PSM.SINGLE_LINE,
+      tessedit_char_whitelist: '0123456789.',
+    });
+    digitalWorker.instance = worker;
+    digitalWorker.ready = true;
+    digitalWorker.initialising = false;
+    return worker;
   } catch (err) {
-    console.warn('[OCR] Worker pre-init failed:', err);
+    console.warn('[OCR] letsgodigital worker failed to init (legacy engine may not be available):', err);
+    digitalWorker.initialising = false;
+    digitalWorker.failed = true;
+    throw err;
   }
 }
 
 /**
- * Terminate the OCR worker and release all resources.
+ * Pre-initialise both workers in the background.
+ * Call this when the page loads so the workers are ready before first capture.
+ */
+export async function initOCRWorker(): Promise<void> {
+  // Init both in parallel — if digital fails, that's OK, we still have eng
+  await Promise.allSettled([
+    getEngWorker().catch(err => console.warn('[OCR] eng worker pre-init failed:', err)),
+    getDigitalWorker().catch(err => console.warn('[OCR] digital worker pre-init failed:', err)),
+  ]);
+}
+
+/**
+ * Terminate all OCR workers and release all resources.
  * Call this when leaving the Incoming Roll page.
  */
 export async function terminateOCRWorker(): Promise<void> {
-  if (workerInstance) {
-    await workerInstance.terminate();
-    workerInstance = null;
-    workerReady = false;
-    workerInitialising = false;
+  const tasks: Promise<void>[] = [];
+  if (engWorker.instance) {
+    tasks.push(engWorker.instance.terminate());
+    engWorker.instance = null;
+    engWorker.ready = false;
+    engWorker.initialising = false;
+    engWorker.failed = false;
   }
+  if (digitalWorker.instance) {
+    tasks.push(digitalWorker.instance.terminate());
+    digitalWorker.instance = null;
+    digitalWorker.ready = false;
+    digitalWorker.initialising = false;
+    digitalWorker.failed = false;
+  }
+  await Promise.allSettled(tasks);
 }
 
 // ---------------------------------------------------------------------------
-// Public API — run multi-pass OCR
+// Public API — run multi-pass OCR (dual engine)
 // ---------------------------------------------------------------------------
 
 /**
- * Run OCR against all preprocessing variants and return the best result.
- *
- * "Best" = highest confidence + valid numeric pattern.
- * If no variant produces a valid numeric result, returns an OcrError.
+ * Run a single worker against a list of variants and collect candidates.
  */
-export async function recogniseWeight(
+async function runWorkerOnVariants(
+  worker: any,
   variants: PreprocessedVariant[],
-  quality: ImageQualityReport,
-): Promise<{ result: OcrResult } | { error: OcrError }> {
-
-  let worker: any;
-  try {
-    worker = await getWorker();
-  } catch {
-    return {
-      error: {
-        title: 'OCR Engine Not Ready',
-        message:
-          'The local OCR engine could not be initialised. ' +
-          'Please refresh the page and try again.',
-      },
-    };
-  }
-
-  interface Candidate {
+  engineLabel: string,
+): Promise<{
+  candidates: Array<{
     weight: number;
     confidence: number;
     rawText: string;
     variantLabel: string;
-  }
-
-  const candidates: Candidate[] = [];
-  const allAttempts: Array<{ label: string; text: string; confidence: number }> = [];
+    variantDataUrl: string;
+  }>;
+  attempts: Array<{ label: string; text: string; confidence: number; engine: string }>;
+}> {
+  const candidates: Array<{
+    weight: number;
+    confidence: number;
+    rawText: string;
+    variantLabel: string;
+    variantDataUrl: string;
+  }> = [];
+  const attempts: Array<{ label: string; text: string; confidence: number; engine: string }> = [];
 
   for (const variant of variants) {
     try {
@@ -389,7 +452,7 @@ export async function recogniseWeight(
       const rawText = data.text ?? '';
       const confidence = data.confidence ?? 0;
 
-      allAttempts.push({ label: variant.label, text: rawText, confidence });
+      attempts.push({ label: variant.label, text: rawText, confidence, engine: engineLabel });
 
       const token = extractWeightToken(rawText);
       if (!token) continue;
@@ -400,45 +463,283 @@ export async function recogniseWeight(
       // Sanity-check: weighing scale values expected in range 1 – 99999 kg
       if (weight < 1 || weight > 99_999) continue;
 
-      candidates.push({ weight, confidence, rawText: rawText.trim(), variantLabel: variant.label });
+      candidates.push({
+        weight,
+        confidence,
+        rawText: rawText.trim(),
+        variantLabel: `[${engineLabel}] ${variant.label}`,
+        variantDataUrl: variant.dataUrl,
+      });
     } catch {
       continue;
     }
   }
 
+  return { candidates, attempts };
+}
+
+/**
+ * Run OCR against all preprocessing variants using BOTH engines and return the best result.
+ *
+ * "Best" = highest confidence + consistency across variants.
+ * If no variant produces a valid numeric result, returns an OcrError.
+ */
+export async function recogniseWeight(
+  variants: PreprocessedVariant[],
+  quality: ImageQualityReport,
+): Promise<{ result: OcrResult } | { error: OcrError }> {
+
+  // Collect available workers
+  const workerTasks: Promise<{
+    candidates: Array<{
+      weight: number;
+      confidence: number;
+      rawText: string;
+      variantLabel: string;
+      variantDataUrl: string;
+    }>;
+    attempts: Array<{ label: string; text: string; confidence: number; engine: string }>;
+  }>[] = [];
+
+  // Try eng worker — only on standard (non-digital) variants
+  const standardVariants = variants.filter(v => !v.digital);
+  try {
+    const ew = await getEngWorker();
+    if (standardVariants.length > 0) {
+      workerTasks.push(runWorkerOnVariants(ew, standardVariants, 'ENG'));
+    }
+  } catch {
+    console.warn('[OCR] eng worker not available');
+  }
+
+  // Try digital worker — only on digital-optimised variants (F, I, J, K)
+  const digitalVariants = variants.filter(v => v.digital);
+  try {
+    const dw = await getDigitalWorker();
+    if (digitalVariants.length > 0) {
+      workerTasks.push(runWorkerOnVariants(dw, digitalVariants, 'DIGITAL'));
+    }
+  } catch {
+    console.warn('[OCR] digital worker not available, running with eng only');
+  }
+
+  if (workerTasks.length === 0) {
+    return {
+      error: {
+        title: 'OCR Engine Not Ready',
+        message:
+          'No OCR engine could be initialised. ' +
+          'Please refresh the page and try again.',
+      },
+    };
+  }
+
+  // Run all workers (sequentially since they share the WASM thread)
+  const results = await Promise.all(workerTasks);
+  const allCandidates = results.flatMap(r => r.candidates);
+  const allAttempts = results.flatMap(r => r.attempts);
+
+  // -------------------------------------------------------------------------
+  // Deterministic 7-Segment Matcher Pass (Pure pixel sampling)
+  // -------------------------------------------------------------------------
+  for (const variant of digitalVariants) {
+    if (!variant.canvas) continue;
+    try {
+      const match = recogniseSegments(variant.canvas);
+      if (match && match.text) {
+        const token = extractWeightToken(match.text);
+        if (token) {
+          const weight = normaliseWeight(token);
+          if (weight !== null && weight >= 1 && weight <= 99_999) {
+            allCandidates.push({
+              weight,
+              confidence: match.confidence,
+              rawText: match.text,
+              variantLabel: `[SEGMENT-MATCHER] ${variant.label}`,
+              variantDataUrl: variant.dataUrl,
+            });
+            allAttempts.push({
+              label: variant.label,
+              text: match.text,
+              confidence: match.confidence,
+              engine: 'SEGMENT-MATCHER',
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[OCR] SegmentMatcher failed for variant:', variant.label, err);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Calibrated Template Classifier Pass (Structural IoU matching)
+  // -------------------------------------------------------------------------
+  for (const variant of digitalVariants) {
+    if (!variant.canvas) continue;
+    try {
+      const match = classifyWithTemplates(variant.canvas);
+      if (match && match.text) {
+        const token = extractWeightToken(match.text);
+        if (token) {
+          const weight = normaliseWeight(token);
+          if (weight !== null && weight >= 1 && weight <= 99_999) {
+            allCandidates.push({
+              weight,
+              confidence: match.confidence,
+              rawText: match.text,
+              variantLabel: `[TEMPLATE-CLASSIFIER] ${variant.label}`,
+              variantDataUrl: variant.dataUrl,
+            });
+            allAttempts.push({
+              label: variant.label,
+              text: match.text,
+              confidence: match.confidence,
+              engine: 'TEMPLATE-CLASSIFIER',
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[OCR] TemplateClassifier failed for variant:', variant.label, err);
+    }
+  }
+
   // Debug: log all attempts
   console.debug('[OCR] All recognition attempts:', allAttempts);
-  console.debug('[OCR] Valid candidates:', candidates);
+  console.debug('[OCR] Valid candidates:', allCandidates);
 
-  if (candidates.length === 0) {
+  if (allCandidates.length === 0) {
     return { error: diagnoseError(quality, '') };
   }
 
-  // Sort by confidence descending
-  candidates.sort((a, b) => b.confidence - a.confidence);
+  // -------------------------------------------------------------------------
+  // Smart candidate selection
+  // -------------------------------------------------------------------------
+  // Composite SCORE per candidate:
+  //   score = (digitCount * 1000)          ← base points for digit count
+  //         + (consistency * 800)         ← CONSENSUS BONUS: variants agreeing on same number win
+  //         + (isDigital ? 300 : 0)       ← digital engine preference
+  //         + (highConfidenceSegmentMatcher ? 300 : 0)
+  //         + confidence                    ← tiebreaker (0-100)
+  // -------------------------------------------------------------------------
 
-  // Prefer a candidate that appears more than once (consistency bonus)
+  // Count how many digits each weight value has
+  function digitCount(weight: number): number {
+    return Math.floor(weight).toString().length;
+  }
+
+  // Count consistency (how many times the same weight appears across all passes)
   const weightCounts = new Map<number, number>();
-  for (const c of candidates) {
+  for (const c of allCandidates) {
     const key = Math.round(c.weight);
     weightCounts.set(key, (weightCounts.get(key) ?? 0) + 1);
   }
-  const mostConsistent = candidates
-    .slice()
-    .sort((a, b) => {
-      const countA = weightCounts.get(Math.round(a.weight)) ?? 0;
-      const countB = weightCounts.get(Math.round(b.weight)) ?? 0;
-      if (countB !== countA) return countB - countA;
-      return b.confidence - a.confidence;
-    })[0];
+
+  // Score each candidate
+  const scored = allCandidates.map(c => {
+    const digits = digitCount(c.weight);
+    const isSegmentMatcher = (c.variantLabel.startsWith('[SEGMENT-MATCHER]') || c.variantLabel.startsWith('[TEMPLATE-CLASSIFIER]')) ? 1 : 0;
+    const isDigital = (c.variantLabel.startsWith('[DIGITAL]') || isSegmentMatcher) ? 1 : 0;
+    const consistency = weightCounts.get(Math.round(c.weight)) ?? 0;
+
+    // SegmentMatcher / TemplateClassifier bonus when confidence is high
+    const segmentBonus = (isSegmentMatcher && c.confidence >= 80) ? 300 : 0;
+
+    const score =
+      (digits * 1000) +           // A 3-digit number gets 3000, a 1-digit gets 1000
+      (consistency * 800) +       // Consensus: each variant that agrees adds +800
+      (isDigital * 300) +         // Digital engine bonus
+      segmentBonus +              // High-confidence Classifier bonus
+      c.confidence;                // Confidence (0-100) as final tiebreaker
+
+    return { ...c, score };
+  });
+
+  // Sort by score descending — highest score wins
+  scored.sort((a, b) => b.score - a.score);
+
+  console.debug('[OCR] Scored candidates:', scored.map(s => ({
+    weight: s.weight,
+    score: s.score,
+    variant: s.variantLabel,
+    confidence: s.confidence,
+  })));
+
+  const winner = scored[0];
 
   return {
     result: {
-      weight: mostConsistent.weight,
-      weightDisplay: formatWeight(mostConsistent.weight),
-      confidence: Math.round(mostConsistent.confidence * 10) / 10,
-      variantLabel: mostConsistent.variantLabel,
-      rawText: mostConsistent.rawText,
+      weight: winner.weight,
+      weightDisplay: formatWeight(winner.weight),
+      confidence: winner.confidence,
+      variantLabel: winner.variantLabel,
+      variantDataUrl: winner.variantDataUrl,
+      rawText: winner.rawText,
     },
   };
+}
+
+/**
+ * Calibrate digit shapes for the scale font using user-confirmed true weight string.
+ * Call this whenever a weight is confirmed or manually saved.
+ */
+export function calibrateScaleFont(canvas: HTMLCanvasElement, trueWeightText: string): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const { width, height } = imageData;
+
+  const columnDark = new Array(width).fill(0);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      if (imageData.data[(y * width + x) * 4] < 128) columnDark[x]++;
+    }
+  }
+
+  const minDark = Math.max(2, height * 0.03);
+  const isActive = columnDark.map(c => c >= minDark);
+
+  const regions: Array<{ start: number; end: number }> = [];
+  let inRegion = false;
+  let regionStart = 0;
+
+  for (let x = 0; x < width; x++) {
+    if (isActive[x] && !inRegion) {
+      inRegion = true;
+      regionStart = x;
+    } else if (!isActive[x] && inRegion) {
+      inRegion = false;
+      regions.push({ start: regionStart, end: x - 1 });
+    }
+  }
+  if (inRegion) regions.push({ start: regionStart, end: width - 1 });
+
+  const valid = regions.filter(r => (r.end - r.start + 1) >= width * 0.03);
+  const digitsOnly = trueWeightText.replace(/\D/g, '');
+
+  if (valid.length !== digitsOnly.length) return;
+
+  for (let i = 0; i < valid.length; i++) {
+    const r = valid[i];
+    const digitChar = digitsOnly[i];
+
+    let topY = height, botY = 0;
+    for (let x = r.start; x <= r.end; x++) {
+      for (let y = 0; y < height; y++) {
+        if (imageData.data[(y * width + x) * 4] < 128) {
+          topY = Math.min(topY, y);
+          botY = Math.max(botY, y);
+        }
+      }
+    }
+
+    const regWidth = r.end - r.start + 1;
+    const regHeight = botY - topY + 1;
+
+    const pixelData = normaliseDigitRegion(imageData, r.start, topY, regWidth, regHeight);
+    calibrateDigitTemplate(digitChar, pixelData);
+  }
+  console.info('[OCR] Calibrated templates for digits:', digitsOnly);
 }
