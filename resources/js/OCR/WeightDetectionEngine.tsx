@@ -427,6 +427,16 @@ export default function WeightDetectionEngine({
               <div style={{ fontSize: 18, color: '#555', fontWeight: 600, marginTop: 4 }}>kg</div>
             </div>
 
+            {/* Debug info — raw OCR text and variant */}
+            <div style={{
+              fontSize: 10, color: '#999', marginBottom: 14, padding: 8,
+              background: '#f9f9f9', border: '1px solid #eee', borderRadius: 4,
+              fontFamily: 'monospace', lineHeight: 1.4,
+            }}>
+              <div><strong>Raw OCR:</strong> "{ocrResult.rawText}"</div>
+              <div><strong>Variant:</strong> {ocrResult.variantLabel}</div>
+            </div>
+
             {/* Editable weight field */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 5 }}>

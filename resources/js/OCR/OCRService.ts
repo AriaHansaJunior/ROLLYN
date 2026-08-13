@@ -20,8 +20,8 @@
  * ============================================================
  */
 
-// tesseract.js uses `export = Tesseract` so we must use this import style:
-import Tesseract = require('tesseract.js');
+// Named imports from tesseract.js for Vite CJS/ESM interop compatibility
+import { createWorker, OEM, PSM } from 'tesseract.js';
 import type { ImageQualityReport } from './ImageProcessor';
 import type { PreprocessedVariant } from './ImageProcessor';
 
@@ -44,12 +44,18 @@ function localAsset(path: string): string {
  *
  * The browser never contacts an external server.
  */
-function buildLocalOptions(): Partial<Tesseract.WorkerOptions> {
+function buildLocalOptions() {
   return {
     workerPath: localAsset('worker.min.js'),
     corePath:   localAsset(''),
     langPath:   localAsset('lang-data'),
     logger: () => {},   // suppress verbose Tesseract console output
+    // Local language data in this repo is stored as plain `.traineddata` files.
+    // Disable gzip so Tesseract requests `eng.traineddata` (not `.gz`).
+    gzip: false,
+    // Tesseract initialization options for digit-only recognition
+    load_system_dawg: '0',
+    load_freq_dawg: '0',
   };
 }
 
@@ -157,12 +163,43 @@ function formatWeight(weight: number): string {
 // ---------------------------------------------------------------------------
 
 /**
+ * Correct common OCR misreadings specific to 7-segment digital displays.
+ * Mapping of commonly confused characters to their likely correct digit.
+ *
+ * Examples:
+ *   'O' (letter) is often '0' (digit)
+ *   'I' (letter) is often '1' (digit)
+ *   'l' (lowercase L) is often '1' (digit)
+ *   'S' (letter) is often '5' (digit)
+ */
+function correctCommonMisreadings(text: string): string {
+  const corrections: Record<string, string> = {
+    'O': '0',  // letter O → digit 0
+    'o': '0',  // lowercase o → digit 0
+    'I': '1',  // capital I → digit 1
+    'l': '1',  // lowercase L → digit 1
+    'S': '5',  // letter S → digit 5
+    'B': '8',  // letter B → digit 8
+    'Z': '2',  // letter Z → digit 2
+  };
+
+  let corrected = text;
+  for (const [wrong, right] of Object.entries(corrections)) {
+    corrected = corrected.replaceAll(wrong, right);
+  }
+  return corrected;
+}
+
+/**
  * Extract all plausible weight tokens from raw OCR text and return the
  * one that looks most like a weighing-scale reading.
  */
 function extractWeightToken(text: string): string | null {
+  // Apply common character corrections first
+  const corrected = correctCommonMisreadings(text);
+
   // Remove obvious non-numeric noise but keep digits, dots, commas, spaces
-  const sanitised = text.replace(/[^0-9.,\s]/g, ' ');
+  const sanitised = corrected.replace(/[^0-9.,\s]/g, ' ');
 
   // Match numeric tokens that look like weighing values
   const tokenRegex = /\d{1,4}([.,]\d{3})*([.,]\d{1,2})?/g;
@@ -228,7 +265,7 @@ function diagnoseError(quality: ImageQualityReport, rawOcrText: string): OcrErro
 // OCR Worker Singleton
 // ---------------------------------------------------------------------------
 
-let workerInstance: Tesseract.Worker | null = null;
+let workerInstance: any = null;
 let workerInitialising = false;
 let workerReady = false;
 
@@ -236,7 +273,7 @@ let workerReady = false;
  * Get (or create) the shared Tesseract.js worker.
  * Reused across captures — creating a new worker per capture is expensive.
  */
-async function getWorker(): Promise<Tesseract.Worker> {
+async function getWorker(): Promise<any> {
   if (workerReady && workerInstance) return workerInstance;
 
   if (workerInitialising) {
@@ -257,22 +294,18 @@ async function getWorker(): Promise<Tesseract.Worker> {
   workerInitialising = true;
 
   try {
-    // Pass InitOptions (load_system_dawg etc.) as the 4th argument to createWorker
-    // so they are applied during lang init — not via setParameters.
-    const worker = await Tesseract.createWorker(
+    // In Tesseract.js v7, pass all options (including load_system_dawg, load_freq_dawg)
+    // as part of the options object (3rd argument).
+    const worker = await createWorker(
       'eng',
-      Tesseract.OEM.LSTM_ONLY,
+      OEM.LSTM_ONLY,
       buildLocalOptions(),
-      {
-        load_system_dawg: '0',
-        load_freq_dawg: '0',
-      } as Partial<Tesseract.InitOptions>,
     );
 
     // PSM.SINGLE_LINE = '7'
     // WorkerParams.tessedit_pageseg_mode expects PSM enum value
     await worker.setParameters({
-      tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
+      tessedit_pageseg_mode: PSM.SINGLE_LINE,
       tessedit_char_whitelist: '0123456789.,',
     });
 
@@ -326,7 +359,7 @@ export async function recogniseWeight(
   quality: ImageQualityReport,
 ): Promise<{ result: OcrResult } | { error: OcrError }> {
 
-  let worker: Tesseract.Worker;
+  let worker: any;
   try {
     worker = await getWorker();
   } catch {
@@ -348,12 +381,15 @@ export async function recogniseWeight(
   }
 
   const candidates: Candidate[] = [];
+  const allAttempts: Array<{ label: string; text: string; confidence: number }> = [];
 
   for (const variant of variants) {
     try {
       const { data } = await worker.recognize(variant.dataUrl);
       const rawText = data.text ?? '';
       const confidence = data.confidence ?? 0;
+
+      allAttempts.push({ label: variant.label, text: rawText, confidence });
 
       const token = extractWeightToken(rawText);
       if (!token) continue;
@@ -369,6 +405,10 @@ export async function recogniseWeight(
       continue;
     }
   }
+
+  // Debug: log all attempts
+  console.debug('[OCR] All recognition attempts:', allAttempts);
+  console.debug('[OCR] Valid candidates:', candidates);
 
   if (candidates.length === 0) {
     return { error: diagnoseError(quality, '') };

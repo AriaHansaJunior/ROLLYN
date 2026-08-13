@@ -377,6 +377,24 @@ export async function preprocessImage(
   fCtx.putImageData(fData, 0, 0);
   varF = threshold(varF, 128);
 
+  // ---------------------------------------------------------------------------
+  // Variant G: Very high contrast + aggressive sharpen + binarization
+  //           (for crisp LED displays with strong contrast)
+  // ---------------------------------------------------------------------------
+  let varG = toGrayscale(cloneCanvas(baseCanvas));
+  varG = adjustBrightnessContrast(varG, 0, 0.8);
+  varG = sharpen(varG, 1.0);
+  varG = threshold(varG, 0);
+
+  // ---------------------------------------------------------------------------
+  // Variant H: Moderate brightness boost + moderate contrast + binarization
+  //           (balanced approach for various lighting conditions)
+  // ---------------------------------------------------------------------------
+  let varH = toGrayscale(cloneCanvas(baseCanvas));
+  varH = adjustBrightnessContrast(varH, 0.1, 0.5);
+  varH = sharpen(varH, 0.3);
+  varH = threshold(varH, 0);
+
   const variants: PreprocessedVariant[] = [
     { label: 'A: Grayscale baseline',           dataUrl: varA.toDataURL('image/png') },
     { label: 'B: Grayscale + contrast + sharpen', dataUrl: varB.toDataURL('image/png') },
@@ -384,6 +402,8 @@ export async function preprocessImage(
     { label: 'D: Brightness + auto-threshold',  dataUrl: varD.toDataURL('image/png') },
     { label: 'E: Contrast + sharpen + auto-thr', dataUrl: varE.toDataURL('image/png') },
     { label: 'F: Inverted + binarized',         dataUrl: varF.toDataURL('image/png') },
+    { label: 'G: High contrast + sharpen + thr', dataUrl: varG.toDataURL('image/png') },
+    { label: 'H: Balanced bright + contrast',   dataUrl: varH.toDataURL('image/png') },
   ];
 
   return { variants, rawCanvas };
