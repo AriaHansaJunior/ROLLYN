@@ -28,6 +28,10 @@ export interface PreprocessedVariant {
   label: string;
   /** The preprocessed image as a data-URL (image/png) */
   dataUrl: string;
+  /** True if this variant is optimised for 7-segment digital displays */
+  digital: boolean;
+  /** The preprocessed HTMLCanvasElement */
+  canvas?: HTMLCanvasElement;
 }
 
 /**
@@ -112,6 +116,22 @@ function toGrayscale(canvas: HTMLCanvasElement): HTMLCanvasElement {
   for (let i = 0; i < data.length; i += 4) {
     const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
     data[i] = data[i + 1] = data[i + 2] = gray;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+/** 
+ * Convert a canvas to grayscale by taking the maximum of the RGB channels. 
+ * Essential for Red LEDs, which appear very dark in standard grayscale.
+ */
+function toMaxGrayscale(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const ctx = canvas.getContext('2d')!;
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+  for (let i = 0; i < data.length; i += 4) {
+    const maxVal = Math.max(data[i], data[i + 1], data[i + 2]);
+    data[i] = data[i + 1] = data[i + 2] = maxVal;
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas;
@@ -223,6 +243,19 @@ function cloneCanvas(src: HTMLCanvasElement): HTMLCanvasElement {
   return canvas;
 }
 
+/**
+ * Add a solid white border around the canvas. 
+ * Tesseract REQUIRES quiet zones (margins) to detect text baselines.
+ * If text touches the edge, Tesseract will completely ignore it or hallucinate.
+ */
+function padCanvas(src: HTMLCanvasElement, padding = 40): HTMLCanvasElement {
+  const [canvas, ctx] = makeCanvas(src.width + padding * 2, src.height + padding * 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(src, padding, padding);
+  return canvas;
+}
+
 // ---------------------------------------------------------------------------
 // Image quality diagnostics (used by OCRService for error diagnosis)
 // ---------------------------------------------------------------------------
@@ -318,8 +351,10 @@ export async function preprocessImage(
   // --- Crop to ROI ---
   const roiCanvas = cropROI(fullCanvas, roi);
 
-  // --- Upscale to a consistent width for OCR (1200px wide) ---
-  const TARGET_W = 1200;
+  // --- Upscale to a consistent width for OCR (400px wide) ---
+  // Note: Tesseract fails if characters are too large (stroke width too thick).
+  // 400px ensures even full-screen digits have a normal font size for the engine.
+  const TARGET_W = 400;
   const baseCanvas = upscale(roiCanvas, TARGET_W);
 
   // We return the raw (colour, upscaled) canvas for quality analysis
@@ -361,21 +396,20 @@ export async function preprocessImage(
   varE = threshold(varE, 0); // auto threshold
 
   // ---------------------------------------------------------------------------
-  // Variant F: Inverted grayscale + binarization
-  //           (helps dark-on-light displays / LED negatives)
+  // Variant F: Inverted + binarized (optimised for 7-segment LED/LCD)
   // ---------------------------------------------------------------------------
   let varF = toGrayscale(cloneCanvas(baseCanvas));
-  varF = adjustBrightnessContrast(varF, 0, 0.3);
-  // Invert
-  const fCtx = varF.getContext('2d')!;
-  const fData = fCtx.getImageData(0, 0, varF.width, varF.height);
-  for (let i = 0; i < fData.data.length; i += 4) {
-    fData.data[i] = 255 - fData.data[i];
-    fData.data[i + 1] = 255 - fData.data[i + 1];
-    fData.data[i + 2] = 255 - fData.data[i + 2];
+  varF = adjustBrightnessContrast(varF, 0.2, 0.6);
+  const ctxF = varF.getContext('2d')!;
+  const imgF = ctxF.getImageData(0, 0, varF.width, varF.height);
+  for (let px = 0; px < imgF.data.length; px += 4) {
+    imgF.data[px] = 255 - imgF.data[px];
+    imgF.data[px + 1] = 255 - imgF.data[px + 1];
+    imgF.data[px + 2] = 255 - imgF.data[px + 2];
   }
-  fCtx.putImageData(fData, 0, 0);
-  varF = threshold(varF, 128);
+  ctxF.putImageData(imgF, 0, 0);
+  varF = threshold(varF, 0);
+  varF = cleanLedCanvas(varF);
 
   // ---------------------------------------------------------------------------
   // Variant G: Very high contrast + aggressive sharpen + binarization
@@ -395,15 +429,187 @@ export async function preprocessImage(
   varH = sharpen(varH, 0.3);
   varH = threshold(varH, 0);
 
+  /**
+   * Clean unwanted border bars, display frame edges, and noise from LED variants.
+   * Erases horizontal/vertical border bars and enclosing frame boxes to pure white.
+   */
+  function cleanLedCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const { width, height, data } = imageData;
+    const visited = new Uint8Array(width * height);
+    const getIdx = (x: number, y: number) => y * width + x;
+
+    interface Comp {
+      pixels: number[];
+      minX: number; maxX: number; minY: number; maxY: number;
+      w: number; h: number;
+      centerX: number; centerY: number;
+    }
+
+    const comps: Comp[] = [];
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = getIdx(x, y);
+        if (visited[idx] === 1 || data[idx * 4] >= 128) continue;
+
+        const pixels: number[] = [];
+        const queue: Array<[number, number]> = [[x, y]];
+        visited[idx] = 1;
+
+        let minX = x, maxX = x, minY = y, maxY = y;
+        let head = 0;
+
+        while (head < queue.length) {
+          const [cx, cy] = queue[head++];
+          const pIdx = getIdx(cx, cy);
+          pixels.push(pIdx);
+
+          if (cx < minX) minX = cx;
+          if (cx > maxX) maxX = cx;
+          if (cy < minY) minY = cy;
+          if (cy > maxY) maxY = cy;
+
+          const neighbors: Array<[number, number]> = [
+            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+          ];
+
+          for (const [nx, ny] of neighbors) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              const nIdx = getIdx(nx, ny);
+              if (visited[nIdx] === 0 && data[nIdx * 4] < 128) {
+                visited[nIdx] = 1;
+                queue.push([nx, ny]);
+              }
+            }
+          }
+        }
+
+        comps.push({
+          pixels,
+          minX, maxX, minY, maxY,
+          w: maxX - minX + 1,
+          h: maxY - minY + 1,
+          centerX: (minX + maxX) / 2,
+          centerY: (minY + maxY) / 2,
+        });
+      }
+    }
+
+    // Identify border bars, frame enclosures, and noise to erase
+    for (const comp of comps) {
+      const touchesTopOrBottom = (comp.minY <= 15 || comp.maxY >= height - 16);
+      const touchesSide = (comp.minX <= 15 || comp.maxX >= width - 16);
+
+      const isHorizontalBorderBar = touchesTopOrBottom && comp.w > width * 0.25;
+      const isVerticalBorderBar = touchesSide && comp.h > height * 0.25;
+
+      const enclosesOther = comps.some(other =>
+        other !== comp && other.pixels.length >= 15 &&
+        other.centerX > comp.minX + 4 && other.centerX < comp.maxX - 4 &&
+        other.centerY > comp.minY + 4 && other.centerY < comp.maxY - 4
+      );
+
+      const isNoise = comp.pixels.length < 12;
+
+      if (isHorizontalBorderBar || isVerticalBorderBar || enclosesOther || isNoise) {
+        for (const pIdx of comp.pixels) {
+          data[pIdx * 4] = 255;
+          data[pIdx * 4 + 1] = 255;
+          data[pIdx * 4 + 2] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helper: create an inverted + blurred + thresholded variant for LED displays
+  // Uses toMaxGrayscale to handle colored LEDs (red, green, etc.)
+  // ---------------------------------------------------------------------------
+  function makeLedVariant(blurPx: number, contrast: number): HTMLCanvasElement {
+    const [bc, bctx] = makeCanvas(baseCanvas.width, baseCanvas.height);
+    if (blurPx > 0) {
+      bctx.filter = `blur(${blurPx}px)`;
+    }
+    bctx.drawImage(baseCanvas, 0, 0);
+    bctx.filter = 'none';
+
+    let c = toMaxGrayscale(bc);
+    c = adjustBrightnessContrast(c, 0, contrast);
+
+    // Bright LED Peak Thresholding:
+    // Glowing LED segments are very bright (> 150 luminance). Unlit ghost segments and background
+    // are dimmer (< 100). Isolate glowing LED pixels to eliminate ghost segments.
+    const ctx2 = c.getContext('2d')!;
+    const img = ctx2.getImageData(0, 0, c.width, c.height);
+    const { width, height, data } = img;
+
+    // Find peak luminance histogram
+    let maxLum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] > maxLum) maxLum = data[i];
+    }
+
+    const cutoff = Math.max(100, Math.round(maxLum * 0.52));
+
+    // Invert & threshold directly: Lit LED (>= cutoff) → BLACK (0), Background (< cutoff) → WHITE (255)
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = data[i]; // R channel in maxGrayscale
+      const isLit = lum >= cutoff;
+      const pixelVal = isLit ? 0 : 255;
+      data[i] = pixelVal;
+      data[i + 1] = pixelVal;
+      data[i + 2] = pixelVal;
+    }
+
+    ctx2.putImageData(img, 0, 0);
+
+    // Clean top/side border bars and bezel artifacts from variant canvas
+    c = cleanLedCanvas(c);
+    return c;
+  }
+
+  // Variant I: LCD (dark on light) — light blur to bridge small gaps
+  const [blurCanvas1, bCtx1] = makeCanvas(baseCanvas.width, baseCanvas.height);
+  bCtx1.filter = 'blur(4px)';
+  bCtx1.drawImage(baseCanvas, 0, 0);
+  bCtx1.filter = 'none';
+  let varI = toGrayscale(blurCanvas1);
+  varI = adjustBrightnessContrast(varI, 0, 0.8);
+  varI = threshold(varI, 0);
+
+  // Variant J: LED Sharp — inverted, NO blur (for clean/close-up displays)
+  const varJ = makeLedVariant(0, 0.6);
+
+  // Variant K: LED Light Blur (3px) — preserves holes in 8, 0, 6, 9
+  const varK = makeLedVariant(3, 0.6);
+
+  // Variant L: LED Medium Blur (6px) — good balance for most digits
+  const varL = makeLedVariant(6, 0.6);
+
+  // Variant M: LED Heavy Blur (10px) — bridges wider gaps in 3, 5, 7
+  const varM = makeLedVariant(10, 0.7);
+
   const variants: PreprocessedVariant[] = [
-    { label: 'A: Grayscale baseline',           dataUrl: varA.toDataURL('image/png') },
-    { label: 'B: Grayscale + contrast + sharpen', dataUrl: varB.toDataURL('image/png') },
-    { label: 'C: Binarized (128)',               dataUrl: varC.toDataURL('image/png') },
-    { label: 'D: Brightness + auto-threshold',  dataUrl: varD.toDataURL('image/png') },
-    { label: 'E: Contrast + sharpen + auto-thr', dataUrl: varE.toDataURL('image/png') },
-    { label: 'F: Inverted + binarized',         dataUrl: varF.toDataURL('image/png') },
-    { label: 'G: High contrast + sharpen + thr', dataUrl: varG.toDataURL('image/png') },
-    { label: 'H: Balanced bright + contrast',   dataUrl: varH.toDataURL('image/png') },
+    { label: 'A: Grayscale baseline',           dataUrl: padCanvas(varA).toDataURL('image/png'), digital: false, canvas: padCanvas(varA) },
+    { label: 'B: Grayscale + contrast + sharpen', dataUrl: padCanvas(varB).toDataURL('image/png'), digital: false, canvas: padCanvas(varB) },
+    { label: 'C: Binarized (128)',               dataUrl: padCanvas(varC).toDataURL('image/png'), digital: false, canvas: padCanvas(varC) },
+    { label: 'D: Brightness + auto-threshold',  dataUrl: padCanvas(varD).toDataURL('image/png'), digital: false, canvas: padCanvas(varD) },
+    { label: 'E: Contrast + sharpen + auto-thr', dataUrl: padCanvas(varE).toDataURL('image/png'), digital: false, canvas: padCanvas(varE) },
+    { label: 'F: Inverted + binarized',         dataUrl: padCanvas(varF).toDataURL('image/png'), digital: true,  canvas: padCanvas(varF) },
+    { label: 'G: High contrast + sharpen + thr', dataUrl: padCanvas(varG).toDataURL('image/png'), digital: false, canvas: padCanvas(varG) },
+    { label: 'H: Balanced bright + contrast',   dataUrl: padCanvas(varH).toDataURL('image/png'), digital: false, canvas: padCanvas(varH) },
+    { label: 'I: LCD Light Blur (4px)',          dataUrl: padCanvas(varI).toDataURL('image/png'), digital: false, canvas: padCanvas(varI) },
+    { label: 'J: LED Sharp (no blur)',           dataUrl: padCanvas(varJ).toDataURL('image/png'), digital: true,  canvas: padCanvas(varJ) },
+    { label: 'K: LED Light Blur (3px)',          dataUrl: padCanvas(varK).toDataURL('image/png'), digital: true,  canvas: padCanvas(varK) },
+    { label: 'L: LED Medium Blur (6px)',         dataUrl: padCanvas(varL).toDataURL('image/png'), digital: true,  canvas: padCanvas(varL) },
+    { label: 'M: LED Heavy Blur (10px)',         dataUrl: padCanvas(varM).toDataURL('image/png'), digital: true,  canvas: padCanvas(varM) },
   ];
 
   return { variants, rawCanvas };

@@ -25,7 +25,7 @@ import { Camera, CheckCircle, AlertCircle, Loader, RefreshCw, Edit3 } from 'luci
 
 import CameraModal from './CameraModal';
 import { preprocessImage, analyseImageQuality, DEFAULT_ROI, type ROI } from './ImageProcessor';
-import { initOCRWorker, recogniseWeight, terminateOCRWorker, type OcrResult, type OcrError } from './OCRService';
+import { initOCRWorker, recogniseWeight, terminateOCRWorker, calibrateScaleFont, type OcrResult, type OcrError } from './OCRService';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,6 +132,8 @@ export default function WeightDetectionEngine({
   // Take Photo — single frame capture + preprocessing + OCR
   // ---------------------------------------------------------------------------
 
+  const latestVariantsRef = useRef<any[]>([]);
+
   const takePhoto = useCallback(async () => {
     const video = videoRef.current;
     if (!video || !streamRef.current) return;
@@ -143,6 +145,7 @@ export default function WeightDetectionEngine({
     try {
       // 1. Preprocess: capture frame, crop ROI, produce 6 variants
       const { variants, rawCanvas } = await preprocessImage(video, roi);
+      latestVariantsRef.current = variants;
 
       // 2. Analyse image quality for diagnostic generation
       const quality = analyseImageQuality(rawCanvas);
@@ -190,6 +193,16 @@ export default function WeightDetectionEngine({
   function confirmWeight() {
     const numericWeight = parseFloat(editedWeight.replace(/,/g, ''));
     if (isNaN(numericWeight) || numericWeight <= 0) return;
+
+    // Automatically calibrate digit templates for user's scale font
+    const digitalVariant = latestVariantsRef.current.find(v => v.digital && v.canvas);
+    if (digitalVariant && digitalVariant.canvas) {
+      try {
+        calibrateScaleFont(digitalVariant.canvas, String(numericWeight));
+      } catch (err) {
+        console.warn('[OCR] Calibration on confirm skipped:', err);
+      }
+    }
 
     const display = numericWeight.toLocaleString('en-US', {
       maximumFractionDigits: 2,
@@ -435,6 +448,14 @@ export default function WeightDetectionEngine({
             }}>
               <div><strong>Raw OCR:</strong> "{ocrResult.rawText}"</div>
               <div><strong>Variant:</strong> {ocrResult.variantLabel}</div>
+              <div style={{ marginTop: 8 }}>
+                <strong>Preprocessed Image:</strong>
+                <img 
+                  src={ocrResult.variantDataUrl} 
+                  alt="Preprocessed OCR input" 
+                  style={{ width: '100%', marginTop: 4, borderRadius: 2, border: '1px solid #ddd' }} 
+                />
+              </div>
             </div>
 
             {/* Editable weight field */}
