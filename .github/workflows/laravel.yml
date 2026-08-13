@@ -28,7 +28,19 @@ jobs:
     - name: Install Dependencies
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
     - name: Generate key
-      run: php artisan key:generate
+      run: |
+        # Generate an app key if missing and export it to subsequent steps
+        if [ -f .env ] && grep -q '^APP_KEY=' .env; then
+          echo ".env already contains APP_KEY"
+        else
+          php artisan key:generate --ansi
+        fi
+        if [ -f .env ]; then
+          KEY=$(grep '^APP_KEY=' .env | sed 's/^APP_KEY=//') || true
+          if [ -n "$KEY" ]; then
+            echo "APP_KEY=$KEY" >> $GITHUB_ENV
+          fi
+        fi
     - name: Directory Permissions
       run: chmod -R 777 storage bootstrap/cache
     - name: Create Database
