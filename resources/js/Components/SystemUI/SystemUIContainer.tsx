@@ -56,13 +56,13 @@ export default function SystemUIContainer() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="w-full max-w-md overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl"
+                            className="w-full max-w-md mx-auto overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl"
                         >
-                            <div className="p-6">
-                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                            <div className="p-6 text-center">
+                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
                                     {modal.title}
                                 </h2>
-                                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                <p className="text-gray-600 dark:text-gray-400 mb-6 text-center leading-relaxed">
                                     {modal.message}
                                 </p>
 
@@ -80,7 +80,7 @@ export default function SystemUIContainer() {
                                     />
                                 )}
 
-                                <div className="flex justify-end space-x-3">
+                                <div className="flex justify-center items-center gap-3">
                                     {modal.type !== 'alert' && (
                                         <button
                                             onClick={handleCancel}
