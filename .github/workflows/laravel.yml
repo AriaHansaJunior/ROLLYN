@@ -17,7 +17,14 @@ jobs:
         php-version: '8.3'
     - uses: actions/checkout@v4
     - name: Copy .env
-      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      run: |
+        if [ -f .env ]; then
+          echo ".env already exists"
+        elif [ -f .env.example ]; then
+          cp .env.example .env
+        else
+          echo "APP_ENV=testing" > .env
+        fi
     - name: Install Dependencies
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
     - name: Generate key
