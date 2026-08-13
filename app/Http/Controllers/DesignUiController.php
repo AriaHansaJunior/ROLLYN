@@ -21,4 +21,5 @@ class DesignUiController extends Controller
     public function reports() { return Inertia::render('Reports'); }
     public function userManagement() { return Inertia::render('UserManagement'); }
     public function profile() { return Inertia::render('Profile'); }
+    public function notifications() { return Inertia::render('Notifications'); }
 }

@@ -19,25 +19,39 @@ export default function OcrMonitoring() {
   })
 
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <h2 className="page-title" style={{ marginBottom: 16 }}>OCR Monitoring</h2>
-
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F5F5', border: '1px solid #DDDDDD', borderRadius: 4, padding: '6px 10px', flex: '1 1 200px' }}>
-          <Search size={14} style={{ color: '#999' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roll, admin, ID..." className="form-input" style={{ padding: 0, border: 'none', background: 'none', boxShadow: 'none' }} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Filter size={13} style={{ color: '#777' }} />
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="form-input" style={{ width: 'auto' }}>
-            <option>All</option><option>Success</option><option>Error</option>
-          </select>
-        </div>
-        <span style={{ fontSize: 12, color: '#777', marginLeft: 'auto' }}>{filtered.length} records</span>
+    <div className="py-4 px-2.5 sm:px-6 space-y-4">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">OCR Monitoring</h2>
+        <p className="text-xs text-slate-500 mt-0.5">Real-time log of camera scale weight recognition events</p>
       </div>
 
-      <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+      <div className="card p-3 sm:p-4 flex flex-wrap gap-2.5 items-center justify-between">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[200px]">
+          <Search size={14} className="text-slate-400 shrink-0" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search roll, admin, ID..."
+            className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter size={13} className="text-slate-500" />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="form-input text-xs py-1.5"
+          >
+            <option value="All">All Statuses</option>
+            <option value="Success">Success</option>
+            <option value="Error">Error</option>
+          </select>
+          <span className="text-xs font-semibold text-slate-500 ml-2">{filtered.length} records</span>
+        </div>
+      </div>
+
+      <div className="card overflow-x-auto">
+        <table className="data-table w-full min-w-[850px] text-left border-collapse text-xs">
           <thead>
             <tr>
               <th>ID</th>
@@ -55,14 +69,14 @@ export default function OcrMonitoring() {
               const sc = statusBadge[r.status] || { bg: '#EEEEEE', color: '#333' }
               return (
                 <tr key={r.id}>
-                  <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.id}</td>
-                  <td style={{ fontSize: 12 }}>{r.timestamp}</td>
-                  <td style={{ fontWeight: 600, color: '#286090', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.roll}</td>
-                  <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600 }}>{r.detectedWeight}</td>
-                  <td><span className="badge" style={{ background: sc.bg, color: sc.color }}>{r.status}</span></td>
-                  <td style={{ color: r.error === '-' ? '#999' : '#C0392B', fontSize: 12 }}>{r.error}</td>
-                  <td style={{ fontSize: 12 }}>{r.admin}</td>
-                  <td style={{ fontSize: 12 }}>{r.result}</td>
+                  <td className="font-mono text-xs text-slate-500">{r.id}</td>
+                  <td className="text-xs text-slate-600">{r.timestamp}</td>
+                  <td className="font-bold text-blue-700 font-mono text-xs">{r.roll}</td>
+                  <td className="font-mono text-xs font-bold text-slate-900">{r.detectedWeight}</td>
+                  <td><span className="badge" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span></td>
+                  <td className={`text-xs ${r.error === '-' ? 'text-slate-400' : 'text-red-600 font-semibold'}`}>{r.error}</td>
+                  <td className="text-xs text-slate-700">{r.admin}</td>
+                  <td className="text-xs text-slate-700">{r.result}</td>
                 </tr>
               )
             })}

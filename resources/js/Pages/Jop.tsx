@@ -2,35 +2,47 @@ import { jopData } from '../data/dummy'
 
 export default function Jop() {
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <h2 className="page-title" style={{ marginBottom: 16 }}>JOP — Job Order Production</h2>
-      <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+    <div className="py-4 px-2.5 sm:px-6 space-y-4">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Job Order Production (JOP)</h2>
+        <p className="text-xs text-slate-500 mt-0.5">Manufacturing execution tracking and completion status by production order</p>
+      </div>
+
+      <div className="card overflow-x-auto">
+        <table className="data-table w-full min-w-[750px] text-left border-collapse text-xs">
           <thead>
             <tr>
-              <th>JOP</th><th>SPK</th><th>PO</th><th>Customer</th><th>Grade</th>
-              <th>Target Rolls</th><th>Completed Rolls</th><th>Progress</th>
+              <th>JOP</th>
+              <th>SPK</th>
+              <th>PO</th>
+              <th>Customer</th>
+              <th>Grade</th>
+              <th className="text-right">Target Rolls</th>
+              <th className="text-right">Completed</th>
+              <th className="w-48">Progress</th>
             </tr>
           </thead>
           <tbody>
             {jopData.map(r => {
               const pct = r.progress
-              const color = pct >= 100 ? '#5CB85C' : pct >= 60 ? '#337AB7' : '#8A6D3B'
+              const colorClass = pct >= 100 ? 'bg-green-500 text-green-700' : pct >= 60 ? 'bg-blue-600 text-blue-700' : 'bg-amber-500 text-amber-700'
+              const barBg = pct >= 100 ? 'bg-green-500' : pct >= 60 ? 'bg-blue-600' : 'bg-amber-500'
+
               return (
                 <tr key={r.jop}>
-                  <td style={{ fontWeight: 700, color: '#286090', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.jop}</td>
-                  <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.spk}</td>
-                  <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.po}</td>
-                  <td style={{ fontWeight: 500 }}>{r.customer}</td>
+                  <td className="font-bold text-blue-700 font-mono text-xs">{r.jop}</td>
+                  <td className="font-mono text-xs text-slate-600">{r.spk}</td>
+                  <td className="font-mono text-xs text-slate-600">{r.po}</td>
+                  <td className="font-medium text-slate-900">{r.customer}</td>
                   <td>{r.grade}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.target}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.rolls}</td>
+                  <td className="text-right font-semibold">{r.target}</td>
+                  <td className="text-right font-bold text-slate-900">{r.rolls}</td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, height: 8, background: '#EEEEEE', borderRadius: 4, minWidth: 80 }}>
-                        <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: color, borderRadius: 4 }} />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden min-w-[60px]">
+                        <div className={`h-full rounded-full ${barBg}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color, width: 36 }}>{pct}%</span>
+                      <span className={`text-[11px] font-bold w-9 text-right ${colorClass.split(' ')[1]}`}>{pct}%</span>
                     </div>
                   </td>
                 </tr>

@@ -1,5 +1,4 @@
 import { useState, useEffect, ReactNode } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { usePage } from '@inertiajs/react'
 import Sidebar from '../Components/Sidebar'
 import Header from '../Components/Header'
@@ -17,13 +16,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Derive activePage from URL (e.g., "/dashboard" -> "dashboard")
   const activePage = url === '/' ? 'dashboard' : url.split('/')[1] || 'dashboard'
 
-  const sidebarWidth = sidebarCollapsed ? 56 : 220
+  const sidebarWidth = sidebarCollapsed ? 56 : 280
 
   useEffect(() => {
     const handleResize = () => {
-      const nextIsMobile = window.innerWidth <= 679
+      const nextIsMobile = window.innerWidth < 680
       setIsMobile(nextIsMobile)
-      if (nextIsMobile) {
+      if (!nextIsMobile) {
         setMobileMenuOpen(false)
       }
     }
@@ -64,18 +63,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
           sidebarCollapsed={sidebarCollapsed}
         />
         <main style={{ flex: 1, overflowY: 'auto', position: 'relative', display: 'flex', justifyContent: 'center' }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={url}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              style={{ width: '100%', maxWidth: 1420, minHeight: '100%', padding: isMobile ? '0 12px 24px' : '0 28px 28px' }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 1420,
+              minHeight: '100%',
+              padding: isMobile ? '0 12px 24px' : '0 28px 28px',
+            }}
+          >
+            {children}
+          </div>
         </main>
       </div>
     </div>

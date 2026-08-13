@@ -21,3 +21,4 @@ Route::get('/spk-po', [DesignUiController::class, 'spkPo']);
 Route::get('/reports', [DesignUiController::class, 'reports']);
 Route::get('/user-management', [DesignUiController::class, 'userManagement']);
 Route::get('/profile', [DesignUiController::class, 'profile']);
+Route::get('/notifications', [DesignUiController::class, 'notifications']);

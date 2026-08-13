@@ -40,7 +40,7 @@ export default function Dashboard() {
           <p className="text-xs text-slate-500 mt-0.5">Real-time metrics & operational status</p>
         </div>
 
-        <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-2 min-[680px]:grid-cols-3 min-[920px]:grid-cols-4 min-[1180px]:grid-cols-5 gap-2.5">
           {kpis.map(kpi => {
             const Icon = kpi.icon
             return (
@@ -67,7 +67,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Grid: Warehouse Condition Table + Operational Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+      <div className="grid grid-cols-1 min-[1180px]:grid-cols-[1fr_320px] gap-4">
         
         {/* Warehouse Overview */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
@@ -174,7 +174,7 @@ export default function Dashboard() {
       </div>
 
       {/* Analytics Row: Demand Forecast & AI Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+      <div className="grid grid-cols-1 min-[1180px]:grid-cols-[1fr_320px] gap-4">
         {/* Demand Forecast Chart */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">

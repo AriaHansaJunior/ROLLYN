@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Download } from 'lucide-react'
 import { rollInventory } from '../data/dummy'
 import { router } from '@inertiajs/react'
+import { SystemUI } from '@/Utils/SystemUI'
 
 const statusColors: Record<string, { bg: string; color: string }> = {
   'Slotted': { bg: '#d0e8f5', color: '#286090' },
@@ -52,6 +53,10 @@ export default function RollInventory() {
     return sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
   }
 
+  function handleExport() {
+    SystemUI.toast({ message: 'Roll inventory exported successfully.', type: 'success' })
+  }
+
   const cols: { key: string; label: string }[] = [
     { key: 'id', label: 'Roll No.' },
     { key: 'form', label: 'Form No.' },
@@ -68,69 +73,89 @@ export default function RollInventory() {
   ]
 
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 className="page-title">Roll Inventory</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm"><Download size={13} /> Export</button>
+    <div className="py-4 px-2.5 sm:px-6 space-y-4">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Roll Inventory</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Comprehensive catalog of physical rolls across all warehouses</p>
+        </div>
+        <div className="flex gap-2">
+          <button className="btn btn-secondary btn-sm" onClick={handleExport}>
+            <Download size={13} /> <span>Export</span>
+          </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F5F5', border: '1px solid #DDDDDD', borderRadius: 4, padding: '6px 10px', flex: '1 1 200px', minWidth: 160 }}>
-          <Search size={14} style={{ color: '#999', flexShrink: 0 }} />
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search roll, grade, JOP, location..." className="form-input" style={{ padding: 0, border: 'none', background: 'none', boxShadow: 'none' }} />
+      <div className="card p-3 sm:p-4 flex flex-wrap gap-2.5 items-center justify-between">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[200px]">
+          <Search size={14} className="text-slate-400 shrink-0" />
+          <input
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
+            placeholder="Search roll, grade, JOP, location..."
+            className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+          />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Filter size={13} style={{ color: '#777' }} />
-          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }} className="form-input" style={{ width: 'auto', paddingRight: 28 }}>
-            {statuses.map(s => <option key={s}>{s}</option>)}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <Filter size={13} className="text-slate-500" />
+            <select
+              value={statusFilter}
+              onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+              className="form-input text-xs py-1.5"
+            >
+              {statuses.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <select
+            value={gradeFilter}
+            onChange={e => { setGradeFilter(e.target.value); setPage(1) }}
+            className="form-input text-xs py-1.5"
+          >
+            {grades.map(g => <option key={g}>{g}</option>)}
           </select>
+          <span className="text-xs font-semibold text-slate-500">{filtered.length} rolls</span>
         </div>
-        <select value={gradeFilter} onChange={e => { setGradeFilter(e.target.value); setPage(1) }} className="form-input" style={{ width: 'auto', paddingRight: 28 }}>
-          {grades.map(g => <option key={g}>{g}</option>)}
-        </select>
-        <span style={{ fontSize: 12, color: '#777', marginLeft: 'auto' }}>{filtered.length} rolls</span>
       </div>
 
       {/* Table */}
-      <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100 }}>
+      <div className="card overflow-x-auto">
+        <table className="data-table w-full min-w-[1050px] text-left border-collapse text-xs">
           <thead>
             <tr>
               {cols.map(col => (
-                <th key={col.key} onClick={() => sort(col.key)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <th key={col.key} onClick={() => sort(col.key)} className="cursor-pointer select-none">
+                  <div className="flex items-center gap-1">
                     {col.label} <SortIcon k={col.key} />
                   </div>
                 </th>
               ))}
-              <th>Action</th>
+              <th className="text-right">Action</th>
             </tr>
           </thead>
           <tbody>
             {paged.length === 0 ? (
-              <tr><td colSpan={cols.length + 1} style={{ textAlign: 'center', padding: 32, color: '#999' }}>No rolls found.</td></tr>
+              <tr><td colSpan={cols.length + 1} className="text-center py-8 text-slate-400">No rolls found.</td></tr>
             ) : paged.map(r => {
               const sc = statusColors[r.status] || { bg: '#EEEEEE', color: '#333' }
               return (
                 <tr key={r.id}>
-                  <td><span style={{ fontWeight: 700, color: '#286090', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.id}</span></td>
-                  <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.form}</td>
-                  <td style={{ textAlign: 'center' }}><span className="badge" style={{ background: '#F5F5F5', color: '#333', border: '1px solid #DDD' }}>{r.shift}</span></td>
-                  <td style={{ fontSize: 12 }}>{r.date}</td>
-                  <td><span style={{ fontWeight: 600 }}>{r.grade}</span></td>
-                  <td style={{ textAlign: 'right' }}>{r.gsm}</td>
-                  <td style={{ textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.weight.toLocaleString()}</td>
-                  <td style={{ textAlign: 'right' }}>{r.width}</td>
-                  <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.location || <span style={{ color: '#C0392B' }}>No Slot</span>}</td>
-                  <td style={{ fontSize: 12 }}>{r.jop}</td>
-                  <td style={{ fontSize: 12 }}>{r.pic}</td>
-                  <td><span className="badge" style={{ background: sc.bg, color: sc.color }}>{r.status}</span></td>
-                  <td>
-                    <button className="btn btn-secondary btn-sm" onClick={() => router.visit('/roll-detail')} style={{ padding: '3px 8px' }}>
-                      <Eye size={12} />
+                  <td><span className="font-bold text-blue-700 font-mono text-xs">{r.id}</span></td>
+                  <td className="font-mono text-xs">{r.form}</td>
+                  <td className="text-center"><span className="badge bg-slate-100 text-slate-700 border-slate-200">{r.shift}</span></td>
+                  <td className="text-xs">{r.date}</td>
+                  <td><span className="font-semibold text-slate-800">{r.grade}</span></td>
+                  <td className="text-right">{r.gsm}</td>
+                  <td className="text-right font-mono text-xs">{r.weight.toLocaleString()}</td>
+                  <td className="text-right">{r.width}</td>
+                  <td className="font-mono text-xs">{r.location || <span className="text-red-600">No Slot</span>}</td>
+                  <td className="text-xs">{r.jop}</td>
+                  <td className="text-xs">{r.pic}</td>
+                  <td><span className="badge" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span></td>
+                  <td className="text-right">
+                    <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer" onClick={() => router.visit('/roll-detail')} title="View Roll Detail">
+                      <Eye size={13} />
                     </button>
                   </td>
                 </tr>
@@ -141,14 +166,14 @@ export default function RollInventory() {
       </div>
 
       {/* Pagination */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 12 }}>
-        <span style={{ fontSize: 12, color: '#777' }}>
+      <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
+        <span className="text-xs text-slate-500">
           Showing {Math.min((page - 1) * PER_PAGE + 1, filtered.length)}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
         </span>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className="flex gap-1">
           <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-            <button key={p} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPage(p)} style={{ minWidth: 32, justifyContent: 'center' }}>{p}</button>
+            <button key={p} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-secondary'} min-w-[30px] justify-center`} onClick={() => setPage(p)}>{p}</button>
           ))}
           <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
         </div>

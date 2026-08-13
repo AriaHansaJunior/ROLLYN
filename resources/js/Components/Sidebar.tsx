@@ -25,7 +25,7 @@ const navSections = [
     label: 'Orders',
     items: [
       { id: 'target-order', label: 'Target Order', icon: Target },
-      { id: 'jop', label: 'JOP', icon: FileText },
+      { id: 'jop', label: 'Job Order Production (JOP)', icon: FileText },
       { id: 'spk-po', label: 'SPK / PO', icon: FileText },
     ]
   },
@@ -63,8 +63,8 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
 
       <aside
         style={{
-          width: collapsed && !mobileOpen ? 56 : 220,
-          minWidth: collapsed && !mobileOpen ? 56 : 220,
+          width: collapsed && !mobileOpen ? 56 : 280,
+          minWidth: collapsed && !mobileOpen ? 56 : 280,
           background: '#1e2d3d',
           display: 'flex',
           flexDirection: 'column',
@@ -100,11 +100,11 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingTop: 12 }}>
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingTop: 8 }}>
           {navSections.map(section => (
-            <div key={section.label} style={{ marginBottom: 16 }}>
+            <div key={section.label} style={{ marginBottom: 12 }}>
               {(!collapsed || mobileOpen) && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 4 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 2 }}>
                   {section.label}
                 </div>
               )}
@@ -116,7 +116,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
                     key={item.id}
                     href={`/${item.id}`}
                     className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
-                    style={{ width: '100%', justifyContent: collapsed && !mobileOpen ? 'center' : 'flex-start', minHeight: 44 }}
+                    style={{ width: '100%', justifyContent: collapsed && !mobileOpen ? 'center' : 'flex-start', minHeight: 36 }}
                     onClick={() => mobileOpen && onClose()}
                     title={collapsed && !mobileOpen ? item.label : undefined}
                   >
@@ -133,7 +133,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
         {/* Version */}
         {(!collapsed || mobileOpen) && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-            ROLLYN v1.0.0
+            ROLLYN v1.0.0 &copy; 2026 All Rights Reserved
           </div>
         )}
       </aside>

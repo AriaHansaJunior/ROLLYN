@@ -1,4 +1,6 @@
-import { ArrowLeft, Package, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Package, CheckCircle, Trash2, Edit } from 'lucide-react'
+import { router } from '@inertiajs/react'
+import { SystemUI } from '@/Utils/SystemUI'
 
 const roll = {
   id: 'R-10421', form: 'F-2241', shift: 'A', date: '2024-07-10',
@@ -13,34 +15,67 @@ const roll = {
 
 function InfoRow({ label, value }: { label: string; value: string | number }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #EEEEEE' }}>
-      <span style={{ fontSize: 12, color: '#777', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 13, color: '#333', fontWeight: 600 }}>{value}</span>
+    <div className="flex justify-between items-center py-2 border-b border-slate-100 text-xs">
+      <span className="text-slate-500 font-medium">{label}</span>
+      <span className="text-slate-900 font-semibold text-right">{value}</span>
     </div>
   )
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="card" style={{ padding: 16 }}>
-      <h3 className="section-title" style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '2px solid #286090' }}>{title}</h3>
-      {children}
+    <div className="card p-4">
+      <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 pb-2 border-b-2 border-blue-600">
+        {title}
+      </h3>
+      <div className="space-y-0.5">
+        {children}
+      </div>
     </div>
   )
 }
 
-import { router } from '@inertiajs/react'
-
 export default function RollDetail() {
+  async function handleDeleteRoll() {
+    const confirmed = await SystemUI.confirm({
+      title: 'Delete Roll Record',
+      message: `Are you sure you want to delete roll "${roll.id}"? This will free the allocated slot and cannot be undone.`,
+      confirmText: 'Delete Roll',
+      cancelText: 'Cancel'
+    })
+
+    if (confirmed) {
+      SystemUI.toast({ message: `Roll ${roll.id} deleted successfully.`, type: 'success' })
+      router.visit('/roll-inventory')
+    }
+  }
+
+  function handleAssignLocation() {
+    SystemUI.toast({ message: `Location ${roll.location} is already assigned.`, type: 'info' })
+  }
+
+  function handleEditRoll() {
+    SystemUI.toast({ message: 'Roll edit modal opened.', type: 'info' })
+  }
+
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <button className="btn btn-secondary btn-sm" onClick={() => router.visit('/roll-inventory')}><ArrowLeft size={13} /> Back</button>
-        <h2 className="page-title" style={{ margin: 0 }}>Roll Detail — {roll.id}</h2>
-        <span className="badge" style={{ background: '#d0e8f5', color: '#286090', marginLeft: 'auto' }}>{roll.status}</span>
+    <div className="py-4 px-2.5 sm:px-6 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <button className="btn btn-secondary btn-sm" onClick={() => router.visit('/roll-inventory')}>
+            <ArrowLeft size={13} /> <span>Back</span>
+          </button>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Roll Detail — {roll.id}</h2>
+            <p className="text-xs text-slate-500">Comprehensive technical specifications & traceability</p>
+          </div>
+        </div>
+        <span className="badge bg-blue-50 text-blue-700 border-blue-200 font-bold px-3 py-1 text-xs">
+          {roll.status}
+        </span>
       </div>
 
-      <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-2 min-[1180px]:grid-cols-3">
+      <div className="grid grid-cols-1 min-[680px]:grid-cols-2 min-[1180px]:grid-cols-3 gap-4">
         <Section title="Roll Information">
           <InfoRow label="Roll Number" value={roll.id} />
           <InfoRow label="Form Number" value={roll.form} />
@@ -75,17 +110,17 @@ export default function RollDetail() {
         </Section>
 
         <Section title="Order Information">
-          <InfoRow label="JOP" value={roll.jop} />
+          <InfoRow label="Job Order Production" value={roll.jop} />
           <InfoRow label="SPK" value={roll.spk} />
           <InfoRow label="PO" value={roll.po} />
           <InfoRow label="Customer" value={roll.customer} />
           <InfoRow label="Order Status" value={roll.orderStatus} />
         </Section>
 
-        <Section title="OCR Information">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 10px', background: '#f2f9f2', borderRadius: 4 }}>
-            <CheckCircle size={16} style={{ color: '#5CB85C' }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#3C763D' }}>Recognition Successful</span>
+        <Section title="OCR Recognition Log">
+          <div className="flex items-center gap-2 mb-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+            <CheckCircle size={15} className="text-green-600 shrink-0" />
+            <span className="text-xs font-semibold text-green-700">Recognition Successful</span>
           </div>
           <InfoRow label="OCR Timestamp" value={roll.ocrTimestamp} />
           <InfoRow label="Detected Weight" value={`${roll.ocrWeight} kg`} />
@@ -94,10 +129,16 @@ export default function RollDetail() {
         </Section>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-        <button className="btn btn-primary"><Package size={14} /> Assign Location</button>
-        <button className="btn btn-secondary">Edit Roll Data</button>
-        <button className="btn btn-danger" style={{ marginLeft: 'auto' }}>Delete Roll</button>
+      <div className="flex flex-wrap items-center gap-2 pt-2">
+        <button className="btn btn-primary" onClick={handleAssignLocation}>
+          <Package size={14} /> <span>Assign Location</span>
+        </button>
+        <button className="btn btn-secondary" onClick={handleEditRoll}>
+          <Edit size={14} /> <span>Edit Roll Data</span>
+        </button>
+        <button className="btn btn-danger ml-auto" onClick={handleDeleteRoll}>
+          <Trash2 size={14} /> <span>Delete Roll</span>
+        </button>
       </div>
     </div>
   )

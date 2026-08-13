@@ -1,24 +1,10 @@
 import { useState } from 'react'
-import { CheckCircle, Save, Scale, Edit3 } from 'lucide-react'
+import { CheckCircle, Save, Scale, Edit3, ArrowLeft, ArrowRight } from 'lucide-react'
 import WeightDetectionEngine from '../OCR/WeightDetectionEngine'
+import { SystemUI } from '@/Utils/SystemUI'
+import { router } from '@inertiajs/react'
 
-// ─── ROI Configuration ────────────────────────────────────────────────────────
-//
-// Adjust these values once the camera is physically mounted above the scale:
-//
-//   x      — left edge of scale display as fraction of frame width  (0–1)
-//   y      — top edge of scale display as fraction of frame height  (0–1)
-//   width  — display width  as fraction of frame width   (0–1)
-//   height — display height as fraction of frame height  (0–1)
-//
-// Example: scale display occupies centre horizontal band of frame:
-//   { x: 0.05, y: 0.25, width: 0.90, height: 0.50 }
-//
-// Default (full frame — safe starting point during development):
 const SCALE_ROI = { x: 0, y: 0, width: 1, height: 1 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-
 const steps = ['Camera & Weight Detection', 'Roll Data Entry', 'Review & Save']
 
 interface WeightState {
@@ -29,75 +15,96 @@ interface WeightState {
 
 export default function IncomingRoll() {
   const [step, setStep] = useState(0)
-
-  // Persisted weight — survives step navigation until final Save
   const [weight, setWeight] = useState<WeightState>({ value: 0, display: '', source: 'none' })
 
-  // Roll data form
   const [form, setForm] = useState({
     rollNumber: '', formNumber: '', shift: 'A', grade: 'KLB-150',
     gsm: '', plybond: '', thickness: '', bulk: '', width: '',
     diameter: '', core: '76', cobb: '', exMaterial: 'OCC', visual: 'OK', jop: '', pic: '',
   })
 
-  const [saved, setSaved] = useState(false)
+  const [errors, setErrors] = useState<{ rollNumber?: string; formNumber?: string; gsm?: string }>({})
 
-  // Called by WeightDetectionEngine when administrator confirms the weight
   function handleWeightConfirmed(value: number, display: string, source: 'ocr' | 'manual') {
     setWeight({ value, display, source })
     setStep(1)
   }
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+  function validateStep1() {
+    const errs: { rollNumber?: string; formNumber?: string; gsm?: string } = {}
+    if (!form.rollNumber.trim()) {
+      errs.rollNumber = 'Roll number is required.'
+    }
+    if (!form.formNumber.trim()) {
+      errs.formNumber = 'Form number is required.'
+    }
+    setErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
-  function Field({ label, name, type = 'text', options }: {
-    label: string; name: keyof typeof form; type?: string; options?: string[]
-  }) {
-    return (
-      <div>
-        <label className="form-label">{label}</label>
-        {options ? (
-          <select value={form[name]} onChange={e => setForm(f => ({ ...f, [name]: e.target.value }))} className="form-input">
-            {options.map(o => <option key={o}>{o}</option>)}
-          </select>
-        ) : (
-          <input type={type} value={form[name]} onChange={e => setForm(f => ({ ...f, [name]: e.target.value }))} className="form-input" placeholder={`Enter ${label.toLowerCase()}`} />
-        )}
-      </div>
-    )
+  function goToStep2() {
+    if (validateStep1()) {
+      setStep(2)
+    }
+  }
+
+  async function handleSave() {
+    SystemUI.toast({ message: `Roll ${form.rollNumber || 'data'} saved successfully!`, type: 'success' })
+    const confirmed = await SystemUI.confirm({
+      title: 'Roll Saved Successfully',
+      message: `Roll ${form.rollNumber} has been logged. Would you like to view the Roll Inventory now?`,
+      confirmText: 'Go to Inventory',
+      cancelText: 'Register Another Roll'
+    })
+
+    if (confirmed) {
+      router.visit('/roll-inventory')
+    } else {
+      setStep(0)
+      setWeight({ value: 0, display: '', source: 'none' })
+      setForm({
+        rollNumber: '', formNumber: '', shift: 'A', grade: 'KLB-150',
+        gsm: '', plybond: '', thickness: '', bulk: '', width: '',
+        diameter: '', core: '76', cobb: '', exMaterial: 'OCC', visual: 'OK', jop: '', pic: '',
+      })
+    }
   }
 
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <h2 className="page-title" style={{ marginBottom: 20 }}>Incoming Roll</h2>
+    <div className="py-4 px-2.5 sm:px-6 space-y-4">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Incoming Roll</h2>
+        <p className="text-xs text-slate-500 mt-0.5">Physical roll weight capture and specification logging</p>
+      </div>
 
-      {/* ── Step Indicator ── */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 0 }}>
+      {/* Step Indicator */}
+      <div className="flex items-center gap-2 max-w-2xl py-2">
         {steps.map((s, i) => (
-          <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : undefined }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: i < step ? '#5CB85C' : i === step ? '#286090' : '#EEEEEE',
-                color: i <= step ? '#fff' : '#777',
-                fontSize: 12, fontWeight: 700, flexShrink: 0,
-              }}>{i < step ? '✓' : i + 1}</div>
-              <span style={{ fontSize: 12, fontWeight: i === step ? 600 : 400, color: i === step ? '#286090' : '#777', whiteSpace: 'nowrap' }} className="max-[679px]:hidden">{s}</span>
+          <div key={s} className="flex items-center flex-1 last:flex-none">
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                  i < step
+                    ? 'bg-green-600 text-white'
+                    : i === step
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                {i < step ? '✓' : i + 1}
+              </div>
+              <span className={`text-xs font-semibold whitespace-nowrap min-[680px]:inline hidden ${i === step ? 'text-blue-700 font-bold' : 'text-slate-500'}`}>
+                {s}
+              </span>
             </div>
-            {i < steps.length - 1 && <div style={{ flex: 1, height: 2, background: i < step ? '#5CB85C' : '#EEEEEE', margin: '0 12px' }} />}
+            {i < steps.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-3 transition-colors ${i < step ? 'bg-green-500' : 'bg-slate-200'}`} />
+            )}
           </div>
         ))}
       </div>
 
-      {/* ════════════════════════════════════════════════════
-          STEP 0: Camera & Weight Detection
-          WeightDetectionEngine handles the entire camera
-          + OCR lifecycle. IncomingRoll only receives the
-          confirmed weight via onWeightConfirmed().
-          ════════════════════════════════════════════════════ */}
+      {/* STEP 0: Camera & Weight Detection */}
       {step === 0 && (
         <WeightDetectionEngine
           onWeightConfirmed={handleWeightConfirmed}
@@ -105,135 +112,214 @@ export default function IncomingRoll() {
         />
       )}
 
-      {/* ════════════════════════════════════════════════════
-          STEP 1: Roll Data Entry
-          Weight is prominently displayed and persisted.
-          ════════════════════════════════════════════════════ */}
+      {/* STEP 1: Roll Data Entry */}
       {step === 1 && (
-        <div style={{ maxWidth: 900 }}>
-
-          {/* ── Prominent Weight Display ── */}
-          <div className="card" style={{ padding: 16, marginBottom: 14 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 16,
-              padding: '14px 18px',
-              background: 'linear-gradient(135deg, #f0f7ff 0%, #e8f3fc 100%)',
-              border: '1px solid #c5dff5',
-              borderRadius: 8,
-            }}>
-              {/* Scale icon */}
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #286090, #337ab7)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(40,96,144,0.3)',
-              }}>
-                <Scale size={22} color="#fff" />
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#777', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
-                  Roll Weight
+        <div className="max-w-4xl space-y-4">
+          {/* Prominent Weight Display */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between gap-4 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-xs text-white">
+                  <Scale size={20} />
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#286090', fontFamily: 'JetBrains Mono, Consolas, monospace', lineHeight: 1 }}>
-                  {weight.display} <span style={{ fontSize: 16, fontWeight: 600, color: '#555' }}>kg</span>
-                </div>
-                <div style={{ fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {weight.source === 'ocr' ? (
-                    <><CheckCircle size={10} style={{ color: '#5CB85C' }} />
-                    <span style={{ color: '#5CB85C' }}>Detected by OCR</span></>
-                  ) : (
-                    <><Edit3 size={10} style={{ color: '#F0AD4E' }} />
-                    <span style={{ color: '#F0AD4E' }}>Entered manually by administrator</span></>
-                  )}
+                <div>
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Confirmed Roll Weight
+                  </div>
+                  <div className="text-2xl font-extrabold text-blue-900 font-mono leading-tight">
+                    {weight.display} <span className="text-sm font-semibold text-slate-500">kg</span>
+                  </div>
+                  <div className="text-[11px] mt-0.5 flex items-center gap-1.5">
+                    {weight.source === 'ocr' ? (
+                      <>
+                        <CheckCircle size={12} className="text-green-600 shrink-0" />
+                        <span className="text-green-700 font-semibold">Detected via OCR</span>
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 size={12} className="text-amber-600 shrink-0" />
+                        <span className="text-amber-700 font-semibold">Entered manually by administrator</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Back to re-detect */}
               <button
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm text-xs cursor-pointer shrink-0"
                 onClick={() => setStep(0)}
                 title="Go back to re-detect weight"
-                style={{ fontSize: 11 }}
               >
                 Re-detect
               </button>
             </div>
           </div>
 
-          {/* ── Roll Data Form ── */}
-          <div className="card" style={{ padding: 16 }}>
-            <h3 className="section-title" style={{ marginBottom: 16 }}>Roll Data Entry</h3>
-            <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-3 min-[1180px]:grid-cols-4">
-              <Field label="Roll Number" name="rollNumber" />
-              <Field label="Form Number" name="formNumber" />
-              <Field label="Shift" name="shift" options={['A', 'B', 'C']} />
-              <Field label="Grade" name="grade" options={['KLB-125', 'KLB-150', 'KLB-175', 'KLB-200', 'KIA-125', 'KIA-150']} />
-              <Field label="GSM" name="gsm" type="number" />
-              <Field label="Plybond" name="plybond" type="number" />
-              <Field label="Thickness (mm)" name="thickness" type="number" />
-              <Field label="Bulk" name="bulk" type="number" />
-              <Field label="Roll Width (mm)" name="width" type="number" />
-              <Field label="Roll Diameter (mm)" name="diameter" type="number" />
-              <Field label="Core (mm)" name="core" type="number" />
-              <Field label="Cobb" name="cobb" type="number" />
-              <Field label="Ex Material" name="exMaterial" options={['OCC', 'NDLKP', 'DIP', 'Mixed']} />
-              <Field label="Visual" name="visual" options={['OK', 'REJ', 'C/S']} />
-              <Field label="JOP" name="jop" />
-              <Field label="PIC" name="pic" />
+          {/* Roll Data Form */}
+          <div className="card p-4 sm:p-5">
+            <h3 className="text-sm font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">Roll Data Entry</h3>
+            <div className="grid grid-cols-1 min-[680px]:grid-cols-3 min-[1180px]:grid-cols-4 gap-3">
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Roll Number <span className="text-red-500">*</span></label>
+                <input
+                  value={form.rollNumber}
+                  onChange={e => {
+                    setForm(f => ({ ...f, rollNumber: e.target.value }))
+                    if (errors.rollNumber) setErrors(err => ({ ...err, rollNumber: undefined }))
+                  }}
+                  className={`form-input w-full ${errors.rollNumber ? 'border-red-500' : ''}`}
+                  placeholder="e.g. R-10425"
+                />
+                {errors.rollNumber && <p className="text-red-600 text-[11px] mt-1">{errors.rollNumber}</p>}
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Form Number <span className="text-red-500">*</span></label>
+                <input
+                  value={form.formNumber}
+                  onChange={e => {
+                    setForm(f => ({ ...f, formNumber: e.target.value }))
+                    if (errors.formNumber) setErrors(err => ({ ...err, formNumber: undefined }))
+                  }}
+                  className={`form-input w-full ${errors.formNumber ? 'border-red-500' : ''}`}
+                  placeholder="e.g. F-2241"
+                />
+                {errors.formNumber && <p className="text-red-600 text-[11px] mt-1">{errors.formNumber}</p>}
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Shift</label>
+                <select value={form.shift} onChange={e => setForm(f => ({ ...f, shift: e.target.value }))} className="form-input w-full">
+                  <option value="A">Shift A</option>
+                  <option value="B">Shift B</option>
+                  <option value="C">Shift C</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Grade</label>
+                <select value={form.grade} onChange={e => setForm(f => ({ ...f, grade: e.target.value }))} className="form-input w-full">
+                  {['KLB-125', 'KLB-150', 'KLB-175', 'KLB-200', 'KIA-125', 'KIA-150'].map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">GSM (g/m²)</label>
+                <input type="number" value={form.gsm} onChange={e => setForm(f => ({ ...f, gsm: e.target.value }))} className="form-input w-full" placeholder="e.g. 150" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Plybond</label>
+                <input type="number" value={form.plybond} onChange={e => setForm(f => ({ ...f, plybond: e.target.value }))} className="form-input w-full" placeholder="e.g. 1.8" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Thickness (mm)</label>
+                <input type="number" value={form.thickness} onChange={e => setForm(f => ({ ...f, thickness: e.target.value }))} className="form-input w-full" placeholder="e.g. 0.22" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Bulk</label>
+                <input type="number" value={form.bulk} onChange={e => setForm(f => ({ ...f, bulk: e.target.value }))} className="form-input w-full" placeholder="e.g. 1.47" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Roll Width (mm)</label>
+                <input type="number" value={form.width} onChange={e => setForm(f => ({ ...f, width: e.target.value }))} className="form-input w-full" placeholder="e.g. 1650" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Roll Diameter (mm)</label>
+                <input type="number" value={form.diameter} onChange={e => setForm(f => ({ ...f, diameter: e.target.value }))} className="form-input w-full" placeholder="e.g. 1120" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Core (mm)</label>
+                <input type="number" value={form.core} onChange={e => setForm(f => ({ ...f, core: e.target.value }))} className="form-input w-full" placeholder="e.g. 76" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Cobb</label>
+                <input type="number" value={form.cobb} onChange={e => setForm(f => ({ ...f, cobb: e.target.value }))} className="form-input w-full" placeholder="e.g. 68" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Ex Material</label>
+                <select value={form.exMaterial} onChange={e => setForm(f => ({ ...f, exMaterial: e.target.value }))} className="form-input w-full">
+                  {['OCC', 'NDLKP', 'DIP', 'Mixed'].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Visual</label>
+                <select value={form.visual} onChange={e => setForm(f => ({ ...f, visual: e.target.value }))} className="form-input w-full">
+                  {['OK', 'REJ', 'C/S'].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">Job Order Production</label>
+                <input value={form.jop} onChange={e => setForm(f => ({ ...f, jop: e.target.value }))} className="form-input w-full" placeholder="e.g. JOP-240710" />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold block mb-1">PIC</label>
+                <input value={form.pic} onChange={e => setForm(f => ({ ...f, pic: e.target.value }))} className="form-input w-full" placeholder="e.g. Budi Santoso" />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setStep(0)}>← Back</button>
-              <button className="btn btn-primary" onClick={() => setStep(2)}>Review →</button>
+
+            <div className="flex gap-2 justify-end pt-4 mt-3 border-t border-slate-100">
+              <button className="btn btn-secondary text-xs" onClick={() => setStep(0)}>
+                <ArrowLeft size={13} /> <span>Back</span>
+              </button>
+              <button className="btn btn-primary text-xs" onClick={goToStep2}>
+                <span>Review</span> <ArrowRight size={13} />
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════
-          STEP 2: Review & Save
-          Weight persisted from Step 0 through to final save.
-          ════════════════════════════════════════════════════ */}
+      {/* STEP 2: Review & Save */}
       {step === 2 && (
-        <div style={{ maxWidth: 700 }}>
-          {saved && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f2f9f2', border: '1px solid #d4edda', borderRadius: 4, marginBottom: 12 }}>
-              <CheckCircle size={16} style={{ color: '#5CB85C' }} />
-              <span style={{ fontWeight: 600, fontSize: 13, color: '#3C763D' }}>Roll information saved successfully.</span>
-            </div>
-          )}
-
-          <div className="card" style={{ padding: 20 }}>
-            <h3 className="section-title" style={{ marginBottom: 16 }}>Review & Save</h3>
-            <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-2">
+        <div className="max-w-2xl space-y-4">
+          <div className="card p-4 sm:p-5">
+            <h3 className="text-sm font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">Review & Save</h3>
+            <div className="grid grid-cols-1 min-[680px]:grid-cols-2 gap-x-6 gap-y-1 text-xs">
               {[
                 ['Roll Number', form.rollNumber || '(not entered)'],
                 ['Form Number', form.formNumber || '(not entered)'],
                 ['Shift', form.shift],
                 ['Grade', form.grade],
-                ['GSM', form.gsm || '(not entered)'],
+                ['GSM', form.gsm ? `${form.gsm} g/m²` : '(not entered)'],
                 ['Weight', `${weight.display} kg`],
                 ['Plybond', form.plybond || '(not entered)'],
-                ['Thickness', form.thickness || '(not entered)'],
-                ['Roll Width', form.width || '(not entered)'],
-                ['Diameter', form.diameter || '(not entered)'],
-                ['Core', form.core],
+                ['Thickness', form.thickness ? `${form.thickness} mm` : '(not entered)'],
+                ['Roll Width', form.width ? `${form.width} mm` : '(not entered)'],
+                ['Diameter', form.diameter ? `${form.diameter} mm` : '(not entered)'],
+                ['Core', `${form.core} mm`],
                 ['Cobb', form.cobb || '(not entered)'],
                 ['Ex Material', form.exMaterial],
                 ['Visual', form.visual],
-                ['JOP', form.jop || '(not entered)'],
+                ['Job Order Production', form.jop || '(not entered)'],
                 ['PIC', form.pic || '(not entered)'],
               ].map(([label, value]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid #EEEEEE' }}>
-                  <span style={{ fontSize: 12, color: '#777', fontWeight: 500 }}>{label}</span>
-                  <span style={{ fontSize: 13, color: value.includes('(not entered)') ? '#C0392B' : '#333', fontWeight: 600 }}>{value}</span>
+                <div key={label} className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500 font-medium">{label}</span>
+                  <span className={`font-semibold text-right ${value.includes('(not entered)') ? 'text-amber-600' : 'text-slate-900'}`}>
+                    {value}
+                  </span>
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setStep(1)}>← Edit</button>
-              <button className="btn btn-success" onClick={handleSave}><Save size={13} /> Save Roll</button>
+
+            <div className="flex gap-2 justify-end pt-4 mt-4 border-t border-slate-100">
+              <button className="btn btn-secondary text-xs" onClick={() => setStep(1)}>
+                <ArrowLeft size={13} /> <span>Edit</span>
+              </button>
+              <button className="btn btn-primary text-xs" onClick={handleSave}>
+                <Save size={13} /> <span>Save Roll</span>
+              </button>
             </div>
           </div>
         </div>

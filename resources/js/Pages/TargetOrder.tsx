@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Filter } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { targetOrders } from '../data/dummy'
 
 export default function TargetOrder() {
@@ -10,37 +10,56 @@ export default function TargetOrder() {
   })
 
   return (
-    <div style={{ padding: '20px 24px' }}>
-      <h2 className="page-title" style={{ marginBottom: 16 }}>Target Order</h2>
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F5F5', border: '1px solid #DDDDDD', borderRadius: 4, padding: '6px 10px', flex: '1 1 200px' }}>
-          <Search size={14} style={{ color: '#999' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search SPK, customer, JOP, grade..." className="form-input" style={{ padding: 0, border: 'none', background: 'none', boxShadow: 'none' }} />
-        </div>
-        <span style={{ fontSize: 12, color: '#777', marginLeft: 'auto' }}>{filtered.length} orders</span>
+    <div className="py-4 px-2.5 sm:px-6 space-y-4">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Target Order</h2>
+        <p className="text-xs text-slate-500 mt-0.5">Production fulfillment targets and container assignment schedule</p>
       </div>
-      <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+
+      <div className="card p-3 sm:p-4 flex flex-wrap gap-2.5 items-center justify-between">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[200px]">
+          <Search size={14} className="text-slate-400 shrink-0" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search SPK, customer, JOP, grade..."
+            className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+          />
+        </div>
+        <span className="text-xs font-semibold text-slate-500">{filtered.length} orders</span>
+      </div>
+
+      <div className="card overflow-x-auto">
+        <table className="data-table w-full min-w-[900px] text-left border-collapse text-xs">
           <thead>
             <tr>
-              <th>SPK</th><th>JOP</th><th>PO</th><th>Customer</th><th>Grade</th>
-              <th>GSM</th><th>RW (mm)</th><th>Qty Roll</th><th>Weight (kg)</th><th>Container</th><th>Notes</th>
+              <th>SPK</th>
+              <th>JOP</th>
+              <th>PO</th>
+              <th>Customer</th>
+              <th>Grade</th>
+              <th className="text-right">GSM</th>
+              <th className="text-right">RW (mm)</th>
+              <th className="text-right">Qty Roll</th>
+              <th className="text-right">Weight (kg)</th>
+              <th>Container</th>
+              <th>Notes</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map(r => (
               <tr key={r.spk}>
-                <td style={{ fontWeight: 700, color: '#286090', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.spk}</td>
-                <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.jop}</td>
-                <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.po}</td>
-                <td style={{ fontWeight: 500 }}>{r.customer}</td>
+                <td className="font-bold text-blue-700 font-mono text-xs">{r.spk}</td>
+                <td className="font-mono text-xs">{r.jop}</td>
+                <td className="font-mono text-xs">{r.po}</td>
+                <td className="font-medium text-slate-900">{r.customer}</td>
                 <td>{r.grade}</td>
-                <td style={{ textAlign: 'right' }}>{r.gsm}</td>
-                <td style={{ textAlign: 'right' }}>{r.rw.toLocaleString()}</td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>{r.qtyRoll}</td>
-                <td style={{ textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{r.weight.toLocaleString()}</td>
+                <td className="text-right">{r.gsm}</td>
+                <td className="text-right">{r.rw.toLocaleString()}</td>
+                <td className="text-right font-bold">{r.qtyRoll}</td>
+                <td className="text-right font-mono text-xs">{r.weight.toLocaleString()}</td>
                 <td>{r.container}</td>
-                <td style={{ fontSize: 12, color: r.noted ? '#333' : '#999' }}>{r.noted || '—'}</td>
+                <td className={`text-xs ${r.noted ? 'text-slate-700' : 'text-slate-400'}`}>{r.noted || '—'}</td>
               </tr>
             ))}
           </tbody>

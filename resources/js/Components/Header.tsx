@@ -1,6 +1,6 @@
 import { Bell, Search, ChevronDown, PanelLeftClose, Menu, X } from 'lucide-react'
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
+import { router } from '@inertiajs/react'
 
 const pageLabels: Record<string, string[]> = {
   'dashboard': ['Dashboard'],
@@ -10,11 +10,12 @@ const pageLabels: Record<string, string[]> = {
   'incoming-roll': ['Production', 'Incoming Roll'],
   'ocr-monitoring': ['Production', 'OCR Monitoring'],
   'target-order': ['Orders', 'Target Order'],
-  'jop': ['Orders', 'JOP'],
+  'jop': ['Orders', 'JOP (Job Order Production)'],
   'spk-po': ['Orders', 'SPK / PO'],
   'reports': ['Reports'],
   'user-management': ['Administration', 'User Management'],
   'profile': ['Administration', 'Profile'],
+  'notifications': ['Notifications'],
 }
 
 interface HeaderProps {
@@ -27,8 +28,20 @@ interface HeaderProps {
 export default function Header({ activePage, onMenuClick, onToggleSidebar, sidebarCollapsed }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+
   const crumbs = pageLabels[activePage] || ['Dashboard']
   const currentPageTitle = crumbs[crumbs.length - 1]
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   return (
     <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 min-[680px]:px-5 flex items-center justify-between gap-2 shadow-xs select-none">
@@ -96,13 +109,16 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         </button>
 
         {/* Notification Bell */}
-        <button className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors">
+        <button 
+          onClick={() => router.visit('/notifications')}
+          className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+        >
           <Bell size={18} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
         </button>
 
         {/* User Profile */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
             className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100 transition-colors"
@@ -122,13 +138,19 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
               </div>
               <button
                 className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                onClick={() => setProfileOpen(false)}
+                onClick={() => {
+                  setProfileOpen(false)
+                  router.visit('/profile')
+                }}
               >
                 Profile Settings
               </button>
               <button
                 className="w-full text-left px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 border-t border-slate-100 transition-colors"
-                onClick={() => setProfileOpen(false)}
+                onClick={() => {
+                  setProfileOpen(false)
+                  router.visit('/login')
+                }}
               >
                 Sign Out
               </button>
@@ -138,32 +160,24 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
       </div>
 
       {/* Mobile Search Overlay */}
-      <AnimatePresence>
-        {mobileSearchOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs p-3 flex flex-col"
-          >
-            <div className="bg-white rounded-xl shadow-2xl p-2.5 flex items-center gap-2">
-              <Search size={18} className="text-slate-400 ml-1 shrink-0" />
-              <input
-                autoFocus
-                placeholder="Search warehouse, rolls, orders..."
-                className="flex-1 bg-transparent border-none outline-none text-sm text-slate-900 py-1"
-              />
-              <button
-                onClick={() => setMobileSearchOpen(false)}
-                className="p-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {mobileSearchOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs p-3 flex flex-col">
+          <div className="bg-white rounded-xl shadow-2xl p-2.5 flex items-center gap-2">
+            <Search size={18} className="text-slate-400 ml-1 shrink-0" />
+            <input
+              autoFocus
+              placeholder="Search warehouse, rolls, orders..."
+              className="flex-1 bg-transparent border-none outline-none text-sm text-slate-900 py-1"
+            />
+            <button
+              onClick={() => setMobileSearchOpen(false)}
+              className="p-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
