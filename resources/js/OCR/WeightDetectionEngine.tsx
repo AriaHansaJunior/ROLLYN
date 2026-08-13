@@ -23,9 +23,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, CheckCircle, AlertCircle, Loader, RefreshCw, Edit3 } from 'lucide-react';
 
-import CameraModal from './CameraModal';
 import { preprocessImage, analyseImageQuality, DEFAULT_ROI, type ROI } from './ImageProcessor';
 import { initOCRWorker, recogniseWeight, terminateOCRWorker, type OcrResult, type OcrError } from './OCRService';
+import { SystemUI } from '@/Utils/SystemUI';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,6 +81,20 @@ export default function WeightDetectionEngine({
   // Pre-init OCR worker on mount (background, so first capture is fast)
   useEffect(() => {
     initOCRWorker();
+    
+    // Trigger permission modal on first load if needed
+    if (engineState === 'permission_modal') {
+      SystemUI.confirm({
+        title: 'Camera Access Required',
+        message: 'Rollyn needs camera access to read the weighing scale display automatically. After clicking Allow, your browser will ask for permission. No images are sent to any external server.',
+        confirmText: 'Allow Camera Access',
+        cancelText: 'Cancel',
+        onConfirm: (confirmed) => {
+          if (confirmed) startCamera();
+        },
+        onCancel: () => setEngineState('camera_denied')
+      });
+    }
   }, []);
 
   // Stop camera and terminate worker on unmount (page leave)
@@ -122,9 +136,14 @@ export default function WeightDetectionEngine({
         await videoRef.current.play();
       }
       setEngineState('camera_active');
+      SystemUI.toast({ message: 'Camera active. Point at the display to capture weight.', type: 'info', duration: 4000 });
     } catch (err) {
       console.error('[OCR] Camera access denied:', err);
       setEngineState('camera_denied');
+      SystemUI.alert({
+        title: 'Camera Access Denied',
+        message: 'Please allow camera access in your browser settings to use this feature.'
+      });
     }
   }, []);
 
@@ -155,19 +174,25 @@ export default function WeightDetectionEngine({
         setEditedWeight(String(outcome.result.weight));
         setIsManuallyEdited(false);
         setEngineState('success');
+        SystemUI.toast({ message: 'Weight detected successfully!', type: 'success' });
       } else {
         setOcrError(outcome.error);
         setEngineState('error');
+        SystemUI.alert({
+            title: outcome.error.title,
+            message: outcome.error.message,
+        });
       }
     } catch (err) {
       console.error('[OCR] Unexpected error during recognition:', err);
+      const errorTitle = 'Processing Error';
+      const errorMessage = 'An unexpected error occurred while processing the image. Please try again.';
       setOcrError({
-        title: 'Processing Error',
-        message:
-          'An unexpected error occurred while processing the image. ' +
-          'Please try again.',
+        title: errorTitle,
+        message: errorMessage,
       });
       setEngineState('error');
+      SystemUI.alert({ title: errorTitle, message: errorMessage });
     }
   }, [roi]);
 
@@ -213,14 +238,6 @@ export default function WeightDetectionEngine({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 900 }}
       className="max-[679px]:grid-cols-1!">
-
-      {/* ── CUSTOM CAMERA PERMISSION MODAL ── */}
-      {engineState === 'permission_modal' && (
-        <CameraModal
-          onAllow={startCamera}
-          onCancel={() => setEngineState('camera_denied')}
-        />
-      )}
 
       {/* ════ LEFT PANEL: Camera Preview ════ */}
       <div className="card" style={{ padding: 16 }}>
@@ -366,7 +383,19 @@ export default function WeightDetectionEngine({
             <button
               id="ocr-grant-access-btn"
               className="btn btn-primary"
-              onClick={() => setEngineState('permission_modal')}
+              onClick={() => {
+                setEngineState('permission_modal');
+                SystemUI.confirm({
+                    title: 'Camera Access Required',
+                    message: 'Rollyn needs camera access to read the weighing scale display automatically. After clicking Allow, your browser will ask for permission. No images are sent to any external server.',
+                    confirmText: 'Allow Camera Access',
+                    cancelText: 'Cancel',
+                    onConfirm: (confirmed) => {
+                        if (confirmed) startCamera();
+                    },
+                    onCancel: () => setEngineState('camera_denied')
+                });
+              }}
               style={{ flex: 1, justifyContent: 'center' }}
             >
               <Camera size={13} /> Try Again
