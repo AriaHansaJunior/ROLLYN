@@ -15,8 +15,16 @@
   font-size: 13px;
   border-bottom: 1px solid #EEEEEE;
   color: #333333;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
-.data-table tr:hover td {
+.data-table tbody tr {
+  transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.data-table tbody tr:hover {
+  background-color: #f7fbff;
+  box-shadow: inset 0 0 0 1px rgba(86, 139, 214, 0.08);
+}
+.data-table tbody tr:hover td {
   background-color: #f0f7ff;
 }
 .data-table tr:last-child td {

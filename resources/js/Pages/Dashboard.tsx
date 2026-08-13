@@ -42,7 +42,7 @@ export default function Dashboard() {
       {/* KPI Row */}
       <div>
         <h2 className="page-title" style={{ marginBottom: 14 }}>Operations Overview</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gap: 10 }} className="grid-cols-2 min-[680px]:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
           {kpis.map(kpi => {
             const Icon = kpi.icon
             return (
@@ -64,7 +64,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main row: WH Overview + Alerts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16 }} className="max-[1179px]:grid-cols-1!">
+      <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-[1fr_280px] min-[1180px]:grid-cols-[1fr_340px]">
         {/* Warehouse overview */}
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -134,7 +134,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }} className="max-[1179px]:grid-cols-1!">
+      <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-[1fr_280px] min-[1180px]:grid-cols-[1fr_320px]">
         {/* Demand Forecast */}
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>

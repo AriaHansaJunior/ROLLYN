@@ -4,8 +4,8 @@ export default function SpkPo() {
   return (
     <div style={{ padding: '20px 24px' }}>
       <h2 className="page-title" style={{ marginBottom: 16 }}>SPK / Purchase Order</h2>
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
           <thead>
             <tr>
               <th>SPK No.</th><th>JOP</th><th>PO No.</th><th>Customer</th>

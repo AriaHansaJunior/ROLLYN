@@ -164,8 +164,8 @@ export default function IncomingRoll() {
 
           {/* ── Roll Data Form ── */}
           <div className="card" style={{ padding: 16 }}>
-            <h3 className="section-title" style={{ marginBottom: 14 }}>Roll Data Entry</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            <h3 className="section-title" style={{ marginBottom: 16 }}>Roll Data Entry</h3>
+            <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-3 min-[1180px]:grid-cols-4">
               <Field label="Roll Number" name="rollNumber" />
               <Field label="Form Number" name="formNumber" />
               <Field label="Shift" name="shift" options={['A', 'B', 'C']} />
@@ -204,35 +204,9 @@ export default function IncomingRoll() {
             </div>
           )}
 
-          {/* Weight highlight at top of review */}
-          <div className="card" style={{ padding: 14, marginBottom: 12 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '12px 16px',
-              background: 'linear-gradient(135deg, #f0f7ff 0%, #e8f3fc 100%)',
-              border: '1px solid #c5dff5',
-              borderRadius: 6,
-            }}>
-              <Scale size={18} style={{ color: '#286090', flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Roll Weight</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#286090', fontFamily: 'JetBrains Mono, Consolas, monospace' }}>
-                  {weight.display} kg
-                </div>
-                <div style={{ fontSize: 11, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {weight.source === 'ocr' ? (
-                    <><CheckCircle size={9} style={{ color: '#5CB85C' }} /><span style={{ color: '#5CB85C' }}>Detected by OCR</span></>
-                  ) : (
-                    <><Edit3 size={9} style={{ color: '#F0AD4E' }} /><span style={{ color: '#F0AD4E' }}>Edited by administrator</span></>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: 16 }}>
-            <h3 className="section-title" style={{ marginBottom: 14 }}>Review Roll Entry</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+          <div className="card" style={{ padding: 20 }}>
+            <h3 className="section-title" style={{ marginBottom: 16 }}>Review & Save</h3>
+            <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-2">
               {[
                 ['Roll Number', form.rollNumber || '(not entered)'],
                 ['Form Number', form.formNumber || '(not entered)'],

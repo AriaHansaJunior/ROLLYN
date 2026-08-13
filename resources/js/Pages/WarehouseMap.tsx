@@ -69,11 +69,12 @@ export default function WarehouseMap() {
       <h2 className="page-title" style={{ marginBottom: 16 }}>Warehouse Map</h2>
 
       {/* WH Tabs */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 16 }}>
+      <div style={{ display: 'flex', overflowX: 'auto', gap: 4, marginBottom: 16, paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
         {warehouses.map(wh => (
           <button
             key={wh}
             className={`tab-button ${activeWH === wh ? 'active' : ''}`}
+            style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
             onClick={() => { setActiveWH(wh); setSelectedSlot(null) }}
           >
             Warehouse {wh}
@@ -81,7 +82,7 @@ export default function WarehouseMap() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selectedSlot ? '1fr 280px' : '1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gap: 16 }} className={selectedSlot ? "grid-cols-1 min-[680px]:grid-cols-[1fr_280px]" : "grid-cols-1"}>
         {/* Map */}
         <div className="card" style={{ padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -157,10 +158,15 @@ export default function WarehouseMap() {
           </div>
         </div>
 
-        {/* Slot detail panel */}
+        {/* Mobile Backdrop for Detail Panel */}
         {selectedSlot && (
-          <div className="card" style={{ padding: 16, height: 'fit-content' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div className="fixed inset-0 bg-black/50 z-40 min-[680px]:hidden" onClick={() => setSelectedSlot(null)} />
+        )}
+
+        {/* Slot Detail Panel */}
+        {selectedSlot && (
+          <div className="card max-[679px]:fixed max-[679px]:bottom-0 max-[679px]:left-0 max-[679px]:right-0 max-[679px]:z-50 max-[679px]:rounded-t-2xl max-[679px]:rounded-b-none max-[679px]:shadow-[0_-4px_24px_rgba(0,0,0,0.15)] max-[679px]:max-h-[85vh] max-[679px]:overflow-y-auto" style={{ padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 className="section-title">Slot Detail</h3>
               <button onClick={() => setSelectedSlot(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#777', padding: 4 }}>
                 <X size={16} />

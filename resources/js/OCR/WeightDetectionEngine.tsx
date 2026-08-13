@@ -236,8 +236,7 @@ export default function WeightDetectionEngine({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 900 }}
-      className="max-[679px]:grid-cols-1!">
+    <div style={{ display: 'grid', gap: 16, maxWidth: 900 }} className="grid-cols-1 min-[680px]:grid-cols-2">
 
       {/* ════ LEFT PANEL: Camera Preview ════ */}
       <div className="card" style={{ padding: 16 }}>
@@ -350,13 +349,14 @@ export default function WeightDetectionEngine({
         </div>
 
         {/* Buttons */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           {/* Take Photo button */}
           {(engineState === 'camera_active' || engineState === 'processing' ||
             engineState === 'success' || engineState === 'error') && (
             <button
               id="ocr-take-photo-btn"
               className="btn btn-primary"
+              style={{ flex: '1 1 auto', justifyContent: 'center' }}
               onClick={takePhoto}
               disabled={isProcessing}
               style={{ flex: 1, justifyContent: 'center' }}
@@ -366,15 +366,16 @@ export default function WeightDetectionEngine({
             </button>
           )}
 
-          {/* Retry button (shown after success/error too) */}
+          {/* Retake / Cancel button */}
           {(engineState === 'success' || engineState === 'error') && (
             <button
-              id="ocr-retry-btn"
-              className="btn btn-secondary btn-sm"
+              id="ocr-retake-btn"
+              className="btn btn-secondary"
+              style={{ flex: '1 1 auto', justifyContent: 'center' }}
               onClick={retryCapture}
-              title="Take another photo"
+              disabled={isProcessing}
             >
-              <RefreshCw size={13} />
+              <RefreshCw size={14} /> Retake
             </button>
           )}
 

@@ -36,8 +36,8 @@ export default function OcrMonitoring() {
         <span style={{ fontSize: 12, color: '#777', marginLeft: 'auto' }}>{filtered.length} records</span>
       </div>
 
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
           <thead>
             <tr>
               <th>ID</th>

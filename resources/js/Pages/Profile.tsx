@@ -14,7 +14,7 @@ export default function Profile() {
   return (
     <div style={{ padding: '20px 24px' }}>
       <h2 className="page-title" style={{ marginBottom: 20 }}>Profile</h2>
-      <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ maxWidth: 980, width: '100%', display: 'flex', flexDirection: 'column', gap: 16, margin: '0 auto' }}>
         {saved && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#f2f9f2', border: '1px solid #d4edda', borderRadius: 4 }}>
             <CheckCircle size={16} style={{ color: '#5CB85C' }} />

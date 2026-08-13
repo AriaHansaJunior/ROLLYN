@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePage } from '@inertiajs/react'
 import Sidebar from '../Components/Sidebar'
@@ -11,6 +11,7 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const { url } = usePage()
 
   // Derive activePage from URL (e.g., "/dashboard" -> "dashboard")
@@ -18,8 +19,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const sidebarWidth = sidebarCollapsed ? 56 : 220
 
+  useEffect(() => {
+    const handleResize = () => {
+      const nextIsMobile = window.innerWidth <= 679
+      setIsMobile(nextIsMobile)
+      if (nextIsMobile) {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F5F5F5' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F5F5' }}>
       <Sidebar
         activePage={activePage}
         collapsed={sidebarCollapsed}
@@ -34,7 +49,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
-          marginLeft: sidebarWidth,
+          marginLeft: isMobile ? 0 : sidebarWidth,
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
         className="max-[679px]:ml-0!"
@@ -45,7 +60,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           onToggleSidebar={() => setSidebarCollapsed(c => !c)}
           sidebarCollapsed={sidebarCollapsed}
         />
-        <main style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
+        <main style={{ flex: 1, overflowY: 'auto', position: 'relative', display: 'flex', justifyContent: 'center' }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={url}
@@ -53,7 +68,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              style={{ minHeight: '100%' }}
+              style={{ width: '100%', maxWidth: 1420, minHeight: '100%', padding: isMobile ? '0 12px 24px' : '0 28px 28px' }}
             >
               {children}
             </motion.div>

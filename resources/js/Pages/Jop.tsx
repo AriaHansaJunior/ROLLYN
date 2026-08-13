@@ -4,8 +4,8 @@ export default function Jop() {
   return (
     <div style={{ padding: '20px 24px' }}>
       <h2 className="page-title" style={{ marginBottom: 16 }}>JOP — Job Order Production</h2>
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
           <thead>
             <tr>
               <th>JOP</th><th>SPK</th><th>PO</th><th>Customer</th><th>Grade</th>

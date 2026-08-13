@@ -1,5 +1,22 @@
-import { Menu, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, Search, ChevronDown, PanelLeftClose, Menu, X } from 'lucide-react'
+import { router } from '@inertiajs/core'
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+
+const mobileNavItems = [
+  { label: 'Dashboard', value: '/dashboard' },
+  { label: 'Warehouse Map', value: '/warehouse-map' },
+  { label: 'Roll Inventory', value: '/roll-inventory' },
+  { label: 'Slot Status', value: '/slot-status' },
+  { label: 'Incoming Roll', value: '/incoming-roll' },
+  { label: 'OCR Monitoring', value: '/ocr-monitoring' },
+  { label: 'Target Order', value: '/target-order' },
+  { label: 'JOP', value: '/jop' },
+  { label: 'SPK / PO', value: '/spk-po' },
+  { label: 'Reports', value: '/reports' },
+  { label: 'User Management', value: '/user-management' },
+  { label: 'Profile', value: '/profile' },
+]
 
 const pageLabels: Record<string, string[]> = {
   'dashboard': ['Dashboard'],
@@ -25,7 +42,17 @@ interface HeaderProps {
 
 export default function Header({ activePage, onMenuClick, onToggleSidebar, sidebarCollapsed }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const crumbs = pageLabels[activePage] || ['Dashboard']
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 679)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   return (
     <header style={{
@@ -40,14 +67,39 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
       top: 0,
       zIndex: 20,
     }}>
-      {/* Mobile hamburger */}
-      <button
-        className="max-[679px]:flex hidden"
-        onClick={onMenuClick}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#555' }}
-      >
-        <Menu size={20} />
-      </button>
+      {isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+          <button
+            onClick={onMenuClick}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 36,
+              height: 36,
+              borderRadius: 6,
+              background: 'transparent',
+              border: 'none',
+              color: '#333',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+            aria-label="Open mobile navigation"
+          >
+            <Menu size={22} />
+          </button>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 24, height: 24, borderRadius: 4,
+              background: 'linear-gradient(135deg, #337AB7, #286090)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, color: '#fff', fontSize: 12
+            }}>R</div>
+            <span style={{ fontWeight: 800, fontSize: 15, color: '#1a4e80', letterSpacing: '0.02em' }}>ROLLYN</span>
+          </div>
+        </div>
+      )}
 
       {/* Desktop collapse toggle */}
       <button
@@ -56,11 +108,11 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#777' }}
         title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+        {sidebarCollapsed ? <PanelLeftClose size={18} /> : <PanelLeftClose size={18} />}
       </button>
 
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, flex: 1 }}>
+      <div className="max-[679px]:hidden" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, flex: 1 }}>
         {crumbs.map((c, i) => (
           <span key={c} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {i > 0 && <span style={{ color: '#CCCCCC' }}>/</span>}
@@ -71,11 +123,18 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         ))}
       </div>
 
-      {/* Search */}
+      {/* Desktop Search */}
       <div className="max-[679px]:hidden" style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5F5F5', border: '1px solid #DDDDDD', borderRadius: 4, padding: '6px 10px', width: 200 }}>
         <Search size={14} style={{ color: '#999' }} />
         <input placeholder="Search..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#333', width: '100%', fontFamily: 'inherit' }} />
       </div>
+
+      {/* Mobile Search Toggle */}
+      {isMobile && (
+        <button onClick={() => setMobileSearchOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#555' }}>
+          <Search size={18} />
+        </button>
+      )}
 
       {/* Notification */}
       <button style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: '#555' }}>
@@ -109,6 +168,38 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
           </div>
         )}
       </div>
+
+      {/* Mobile Search Overlay */}
+      <AnimatePresence>
+        {mobileSearchOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 100,
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '20px',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', width: '100%' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: '1px solid #DDD', borderRadius: 8, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                <Search size={18} style={{ color: '#999' }} />
+                <input autoFocus placeholder="Search something..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 16, width: '100%', color: '#333' }} />
+              </div>
+              <button onClick={() => setMobileSearchOpen(false)} style={{ padding: '8px', background: 'none', border: 'none', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={24} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   )
 }

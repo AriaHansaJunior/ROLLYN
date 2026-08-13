@@ -55,16 +55,16 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50"
-          style={{ display: 'block' }}
+          className="fixed inset-0 z-30 bg-black/50 min-[680px]:hidden"
+          style={{ display: 'block', backdropFilter: 'blur(2px)' }}
           onClick={onClose}
         />
       )}
 
       <aside
         style={{
-          width: collapsed ? 56 : 220,
-          minWidth: collapsed ? 56 : 220,
+          width: collapsed && !mobileOpen ? 56 : 220,
+          minWidth: collapsed && !mobileOpen ? 56 : 220,
           background: '#1e2d3d',
           display: 'flex',
           flexDirection: 'column',
@@ -73,10 +73,9 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
           left: 0,
           height: '100vh',
           zIndex: 40,
-          transition: 'transform 0.2s ease, width 0.2s ease',
-          transform: mobileOpen ? 'translateX(0)' : undefined,
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
-        className="max-[679px]:translate-x-[-100%] max-[679px]:w-[220px]!"
+        className={mobileOpen ? "max-[679px]:translate-x-0" : "max-[679px]:-translate-x-full"}
       >
         {/* Logo */}
         <div style={{ padding: '0 12px', height: 56, display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -86,23 +85,25 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, fontWeight: 700, color: '#fff', fontSize: 14
           }}>R</div>
-          {(!collapsed) && (
+          {(!collapsed || mobileOpen) && (
             <span style={{ fontWeight: 700, fontSize: 16, color: '#ffffff', letterSpacing: '0.04em' }}>ROLLYN</span>
           )}
-          <button
-            className="max-[679px]:flex hidden ml-auto"
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: 4 }}
-          >
-            <X size={16} />
-          </button>
+          {mobileOpen && (
+            <button
+              className="max-[679px]:flex hidden ml-auto"
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: 4 }}
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingTop: 12 }}>
           {navSections.map(section => (
             <div key={section.label} style={{ marginBottom: 16 }}>
-              {!collapsed && (
+              {(!collapsed || mobileOpen) && (
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 4 }}>
                   {section.label}
                 </div>
@@ -115,13 +116,13 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
                     key={item.id}
                     href={`/${item.id}`}
                     className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
-                    style={{ width: '100%', justifyContent: collapsed ? 'center' : 'flex-start' }}
+                    style={{ width: '100%', justifyContent: collapsed && !mobileOpen ? 'center' : 'flex-start', minHeight: 44 }}
                     onClick={() => mobileOpen && onClose()}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed && !mobileOpen ? item.label : undefined}
                   >
-                    <Icon size={16} style={{ flexShrink: 0 }} />
-                    {!collapsed && <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>}
-                    {!collapsed && isActive && <ChevronRight size={12} style={{ opacity: 0.6 }} />}
+                    <Icon size={18} style={{ flexShrink: 0 }} />
+                    {(!collapsed || mobileOpen) && <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>}
+                    {(!collapsed || mobileOpen) && isActive && <ChevronRight size={14} style={{ opacity: 0.6 }} />}
                   </Link>
                 )
               })}
@@ -130,7 +131,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
         </nav>
 
         {/* Version */}
-        {!collapsed && (
+        {(!collapsed || mobileOpen) && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
             ROLLYN v1.0.0
           </div>

@@ -3,10 +3,24 @@
   border: 1px solid #DDDDDD;
   border-radius: 4px;
   padding: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: #BFD7F5;
+  box-shadow: 0 8px 18px rgba(25, 62, 116, 0.08);
 }
 
 .card {
   background: #FFFFFF;
   border: 1px solid #DDDDDD;
   border-radius: 4px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: #BFD7F5;
+  box-shadow: 0 8px 18px rgba(25, 62, 116, 0.08);
 }

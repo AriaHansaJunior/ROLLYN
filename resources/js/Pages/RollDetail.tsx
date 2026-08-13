@@ -40,7 +40,7 @@ export default function RollDetail() {
         <span className="badge" style={{ background: '#d0e8f5', color: '#286090', marginLeft: 'auto' }}>{roll.status}</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }} className="max-[1179px]:grid-cols-2! max-[679px]:grid-cols-1!">
+      <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-2 min-[1180px]:grid-cols-3">
         <Section title="Roll Information">
           <InfoRow label="Roll Number" value={roll.id} />
           <InfoRow label="Form Number" value={roll.form} />
@@ -94,7 +94,7 @@ export default function RollDetail() {
         </Section>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
         <button className="btn btn-primary"><Package size={14} /> Assign Location</button>
         <button className="btn btn-secondary">Edit Roll Data</button>
         <button className="btn btn-danger" style={{ marginLeft: 'auto' }}>Delete Roll</button>

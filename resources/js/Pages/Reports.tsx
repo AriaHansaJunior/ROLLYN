@@ -35,7 +35,7 @@ export default function Reports() {
       <h2 className="page-title">Reports</h2>
 
       {/* KPI summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+      <div style={{ display: 'grid', gap: 10 }} className="grid-cols-2 min-[680px]:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
         {kpis.map(kpi => (
           <div key={kpi.label} className="kpi-card">
             <div style={{ fontSize: 11, color: '#777', fontWeight: 500, marginBottom: 4 }}>{kpi.label}</div>
@@ -44,7 +44,7 @@ export default function Reports() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="max-[679px]:grid-cols-1!">
+      <div style={{ display: 'grid', gap: 16 }} className="grid-cols-1 min-[680px]:grid-cols-2">
         {/* WH Occupancy */}
         <div className="card" style={{ padding: 16 }}>
           <h3 className="section-title" style={{ marginBottom: 12 }}>Warehouse Occupancy (Slots)</h3>
