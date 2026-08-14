@@ -1,7 +1,26 @@
 {
-  "engine_version": "4.1.0 (Strict Box-Count & Left-to-Right Sort)",
+  "engine_version": "4.0.0 (HOG+MLP Real Training)",
+  "model_type": "scikit-learn MLPClassifier (HOG Features)",
   "model_file": "best_mlp.pkl",
-  "samples_processed": 0,
-  "corrections_learned": 0,
-  "last_trained_formatted": "Never"
+  "epochs_trained": 300,
+  "samples_processed": 37,
+  "corrections_learned": 25,
+  "auto_annotated_images": 37,
+  "digit_crops_saved": 107,
+  "class_distribution": {
+    "0": 2,
+    "1": 13,
+    "2": 10,
+    "3": 21,
+    "4": 7,
+    "5": 9,
+    "6": 8,
+    "7": 7,
+    "8": 6,
+    "9": 24
+  },
+  "val_accuracy": "45.5%",
+  "accuracy_gain": "+40.0%",
+  "last_trained_timestamp": 1786680765,
+  "last_trained_formatted": "2026-08-14 11:12:45"
 }

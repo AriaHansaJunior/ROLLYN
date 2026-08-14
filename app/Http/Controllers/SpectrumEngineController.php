@@ -19,20 +19,21 @@ class SpectrumEngineController extends Controller
     public function detect(Request $request)
     {
         $base64Image = $request->input('image') ?? $request->input('image_base64');
+        $images = $request->input('images');
 
-        if (empty($base64Image)) {
+        if (empty($base64Image) && empty($images)) {
             return response()->json([
                 'status' => 'ERROR',
                 'weight_detected' => 0,
                 'confidence' => 0.0,
-                'message' => 'Param image or image_base64 is required.',
+                'message' => 'Param image, image_base64, or images is required.',
             ], 422);
         }
 
+        $payload = !empty($images) ? ['images' => $images] : ['image' => $base64Image];
+
         try {
-            $response = Http::timeout(5)->post('http://127.0.0.1:8001/api/spectrum/detect', [
-                'image' => $base64Image,
-            ]);
+            $response = Http::timeout(5)->post('http://127.0.0.1:8001/api/spectrum/detect', $payload);
 
             if ($response->successful()) {
                 return response()->json($response->json());

@@ -1,6 +1,13 @@
 {
-  "status": "IDLE",
-  "phase": "IDLE",
-  "progress_pct": 0.0,
-  "message": "Dataset disanitasi. Siap mengambil foto sampel baru."
+  "status": "SUCCESS",
+  "phase": "DONE",
+  "progress_pct": 100.0,
+  "message": "\u2705 SPECTRUM AI Model v4.0 berhasil dilatih! Val Accuracy: 45.5%",
+  "timestamp": 1786680765,
+  "samples_processed": 37,
+  "corrections_learned": 25,
+  "crops_saved": 107,
+  "val_accuracy": "45.5%",
+  "accuracy_gain": "+40.0%",
+  "epochs": 300
 }

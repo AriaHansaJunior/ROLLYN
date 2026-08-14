@@ -19,9 +19,10 @@ export interface SpectrumLogPayload {
     selected_source?: "ocr" | "spectrum" | "manual";
 }
 
-export async function detectSpectrumWeight(base64Image: string): Promise<SpectrumResult> {
+export async function detectSpectrumWeight(base64Image: string | string[]): Promise<SpectrumResult> {
     try {
         const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";
+        const payload = Array.isArray(base64Image) ? { images: base64Image } : { image: base64Image };
 
         const response = await fetch("/api/spectrum/detect", {
             method: "POST",
@@ -30,7 +31,7 @@ export async function detectSpectrumWeight(base64Image: string): Promise<Spectru
                 "Accept": "application/json",
                 "X-CSRF-TOKEN": csrfToken,
             },
-            body: JSON.stringify({ image: base64Image }),
+            body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -45,8 +46,8 @@ export async function detectSpectrumWeight(base64Image: string): Promise<Spectru
             status: "WARNING_LOW_CONFIDENCE",
             weight_detected: 0,
             confidence: 0,
-            spectrum_processed_image: base64Image,
-            engine_version: "3.0.0 (NMS Active)",
+            spectrum_processed_image: Array.isArray(base64Image) ? base64Image[0] : base64Image,
+            engine_version: "5.1.0 (Adaptive 7-Segment & Temporal Consensus)",
             message: "SPECTRUM Engine microservice unreachable",
         };
     }

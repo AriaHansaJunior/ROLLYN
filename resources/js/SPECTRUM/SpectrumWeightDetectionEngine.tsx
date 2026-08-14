@@ -159,16 +159,28 @@ export default function SpectrumWeightDetectionEngine({
         setSpectrumResult(null);
 
         try {
+            const captureBase64 = async () => {
+                const { rawCanvas } = await preprocessImage(video, roi);
+                return rawCanvas.toDataURL("image/jpeg", 0.9);
+            };
+
+            const frames: string[] = [];
             const { variants, rawCanvas } = await preprocessImage(video, roi);
             latestVariantsRef.current = variants;
 
             const frameBase64 = rawCanvas.toDataURL("image/jpeg", 0.9);
             currentFrameBase64Ref.current = frameBase64;
+            frames.push(frameBase64);
+
+            await new Promise((r) => setTimeout(r, 50));
+            frames.push(await captureBase64());
+            await new Promise((r) => setTimeout(r, 50));
+            frames.push(await captureBase64());
 
             const quality = analyseImageQuality(rawCanvas);
             const [legacyOutcome, spectrumData] = await Promise.all([
                 recogniseWeight(variants, quality),
-                detectSpectrumWeight(frameBase64),
+                detectSpectrumWeight(frames),
             ]);
 
             setSpectrumResult(spectrumData);
