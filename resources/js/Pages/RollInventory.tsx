@@ -114,21 +114,39 @@ export default function RollInventory() {
 
       {/* Table */}
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1180px] table-fixed border-collapse text-xs">
+        <table className="data-table w-full min-w-[1070px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col className="w-[100px]" />
+            <col className="w-[90px]" />
+            <col className="w-[60px]" />
+            <col className="w-[90px]" />
+            <col className="w-[80px]" />
+            <col className="w-[60px]" />
+            <col className="w-[80px]" />
+            <col className="w-[80px]" />
+            <col className="w-[80px]" />
+            <col className="w-[100px]" />
+            <col className="w-[100px]" />
+            <col className="w-[100px]" />
+            <col className="w-[60px]" />
+          </colgroup>
           <thead>
             <tr>
-              {cols.map(col => (
-                <th
-                  key={col.key}
-                  onClick={() => sort(col.key)}
-                  className={`cursor-pointer select-none ${centeredCols.has(col.key) ? 'text-center' : ''}`}
-                >
-                  <div className={`flex items-center gap-1 ${centeredCols.has(col.key) ? 'justify-center' : ''}`}>
-                    {col.label} <SortIcon k={col.key} />
-                  </div>
-                </th>
-              ))}
-              <th className="text-center">Action</th>
+              {cols.map(col => {
+                const isCenter = col.key !== 'id';
+                return (
+                  <th
+                    key={col.key}
+                    onClick={() => sort(col.key)}
+                    className="cursor-pointer select-none"
+                    style={{ textAlign: isCenter ? 'center' : 'left' }}
+                  >
+                    {col.label} 
+                    <span className="inline-block align-middle ml-1"><SortIcon k={col.key} /></span>
+                  </th>
+                );
+              })}
+              <th style={{ textAlign: 'center' }}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -138,23 +156,23 @@ export default function RollInventory() {
               const sc = statusColors[r.status] || { bg: '#EEEEEE', color: '#333' }
               return (
                 <tr key={r.id}>
-                  <td><span className="font-bold text-blue-700 font-mono text-xs">{r.id}</span></td>
-                  <td className="font-mono text-xs">{r.form}</td>
-                  <td className="text-center"><span className="badge bg-slate-100 text-slate-700 border-slate-200">{r.shift}</span></td>
-                  <td className="text-center text-xs">{r.date}</td>
-                  <td><span className="font-semibold text-slate-800">{r.grade}</span></td>
-                  <td className="text-center">{r.gsm}</td>
-                  <td className="text-center font-mono text-xs">{r.weight.toLocaleString()}</td>
-                  <td className="text-center">{r.width}</td>
-                  <td className="text-center font-mono text-xs">{r.location || <span className="text-red-600">No Slot</span>}</td>
-                  <td className="text-center text-xs">{r.jop}</td>
-                  <td className="text-center text-xs">{r.pic}</td>
-                  <td className="text-center">
+                  <td style={{ textAlign: 'left' }}><span className="font-bold text-blue-700 font-mono text-xs">{r.id}</span></td>
+                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.form}</td>
+                  <td style={{ textAlign: 'center' }}><span className="badge bg-slate-100 text-slate-700 border-slate-200">{r.shift}</span></td>
+                  <td style={{ textAlign: 'center' }} className="text-xs">{r.date}</td>
+                  <td style={{ textAlign: 'center' }}><span className="font-semibold text-slate-800">{r.grade}</span></td>
+                  <td style={{ textAlign: 'center' }}>{r.gsm}</td>
+                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.weight.toLocaleString()}</td>
+                  <td style={{ textAlign: 'center' }}>{r.width}</td>
+                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.location || <span className="text-red-600">No Slot</span>}</td>
+                  <td style={{ textAlign: 'center' }} className="text-xs">{r.jop}</td>
+                  <td style={{ textAlign: 'center' }} className="text-xs">{r.pic}</td>
+                  <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
                       <span className="badge inline-flex min-w-[88px] justify-center" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span>
                     </div>
                   </td>
-                  <td className="text-center">
+                  <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
                       <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer" onClick={() => router.visit('/roll-detail')} title="View Roll Detail">
                         <Eye size={13} />

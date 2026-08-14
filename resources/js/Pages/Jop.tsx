@@ -9,27 +9,27 @@ export default function Jop() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1080px] table-fixed border-collapse text-xs">
+        <table className="data-table w-full min-w-[980px] table-fixed border-collapse text-xs">
           <colgroup>
+            <col className="w-[130px]" />
+            <col className="w-[130px]" />
+            <col className="w-[130px]" />
+            <col className="w-[200px]" />
+            <col className="w-[100px]" />
+            <col className="w-[110px]" />
+            <col className="w-[110px]" />
             <col className="w-[160px]" />
-            <col className="w-[160px]" />
-            <col className="w-[170px]" />
-            <col className="w-[230px]" />
-            <col className="w-[120px]" />
-            <col className="w-[150px]" />
-            <col className="w-[150px]" />
-            <col className="w-[220px]" />
           </colgroup>
           <thead>
             <tr>
-              <th>JOP</th>
-              <th>SPK</th>
-              <th>PO</th>
-              <th>Customer</th>
-              <th>Grade</th>
-              <th className="text-center">Target Rolls</th>
-              <th className="text-center">Completed</th>
-              <th className="text-center">Progress</th>
+              <th style={{ textAlign: 'left' }}>JOP</th>
+              <th style={{ textAlign: 'center' }}>SPK</th>
+              <th style={{ textAlign: 'center' }}>PO</th>
+              <th style={{ textAlign: 'center' }}>Customer</th>
+              <th style={{ textAlign: 'center' }}>Grade</th>
+              <th style={{ textAlign: 'center' }}>Target Rolls</th>
+              <th style={{ textAlign: 'center' }}>Completed</th>
+              <th style={{ textAlign: 'center' }}>Progress</th>
             </tr>
           </thead>
           <tbody>
@@ -40,16 +40,16 @@ export default function Jop() {
 
               return (
                 <tr key={r.jop}>
-                  <td className="font-bold text-blue-700 font-mono text-xs">{r.jop}</td>
-                  <td className="font-mono text-xs text-slate-600">{r.spk}</td>
-                  <td className="font-mono text-xs text-slate-600">{r.po}</td>
-                  <td className="font-medium text-slate-900">{r.customer}</td>
-                  <td>{r.grade}</td>
-                  <td className="text-center font-semibold">{r.target}</td>
-                  <td className="text-center font-bold text-slate-900">{r.rolls}</td>
-                  <td className="text-center">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden min-w-[60px]">
+                  <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.jop}</td>
+                  <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.spk}</td>
+                  <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.po}</td>
+                  <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{r.customer}</td>
+                  <td style={{ textAlign: 'center' }}>{r.grade}</td>
+                  <td className="font-semibold" style={{ textAlign: 'center' }}>{r.target}</td>
+                  <td className="font-bold text-slate-900" style={{ textAlign: 'center' }}>{r.rolls}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-full max-w-[90px] h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${barBg}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                       </div>
                       <span className={`text-[11px] font-bold w-9 text-right ${colorClass.split(' ')[1]}`}>{pct}%</span>

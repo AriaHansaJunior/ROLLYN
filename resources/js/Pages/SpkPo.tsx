@@ -9,27 +9,27 @@ export default function SpkPo() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1200px] table-fixed border-collapse text-xs">
+        <table className="data-table w-full min-w-[1000px] table-fixed border-collapse text-xs">
           <colgroup>
-            <col className="w-[160px]" />
-            <col className="w-[160px]" />
-            <col className="w-[170px]" />
-            <col className="w-[240px]" />
+            <col className="w-[130px]" />
             <col className="w-[120px]" />
-            <col className="w-[180px]" />
-            <col className="w-[180px]" />
-            <col className="w-[160px]" />
+            <col className="w-[130px]" />
+            <col className="w-[200px]" />
+            <col className="w-[100px]" />
+            <col className="w-[120px]" />
+            <col className="w-[130px]" />
+            <col className="w-[140px]" />
           </colgroup>
           <thead>
             <tr>
-              <th>SPK No.</th>
-              <th>JOP</th>
-              <th>PO No.</th>
-              <th>Customer</th>
-              <th>Grade</th>
-              <th className="text-center">Target (rolls)</th>
-              <th className="text-center">Fulfilled Rolls</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Status</th>
+              <th style={{ textAlign: 'left' }}>SPK No.</th>
+              <th style={{ textAlign: 'center' }}>JOP</th>
+              <th style={{ textAlign: 'center' }}>PO No.</th>
+              <th style={{ textAlign: 'center' }}>Customer</th>
+              <th style={{ textAlign: 'center' }}>Grade</th>
+              <th style={{ textAlign: 'center' }}>Target (rolls)</th>
+              <th style={{ textAlign: 'center' }}>Fulfilled Rolls</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -44,14 +44,14 @@ export default function SpkPo() {
 
               return (
                 <tr key={o.spk}>
-                  <td className="font-bold text-blue-700 font-mono text-xs">{o.spk}</td>
-                  <td className="font-mono text-xs text-slate-600">{o.jop}</td>
-                  <td className="font-mono text-xs text-slate-600">{o.po}</td>
-                  <td className="font-medium text-slate-900">{o.customer}</td>
-                  <td>{o.grade}</td>
-                  <td className="text-center font-semibold">{o.qtyRoll}</td>
-                  <td className="text-center font-bold text-slate-900">{relatedRolls}</td>
-                  <td className="text-center">
+                  <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{o.spk}</td>
+                  <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{o.jop}</td>
+                  <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{o.po}</td>
+                  <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{o.customer}</td>
+                  <td style={{ textAlign: 'center' }}>{o.grade}</td>
+                  <td className="font-semibold" style={{ textAlign: 'center' }}>{o.qtyRoll}</td>
+                  <td className="font-bold text-slate-900" style={{ textAlign: 'center' }}>{relatedRolls}</td>
+                  <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
                       <span className={`badge inline-flex min-w-[96px] justify-center ${sc}`}>{status}</span>
                     </div>

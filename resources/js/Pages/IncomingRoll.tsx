@@ -78,7 +78,7 @@ export default function IncomingRoll() {
       </div>
 
       {/* Step Indicator */}
-      <div className="flex items-center gap-2 max-w-2xl py-2">
+      <div className="flex items-center gap-2 w-full lg:max-w-4xl py-2">
         {steps.map((s, i) => (
           <div key={s} className="flex items-center flex-1 last:flex-none">
             <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export default function IncomingRoll() {
 
       {/* STEP 1: Roll Data Entry */}
       {step === 1 && (
-        <div className="max-w-4xl space-y-4">
+        <div className="w-full 2xl:max-w-7xl space-y-4 lg:space-y-6">
           {/* Prominent Weight Display */}
           <div className="card p-4">
             <div className="flex items-center justify-between gap-4 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl">
@@ -158,7 +158,7 @@ export default function IncomingRoll() {
           {/* Roll Data Form */}
           <div className="card p-4 sm:p-5">
             <h3 className="text-sm font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">Roll Data Entry</h3>
-            <div className="grid grid-cols-1 min-[680px]:grid-cols-3 min-[1180px]:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 min-[680px]:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
               <div>
                 <label className="form-label text-xs font-semibold block mb-1">Roll Number <span className="text-red-500">*</span></label>
                 <input
@@ -282,10 +282,10 @@ export default function IncomingRoll() {
 
       {/* STEP 2: Review & Save */}
       {step === 2 && (
-        <div className="max-w-2xl space-y-4">
-          <div className="card p-4 sm:p-5">
-            <h3 className="text-sm font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">Review & Save</h3>
-            <div className="grid grid-cols-1 min-[680px]:grid-cols-2 gap-x-6 gap-y-1 text-xs">
+        <div className="w-full 2xl:max-w-7xl space-y-4">
+          <div className="card p-4 sm:p-6 lg:p-8">
+            <h3 className="text-sm sm:text-base lg:text-xl font-extrabold text-slate-900 mb-4 pb-3 border-b border-slate-200">Review & Save</h3>
+            <div className="grid grid-cols-1 min-[680px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-2 sm:gap-y-3 lg:gap-y-4 text-xs sm:text-sm lg:text-base">
               {[
                 ['Roll Number', form.rollNumber || '(not entered)'],
                 ['Form Number', form.formNumber || '(not entered)'],
@@ -304,7 +304,7 @@ export default function IncomingRoll() {
                 ['Job Order Production', form.jop || '(not entered)'],
                 ['PIC', form.pic || '(not entered)'],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <div key={label} className="flex justify-between items-center py-2 lg:py-3 border-b border-slate-100">
                   <span className="text-slate-500 font-medium">{label}</span>
                   <span className={`font-semibold text-right ${value.includes('(not entered)') ? 'text-amber-600' : 'text-slate-900'}`}>
                     {value}
@@ -313,12 +313,12 @@ export default function IncomingRoll() {
               ))}
             </div>
 
-            <div className="flex gap-2 justify-end pt-4 mt-4 border-t border-slate-100">
-              <button className="btn btn-secondary text-xs" onClick={() => setStep(1)}>
-                <ArrowLeft size={13} /> <span>Edit</span>
+            <div className="flex gap-3 justify-end pt-6 mt-6 border-t border-slate-200">
+              <button className="btn btn-secondary text-xs sm:text-sm px-4 py-2 lg:px-6 lg:py-2.5" onClick={() => setStep(1)}>
+                <ArrowLeft size={16} /> <span>Edit</span>
               </button>
-              <button className="btn btn-primary text-xs" onClick={handleSave}>
-                <Save size={13} /> <span>Save Roll</span>
+              <button className="btn btn-primary text-xs sm:text-sm px-4 py-2 lg:px-6 lg:py-2.5" onClick={handleSave}>
+                <Save size={16} /> <span>Save Roll</span>
               </button>
             </div>
           </div>

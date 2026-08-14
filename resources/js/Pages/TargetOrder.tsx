@@ -30,36 +30,49 @@ export default function TargetOrder() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1120px] border-collapse text-xs">
+        <table className="data-table w-full min-w-[1040px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col className="w-[110px]" />
+            <col className="w-[100px]" />
+            <col className="w-[100px]" />
+            <col className="w-[160px]" />
+            <col className="w-[90px]" />
+            <col className="w-[60px]" />
+            <col className="w-[70px]" />
+            <col className="w-[70px]" />
+            <col className="w-[80px]" />
+            <col className="w-[80px]" />
+            <col className="w-[120px]" />
+          </colgroup>
           <thead>
             <tr>
-              <th className="text-left">SPK</th>
-              <th className="text-left">JOP</th>
-              <th className="text-left">PO</th>
-              <th className="text-left">Customer</th>
-              <th className="text-left">Grade</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>GSM</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>RW (mm)</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Qty Roll</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Weight (kg)</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Container</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Notes</th>
+              <th style={{ textAlign: 'left' }}>SPK</th>
+              <th style={{ textAlign: 'center' }}>JOP</th>
+              <th style={{ textAlign: 'center' }}>PO</th>
+              <th style={{ textAlign: 'center' }}>Customer</th>
+              <th style={{ textAlign: 'center' }}>Grade</th>
+              <th style={{ textAlign: 'center' }}>GSM</th>
+              <th style={{ textAlign: 'center' }}>RW (mm)</th>
+              <th style={{ textAlign: 'center' }}>Qty Roll</th>
+              <th style={{ textAlign: 'center' }}>Weight (kg)</th>
+              <th style={{ textAlign: 'center' }}>Container</th>
+              <th style={{ textAlign: 'center' }}>Notes</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map(r => (
               <tr key={r.spk}>
-                <td className="text-left font-bold text-blue-700 font-mono text-xs">{r.spk}</td>
-                <td className="text-left font-mono text-xs">{r.jop}</td>
-                <td className="text-left font-mono text-xs">{r.po}</td>
-                <td className="text-left font-medium text-slate-900">{r.customer}</td>
-                <td className="text-left">{r.grade}</td>
-                <td className="text-center">{r.gsm}</td>
-                <td className="text-center">{r.rw.toLocaleString()}</td>
-                <td className="text-center font-bold">{r.qtyRoll}</td>
-                <td className="text-center font-mono text-xs">{r.weight.toLocaleString()}</td>
-                <td className="text-center">{r.container}</td>
-                <td className={`text-center text-xs ${r.noted ? 'text-slate-700' : 'text-slate-400'}`}>{r.noted || '—'}</td>
+                <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.spk}</td>
+                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.jop}</td>
+                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.po}</td>
+                <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{r.customer}</td>
+                <td style={{ textAlign: 'center' }}>{r.grade}</td>
+                <td style={{ textAlign: 'center' }}>{r.gsm}</td>
+                <td style={{ textAlign: 'center' }}>{r.rw.toLocaleString()}</td>
+                <td className="font-bold" style={{ textAlign: 'center' }}>{r.qtyRoll}</td>
+                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.weight.toLocaleString()}</td>
+                <td style={{ textAlign: 'center' }}>{r.container}</td>
+                <td className={`text-xs ${r.noted ? 'text-slate-700' : 'text-slate-400'}`} style={{ textAlign: 'center' }}>{r.noted || '—'}</td>
               </tr>
             ))}
           </tbody>

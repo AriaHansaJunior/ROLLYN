@@ -78,40 +78,40 @@ export default function UserManagement() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[980px] table-fixed border-collapse">
+        <table className="data-table w-full min-w-[950px] table-fixed border-collapse">
           <colgroup>
-            <col className="w-[220px]" />
-            <col className="w-[310px]" />
-            <col className="w-[150px]" />
-            <col className="w-[170px]" />
-            <col className="w-[230px]" />
-            <col className="w-[140px]" />
+            <col className="w-[180px]" />
+            <col className="w-[280px]" />
+            <col className="w-[120px]" />
+            <col className="w-[130px]" />
+            <col className="w-[160px]" />
+            <col className="w-[120px]" />
           </colgroup>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Status</th>
-              <th>Created</th>
-              <th>Last Activity</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Actions</th>
+              <th style={{ textAlign: 'left' }}>Name</th>
+              <th style={{ textAlign: 'center' }}>Email</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
+              <th style={{ textAlign: 'center' }}>Created</th>
+              <th style={{ textAlign: 'center' }}>Last Activity</th>
+              <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map(user => (
               <tr key={user.id}>
-                <td className="font-semibold text-slate-900">{user.name}</td>
-                <td className="font-mono text-xs text-slate-600">{user.email}</td>
-                <td className="text-center">
+                <td className="font-semibold text-slate-900" style={{ textAlign: 'left' }}>{user.name}</td>
+                <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{user.email}</td>
+                <td style={{ textAlign: 'center' }}>
                   <div className="flex w-full justify-center">
                     <span className={`badge inline-flex min-w-[86px] justify-center ${user.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                       {user.status}
                     </span>
                   </div>
                 </td>
-                <td className="text-xs text-slate-500">{user.created}</td>
-                <td className="text-xs text-slate-500">{user.lastActivity}</td>
-                <td className="text-center">
+                <td className="text-xs text-slate-500" style={{ textAlign: 'center' }}>{user.created}</td>
+                <td className="text-xs text-slate-500" style={{ textAlign: 'center' }}>{user.lastActivity}</td>
+                <td style={{ textAlign: 'center' }}>
                   <div className="flex gap-1.5 justify-center">
                     <button className="btn btn-secondary btn-sm p-1.5" onClick={() => openEdit(user)} title="Edit">
                       <Edit size={13} />
