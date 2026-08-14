@@ -82,31 +82,41 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full text-left text-xs border-collapse min-w-[580px]">
+          <div className="overflow-x-auto">
+            <table className="data-table w-full min-w-[750px] table-fixed border-collapse text-xs">
+              <colgroup>
+                <col className="w-[80px]" />
+                <col className="w-[90px]" />
+                <col className="w-[90px]" />
+                <col className="w-[140px]" />
+                <col className="w-[90px]" />
+                <col className="w-[90px]" />
+                <col className="w-[90px]" />
+                <col className="w-[80px]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-semibold">
-                  <th className="py-2.5 px-3 rounded-l-lg">WH</th>
-                  <th className="py-2.5 px-2">Occupied</th>
-                  <th className="py-2.5 px-2">Available</th>
-                  <th className="py-2.5 px-2 w-36">Utilization</th>
-                  <th className="py-2.5 px-2">Shipment</th>
-                  <th className="py-2.5 px-2">Non-PO</th>
-                  <th className="py-2.5 px-2">Move WH</th>
-                  <th className="py-2.5 px-2 rounded-r-lg">Hold</th>
+                <tr>
+                  <th style={{ textAlign: 'left' }}>WH</th>
+                  <th style={{ textAlign: 'center' }}>Occupied</th>
+                  <th style={{ textAlign: 'center' }}>Available</th>
+                  <th style={{ textAlign: 'center' }}>Utilization</th>
+                  <th style={{ textAlign: 'center' }}>Shipment</th>
+                  <th style={{ textAlign: 'center' }}>Non-PO</th>
+                  <th style={{ textAlign: 'center' }}>Move WH</th>
+                  <th style={{ textAlign: 'center' }}>Hold</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody>
                 {warehouseData.map(wh => {
                   const util = Math.round((wh.occupied / wh.total) * 100)
                   return (
-                    <tr key={wh.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-2.5 px-3 font-bold text-blue-700">WH {wh.id}</td>
-                      <td className="py-2.5 px-2">{wh.occupied}</td>
-                      <td className="py-2.5 px-2">{wh.available}</td>
-                      <td className="py-2.5 px-2">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden min-w-[50px]">
+                    <tr key={wh.id}>
+                      <td className="font-bold text-blue-700 font-mono" style={{ textAlign: 'left' }}>WH {wh.id}</td>
+                      <td className="font-semibold text-slate-800" style={{ textAlign: 'center' }}>{wh.occupied}</td>
+                      <td className="font-semibold text-slate-800" style={{ textAlign: 'center' }}>{wh.available}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-full max-w-[70px] h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-300 ${
                                 util > 85 ? 'bg-red-500' : util > 60 ? 'bg-amber-500' : 'bg-green-500'
@@ -114,28 +124,36 @@ export default function Dashboard() {
                               style={{ width: `${util}%` }}
                             />
                           </div>
-                          <span className="text-[11px] font-bold text-slate-600 w-8">{util}%</span>
+                          <span className="text-[11px] font-bold text-slate-600 w-8 text-right">{util}%</span>
                         </div>
                       </td>
-                      <td className="py-2.5 px-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
-                          {wh.shipment}
-                        </span>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex w-full justify-center">
+                          <span className="badge inline-flex min-w-[40px] justify-center bg-green-50 text-green-700 border-green-200">
+                            {wh.shipment}
+                          </span>
+                        </div>
                       </td>
-                      <td className="py-2.5 px-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
-                          {wh.nonPO}
-                        </span>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex w-full justify-center">
+                          <span className="badge inline-flex min-w-[40px] justify-center bg-red-50 text-red-700 border-red-200">
+                            {wh.nonPO}
+                          </span>
+                        </div>
                       </td>
-                      <td className="py-2.5 px-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                          {wh.moveWH}
-                        </span>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex w-full justify-center">
+                          <span className="badge inline-flex min-w-[40px] justify-center bg-amber-50 text-amber-700 border-amber-200">
+                            {wh.moveWH}
+                          </span>
+                        </div>
                       </td>
-                      <td className="py-2.5 px-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                          {wh.hold}
-                        </span>
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex w-full justify-center">
+                          <span className="badge inline-flex min-w-[40px] justify-center bg-blue-50 text-blue-700 border-blue-200">
+                            {wh.hold}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -151,8 +169,8 @@ export default function Dashboard() {
             <p className="text-[11px] text-slate-400">System warnings & required actions</p>
           </div>
 
-          <div className="space-y-2.5 overflow-y-auto max-h-[300px] pr-1">
-            {alerts.map(alert => (
+          <div className="space-y-2.5">
+            {alerts.slice(0, 3).map(alert => (
               <div
                 key={alert.id}
                 className={`p-2.5 rounded-xl border-l-4 ${alertBg[alert.type]} border border-slate-100 flex items-start gap-2.5`}

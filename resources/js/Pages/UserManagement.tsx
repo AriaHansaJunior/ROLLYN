@@ -1,14 +1,23 @@
 import { useState } from 'react'
-import { Plus, Edit, Trash2, X } from 'lucide-react'
+import { Plus, Edit, Trash2, X, Search, Filter } from 'lucide-react'
 import { adminUsers as initialUsers } from '../data/dummy'
 import { SystemUI } from '@/Utils/SystemUI'
 
 export default function UserManagement() {
   const [users, setUsers] = useState(initialUsers)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('All')
   const [showModal, setShowModal] = useState(false)
   const [editUser, setEditUser] = useState<typeof initialUsers[0] | null>(null)
   const [form, setForm] = useState({ name: '', email: '', status: 'Active' })
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({})
+
+  const filteredUsers = users.filter(user => {
+    const q = search.toLowerCase()
+    const matchSearch = !q || user.name.toLowerCase().includes(q) || user.email.toLowerCase().includes(q)
+    const matchStatus = statusFilter === 'All' || user.status === statusFilter
+    return matchSearch && matchStatus
+  })
 
   function openAdd() {
     setEditUser(null)
@@ -67,25 +76,54 @@ export default function UserManagement() {
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">User Management</h2>
           <p className="text-xs text-slate-500 mt-0.5">Manage system administrator accounts</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={14} /> <span>Add Admin</span>
+        <button className="btn btn-primary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0" onClick={openAdd}>
+          <Plus size={13} className="sm:w-3.5 sm:h-3.5" /> <span>Add Admin</span>
         </button>
       </div>
 
+      <div className="card p-3 sm:p-4 grid grid-cols-1 min-[760px]:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 w-full min-[760px]:flex-1 min-w-0">
+          <Search size={14} className="text-slate-400 shrink-0" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search name or email..."
+            className="w-full min-w-0 bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+          />
+        </div>
+        <div className="flex items-center gap-2 justify-between w-full min-[760px]:w-auto min-[760px]:justify-end">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Filter size={13} className="text-slate-500 shrink-0" />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="form-input text-xs py-1.5 min-w-[130px] w-auto"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div className="min-[760px]:col-span-2 mt-1 min-[760px]:mt-0">
+          <span className="text-xs font-semibold text-slate-500">Total: {filteredUsers.length} users</span>
+        </div>
+      </div>
+
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[950px] table-fixed border-collapse">
+        <table className="data-table w-full min-w-[1050px] lg:min-w-[820px] table-fixed border-collapse">
           <colgroup>
-            <col className="w-[180px]" />
-            <col className="w-[280px]" />
-            <col className="w-[120px]" />
-            <col className="w-[130px]" />
-            <col className="w-[160px]" />
-            <col className="w-[120px]" />
+            <col className="w-[180px] lg:w-[150px]" />
+            <col className="w-[280px] lg:w-[200px]" />
+            <col className="w-[120px] lg:w-[100px]" />
+            <col className="w-[160px] lg:w-[120px]" />
+            <col className="w-[190px] lg:w-[150px]" />
+            <col className="w-[120px] lg:w-[100px]" />
           </colgroup>
           <thead>
             <tr>
@@ -98,7 +136,7 @@ export default function UserManagement() {
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
+            {filteredUsers.map(user => (
               <tr key={user.id}>
                 <td className="font-semibold text-slate-900" style={{ textAlign: 'left' }}>{user.name}</td>
                 <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{user.email}</td>

@@ -131,15 +131,17 @@ export default function RollDetail() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 pt-2">
-        <button className="btn btn-primary" onClick={handleAssignLocation}>
+        <button className="btn btn-primary flex-1 sm:flex-initial justify-center" onClick={handleAssignLocation}>
           <Package size={14} /> <span>Assign Location</span>
         </button>
-        <button className="btn btn-secondary" onClick={handleEditRoll}>
+        <button className="btn btn-secondary flex-1 sm:flex-initial justify-center" onClick={handleEditRoll}>
           <Edit size={14} /> <span>Edit Roll Data</span>
         </button>
-        <button className="btn btn-danger ml-auto" onClick={handleDeleteRoll}>
-          <Trash2 size={14} /> <span>Delete Roll</span>
-        </button>
+        <div className="w-full sm:w-auto flex justify-center sm:ml-auto mt-1 sm:mt-0">
+          <button className="btn btn-danger justify-center" onClick={handleDeleteRoll}>
+            <Trash2 size={14} /> <span>Delete Roll</span>
+          </button>
+        </div>
       </div>
     </div>
   )

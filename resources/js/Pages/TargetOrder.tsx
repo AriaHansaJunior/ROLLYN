@@ -16,33 +16,35 @@ export default function TargetOrder() {
         <p className="text-xs text-slate-500 mt-0.5">Production fulfillment targets and container assignment schedule</p>
       </div>
 
-      <div className="card p-3 sm:p-4 flex flex-wrap gap-2.5 items-center justify-between">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[200px]">
+      <div className="card p-3 sm:p-4 flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 w-full min-w-0">
           <Search size={14} className="text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search SPK, customer, JOP, grade..."
-            className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+            className="w-full min-w-0 bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
           />
         </div>
-        <span className="text-xs font-semibold text-slate-500">{filtered.length} orders</span>
+        <div>
+          <span className="text-xs font-semibold text-slate-500">Total: {filtered.length} orders</span>
+        </div>
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1040px] table-fixed border-collapse text-xs">
+        <table className="data-table w-full min-w-[1300px] lg:min-w-[1040px] table-fixed border-collapse text-xs">
           <colgroup>
-            <col className="w-[110px]" />
-            <col className="w-[100px]" />
-            <col className="w-[100px]" />
-            <col className="w-[160px]" />
-            <col className="w-[90px]" />
-            <col className="w-[60px]" />
-            <col className="w-[70px]" />
-            <col className="w-[70px]" />
-            <col className="w-[80px]" />
-            <col className="w-[80px]" />
-            <col className="w-[120px]" />
+            <col className="w-[140px] lg:w-[110px]" />
+            <col className="w-[120px] lg:w-[100px]" />
+            <col className="w-[120px] lg:w-[100px]" />
+            <col className="w-[200px] lg:w-[160px]" />
+            <col className="w-[110px] lg:w-[90px]" />
+            <col className="w-[80px] lg:w-[60px]" />
+            <col className="w-[90px] lg:w-[70px]" />
+            <col className="w-[90px] lg:w-[70px]" />
+            <col className="w-[100px] lg:w-[80px]" />
+            <col className="w-[100px] lg:w-[80px]" />
+            <col className="w-[150px] lg:w-[120px]" />
           </colgroup>
           <thead>
             <tr>

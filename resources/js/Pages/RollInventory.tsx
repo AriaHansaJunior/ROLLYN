@@ -86,49 +86,51 @@ export default function RollInventory() {
 
       {/* Filters */}
       <div className="card p-3 sm:p-4 grid grid-cols-1 min-[760px]:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[200px]">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 w-full min-[760px]:flex-1 min-w-0">
           <Search size={14} className="text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
             placeholder="Search roll, grade, JOP, location..."
-            className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+            className="w-full min-w-0 bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
           />
         </div>
-        <div className="flex items-center gap-1.5 min-[760px]:justify-end">
-          <Filter size={13} className="text-slate-500" />
-          <select
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-            className="form-input text-xs py-1.5 w-full min-[760px]:w-auto"
-          >
-            {statuses.map(s => (
-              <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
-            ))}
-          </select>
+        <div className="flex items-center gap-2 justify-between w-full min-[760px]:w-auto min-[760px]:justify-end">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Filter size={13} className="text-slate-500 shrink-0" />
+            <select
+              value={statusFilter}
+              onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+              className="form-input text-xs py-1.5 min-w-[130px] w-auto"
+            >
+              {statuses.map(s => (
+                <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="min-[760px]:col-span-2">
+        <div className="min-[760px]:col-span-2 mt-1 min-[760px]:mt-0">
           <span className="text-xs font-semibold text-slate-500">Total: {filtered.length} rolls</span>
         </div>
       </div>
 
       {/* Table */}
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1070px] table-fixed border-collapse text-xs">
+        <table className="data-table w-full min-w-[1300px] lg:min-w-[1060px] table-fixed border-collapse text-xs">
           <colgroup>
-            <col className="w-[100px]" />
-            <col className="w-[90px]" />
-            <col className="w-[60px]" />
-            <col className="w-[90px]" />
-            <col className="w-[80px]" />
-            <col className="w-[60px]" />
-            <col className="w-[80px]" />
-            <col className="w-[80px]" />
-            <col className="w-[80px]" />
-            <col className="w-[100px]" />
-            <col className="w-[100px]" />
-            <col className="w-[100px]" />
-            <col className="w-[60px]" />
+            <col className="w-[120px] lg:w-[90px]" />
+            <col className="w-[110px] lg:w-[80px]" />
+            <col className="w-[80px] lg:w-[50px]" />
+            <col className="w-[100px] lg:w-[90px]" />
+            <col className="w-[100px] lg:w-[80px]" />
+            <col className="w-[80px] lg:w-[50px]" />
+            <col className="w-[100px] lg:w-[95px]" />
+            <col className="w-[100px] lg:w-[95px]" />
+            <col className="w-[100px] lg:w-[80px]" />
+            <col className="w-[120px] lg:w-[90px]" />
+            <col className="w-[110px] lg:w-[90px]" />
+            <col className="w-[100px] lg:w-[100px]" />
+            <col className="w-[80px] lg:w-[70px]" />
           </colgroup>
           <thead>
             <tr>

@@ -318,16 +318,8 @@ export default function SpectrumWeightDetectionEngine({
     const isSpectrumLowConf = spectrumResult && (spectrumResult.confidence < 0.80 || spectrumResult.status === "WARNING_LOW_CONFIDENCE");
 
     return (
-        <div
-            style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 16,
-                maxWidth: 1100,
-            }}
-            className="max-[900px]:grid-cols-1!"
-        >
-            <div className="card" style={{ padding: 16 }}>
+        <div className="w-full 2xl:max-w-7xl grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+            <div className="card p-4 sm:p-5">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <h3 className="section-title" style={{ margin: 0 }}>
                         Pratinjau Kamera Live
@@ -514,7 +506,7 @@ export default function SpectrumWeightDetectionEngine({
                 </div>
             </div>
 
-            <div className="card" style={{ padding: 16 }}>
+            <div className="card p-4 sm:p-5">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <h3 className="section-title" style={{ margin: 0 }}>
                         Hasil Pembacaan Timbangan
@@ -571,7 +563,7 @@ export default function SpectrumWeightDetectionEngine({
                             </div>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="max-[600px]:grid-cols-1!">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
                             <div style={{
                                 padding: 12,

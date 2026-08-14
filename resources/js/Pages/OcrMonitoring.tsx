@@ -25,53 +25,57 @@ export default function OcrMonitoring() {
         <p className="text-xs text-slate-500 mt-0.5">Real-time log of camera scale weight recognition events</p>
       </div>
 
-      <div className="card p-3 sm:p-4 flex flex-wrap gap-2.5 items-center justify-between">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[200px]">
+      <div className="card p-3 sm:p-4 grid grid-cols-1 min-[760px]:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 w-full min-[760px]:flex-1 min-w-0">
           <Search size={14} className="text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search roll, admin, ID..."
-            className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+            className="w-full min-w-0 bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Filter size={13} className="text-slate-500" />
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="form-input text-xs py-1.5"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Success">Success</option>
-            <option value="Error">Error</option>
-          </select>
-          <span className="text-xs font-semibold text-slate-500 ml-2">{filtered.length} records</span>
+        <div className="flex items-center gap-2 justify-between w-full min-[760px]:w-auto min-[760px]:justify-end">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Filter size={13} className="text-slate-500 shrink-0" />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="form-input text-xs py-1.5 min-w-[130px] w-auto"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Success">Success</option>
+              <option value="Error">Error</option>
+            </select>
+          </div>
+        </div>
+        <div className="min-[760px]:col-span-2 mt-1 min-[760px]:mt-0">
+          <span className="text-xs font-semibold text-slate-500">Total: {filtered.length} records</span>
         </div>
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1200px] table-fixed border-collapse text-xs">
+        <table className="data-table w-full min-w-[1100px] lg:min-w-[850px] table-fixed border-collapse text-xs">
           <colgroup>
-            <col className="w-[110px]" />
-            <col className="w-[210px]" />
-            <col className="w-[110px]" />
-            <col className="w-[170px]" />
-            <col className="w-[130px]" />
-            <col className="w-[180px]" />
-            <col className="w-[170px]" />
-            <col className="w-[120px]" />
+            <col className="w-[110px] lg:w-[80px]" />
+            <col className="w-[170px] lg:w-[130px]" />
+            <col className="w-[110px] lg:w-[80px]" />
+            <col className="w-[150px] lg:w-[110px]" />
+            <col className="w-[120px] lg:w-[90px]" />
+            <col className="w-[170px] lg:w-[130px]" />
+            <col className="w-[150px] lg:w-[120px]" />
+            <col className="w-[120px] lg:w-[110px]" />
           </colgroup>
           <thead>
             <tr>
-              <th className="text-center" style={{ textAlign: 'center' }}>ID</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Timestamp</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Roll</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Detected Weight</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Status</th>
-              <th>Error Reason</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Administrator</th>
-              <th className="text-center" style={{ textAlign: 'center' }}>Result</th>
+              <th style={{ textAlign: 'left' }}>ID</th>
+              <th style={{ textAlign: 'center' }}>Timestamp</th>
+              <th style={{ textAlign: 'center' }}>Roll</th>
+              <th style={{ textAlign: 'center' }}>Detected Weight</th>
+              <th style={{ textAlign: 'center' }}>Status</th>
+              <th style={{ textAlign: 'left' }}>Error Reason</th>
+              <th style={{ textAlign: 'center' }}>Administrator</th>
+              <th style={{ textAlign: 'center' }}>Result</th>
             </tr>
           </thead>
           <tbody>
@@ -79,18 +83,18 @@ export default function OcrMonitoring() {
               const sc = statusBadge[r.status] || { bg: '#EEEEEE', color: '#333' }
               return (
                 <tr key={r.id}>
-                  <td className="text-center font-mono text-xs text-slate-500">{r.id}</td>
-                  <td className="text-center text-xs text-slate-600">{r.timestamp}</td>
-                  <td className="text-center font-bold text-blue-700 font-mono text-xs">{r.roll}</td>
-                  <td className="text-center font-mono text-xs font-bold text-slate-900">{r.detectedWeight}</td>
-                  <td className="text-center">
+                  <td className="font-mono text-xs font-bold text-slate-700" style={{ textAlign: 'left' }}>{r.id}</td>
+                  <td className="text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.timestamp}</td>
+                  <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'center' }}>{r.roll}</td>
+                  <td className="font-mono text-xs font-bold text-slate-900" style={{ textAlign: 'center' }}>{r.detectedWeight}</td>
+                  <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
                       <span className="badge inline-flex min-w-[82px] justify-center" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span>
                     </div>
                   </td>
-                  <td className={`text-xs ${r.error === '-' ? 'text-slate-400' : 'text-red-600 font-semibold'}`}>{r.error}</td>
-                  <td className="text-center text-xs text-slate-700">{r.admin}</td>
-                  <td className="text-center text-xs text-slate-700">{r.result}</td>
+                  <td className={`text-xs ${r.error === '-' ? 'text-slate-400' : 'text-red-600 font-semibold'}`} style={{ textAlign: 'left' }}>{r.error}</td>
+                  <td className="text-xs text-slate-700" style={{ textAlign: 'center' }}>{r.admin}</td>
+                  <td className="text-xs text-slate-700" style={{ textAlign: 'center' }}>{r.result}</td>
                 </tr>
               )
             })}
