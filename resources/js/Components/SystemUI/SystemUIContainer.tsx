@@ -117,15 +117,6 @@ export default function SystemUIContainer() {
                         toast.type === 'success' ? CheckCircle2 :
                         toast.type === 'error' ? XCircle :
                         toast.type === 'warning' ? AlertCircle : Info;
-<<<<<<< HEAD
-                        
-                    const colors = 
-                        toast.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800' :
-                        toast.type === 'error' ? 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800' :
-                        toast.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' :
-                        'bg-blue-50 dark:bg-blue-900/30 text-slate-900 dark:text-slate-100 border-blue-200 dark:border-blue-800';
-=======
-
                     const bg =
                         toast.type === 'success' ? '#064e3b' :
                         toast.type === 'error' ? '#7f1d1d' :
@@ -140,7 +131,6 @@ export default function SystemUIContainer() {
                         toast.type === 'success' ? '#34d399' :
                         toast.type === 'error' ? '#f87171' :
                         toast.type === 'warning' ? '#fbbf24' : '#60a5fa';
->>>>>>> c76d066d3dcf33b462651186838fbedda8242bb9
 
                     return (
                         <div
