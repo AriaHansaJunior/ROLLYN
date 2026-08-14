@@ -9,7 +9,17 @@ export default function Jop() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[750px] text-left border-collapse text-xs">
+        <table className="data-table w-full min-w-[1080px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col className="w-[160px]" />
+            <col className="w-[160px]" />
+            <col className="w-[170px]" />
+            <col className="w-[230px]" />
+            <col className="w-[120px]" />
+            <col className="w-[150px]" />
+            <col className="w-[150px]" />
+            <col className="w-[220px]" />
+          </colgroup>
           <thead>
             <tr>
               <th>JOP</th>
@@ -17,9 +27,9 @@ export default function Jop() {
               <th>PO</th>
               <th>Customer</th>
               <th>Grade</th>
-              <th className="text-right">Target Rolls</th>
-              <th className="text-right">Completed</th>
-              <th className="w-48">Progress</th>
+              <th className="text-center">Target Rolls</th>
+              <th className="text-center">Completed</th>
+              <th className="text-center">Progress</th>
             </tr>
           </thead>
           <tbody>
@@ -35,9 +45,9 @@ export default function Jop() {
                   <td className="font-mono text-xs text-slate-600">{r.po}</td>
                   <td className="font-medium text-slate-900">{r.customer}</td>
                   <td>{r.grade}</td>
-                  <td className="text-right font-semibold">{r.target}</td>
-                  <td className="text-right font-bold text-slate-900">{r.rolls}</td>
-                  <td>
+                  <td className="text-center font-semibold">{r.target}</td>
+                  <td className="text-center font-bold text-slate-900">{r.rolls}</td>
+                  <td className="text-center">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden min-w-[60px]">
                         <div className={`h-full rounded-full ${barBg}`} style={{ width: `${Math.min(pct, 100)}%` }} />

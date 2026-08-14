@@ -49,12 +49,19 @@ export default function SlotStatus() {
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Per-Warehouse Slot Distribution</h3>
           <p className="text-[11px] text-slate-400">Detailed count by warehouse facility</p>
         </div>
-        <table className="data-table w-full min-w-[680px] text-left border-collapse text-xs">
+        <table className="data-table w-full min-w-[940px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col className="w-[140px]" />
+            {statusDef.map(s => (
+              <col key={`col-${s.key}`} className="w-[145px]" />
+            ))}
+            <col className="w-[90px]" />
+          </colgroup>
           <thead>
             <tr>
-              <th>Warehouse</th>
-              {statusDef.map(s => <th key={s.key} className="text-right">{s.label}</th>)}
-              <th className="text-right font-bold">Total</th>
+              <th className="text-left">Warehouse</th>
+              {statusDef.map(s => <th key={s.key} className="text-center" style={{ textAlign: 'center' }}>{s.label}</th>)}
+              <th className="text-center font-bold" style={{ textAlign: 'center' }}>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -64,7 +71,7 @@ export default function SlotStatus() {
                 {statusDef.map(s => {
                   const val = (wh as unknown as Record<string, number>)[s.key] || 0
                   return (
-                    <td key={s.key} className="text-right">
+                    <td key={s.key} className="text-center">
                       {val > 0 ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border" style={{ backgroundColor: s.bg, color: s.color, borderColor: s.border }}>
                           {val}
@@ -75,13 +82,13 @@ export default function SlotStatus() {
                     </td>
                   )
                 })}
-                <td className="text-right font-bold text-slate-900">{wh.total}</td>
+                <td className="text-center font-bold text-slate-900">{wh.total}</td>
               </tr>
             ))}
             <tr className="bg-slate-50 font-bold border-t border-slate-200">
               <td className="text-slate-900">Total</td>
-              {statusDef.map(s => <td key={s.key} className="text-right text-slate-900">{totals[s.key] || 0}</td>)}
-              <td className="text-right text-blue-700">{totalSlots}</td>
+              {statusDef.map(s => <td key={s.key} className="text-center text-slate-900">{totals[s.key] || 0}</td>)}
+              <td className="text-center text-blue-700">{totalSlots}</td>
             </tr>
           </tbody>
         </table>

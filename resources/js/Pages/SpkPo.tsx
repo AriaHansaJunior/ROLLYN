@@ -9,7 +9,17 @@ export default function SpkPo() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[850px] text-left border-collapse text-xs">
+        <table className="data-table w-full min-w-[1200px] table-fixed border-collapse text-xs">
+          <colgroup>
+            <col className="w-[160px]" />
+            <col className="w-[160px]" />
+            <col className="w-[170px]" />
+            <col className="w-[240px]" />
+            <col className="w-[120px]" />
+            <col className="w-[180px]" />
+            <col className="w-[180px]" />
+            <col className="w-[160px]" />
+          </colgroup>
           <thead>
             <tr>
               <th>SPK No.</th>
@@ -17,9 +27,9 @@ export default function SpkPo() {
               <th>PO No.</th>
               <th>Customer</th>
               <th>Grade</th>
-              <th className="text-right">Target (rolls)</th>
-              <th className="text-right">Fulfilled Rolls</th>
-              <th className="text-center">Status</th>
+              <th className="text-center">Target (rolls)</th>
+              <th className="text-center">Fulfilled Rolls</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -39,10 +49,12 @@ export default function SpkPo() {
                   <td className="font-mono text-xs text-slate-600">{o.po}</td>
                   <td className="font-medium text-slate-900">{o.customer}</td>
                   <td>{o.grade}</td>
-                  <td className="text-right font-semibold">{o.qtyRoll}</td>
-                  <td className="text-right font-bold text-slate-900">{relatedRolls}</td>
+                  <td className="text-center font-semibold">{o.qtyRoll}</td>
+                  <td className="text-center font-bold text-slate-900">{relatedRolls}</td>
                   <td className="text-center">
-                    <span className={`badge ${sc}`}>{status}</span>
+                    <div className="flex w-full justify-center">
+                      <span className={`badge inline-flex min-w-[96px] justify-center ${sc}`}>{status}</span>
+                    </div>
                   </td>
                 </tr>
               )

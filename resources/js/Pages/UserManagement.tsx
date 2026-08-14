@@ -78,15 +78,23 @@ export default function UserManagement() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[620px] text-left border-collapse">
+        <table className="data-table w-full min-w-[980px] table-fixed border-collapse">
+          <colgroup>
+            <col className="w-[220px]" />
+            <col className="w-[310px]" />
+            <col className="w-[150px]" />
+            <col className="w-[170px]" />
+            <col className="w-[230px]" />
+            <col className="w-[140px]" />
+          </colgroup>
           <thead>
             <tr>
               <th>Name</th>
               <th>Email</th>
-              <th>Status</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Status</th>
               <th>Created</th>
               <th>Last Activity</th>
-              <th className="text-right">Actions</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -94,15 +102,17 @@ export default function UserManagement() {
               <tr key={user.id}>
                 <td className="font-semibold text-slate-900">{user.name}</td>
                 <td className="font-mono text-xs text-slate-600">{user.email}</td>
-                <td>
-                  <span className={`badge ${user.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                    {user.status}
-                  </span>
+                <td className="text-center">
+                  <div className="flex w-full justify-center">
+                    <span className={`badge inline-flex min-w-[86px] justify-center ${user.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                      {user.status}
+                    </span>
+                  </div>
                 </td>
                 <td className="text-xs text-slate-500">{user.created}</td>
                 <td className="text-xs text-slate-500">{user.lastActivity}</td>
-                <td className="text-right">
-                  <div className="flex gap-1.5 justify-end">
+                <td className="text-center">
+                  <div className="flex gap-1.5 justify-center">
                     <button className="btn btn-secondary btn-sm p-1.5" onClick={() => openEdit(user)} title="Edit">
                       <Edit size={13} />
                     </button>

@@ -17,20 +17,17 @@ const PER_PAGE = 8
 export default function RollInventory() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
-  const [gradeFilter, setGradeFilter] = useState('All')
   const [sortKey, setSortKey] = useState<string>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
 
   const statuses = ['All', ...Array.from(new Set(rollInventory.map(r => r.status)))]
-  const grades = ['All', ...Array.from(new Set(rollInventory.map(r => r.grade)))]
 
   const filtered = rollInventory.filter(r => {
     const q = search.toLowerCase()
     const matchSearch = !q || r.id.toLowerCase().includes(q) || r.grade.toLowerCase().includes(q) || r.jop.toLowerCase().includes(q) || r.location.toLowerCase().includes(q)
     const matchStatus = statusFilter === 'All' || r.status === statusFilter
-    const matchGrade = gradeFilter === 'All' || r.grade === gradeFilter
-    return matchSearch && matchStatus && matchGrade
+    return matchSearch && matchStatus
   }).sort((a, b) => {
     const va = (a as Record<string, unknown>)[sortKey]
     const vb = (b as Record<string, unknown>)[sortKey]
@@ -71,6 +68,7 @@ export default function RollInventory() {
     { key: 'pic', label: 'PIC' },
     { key: 'status', label: 'Status' },
   ]
+  const centeredCols = new Set(['shift', 'date', 'gsm', 'weight', 'width', 'location', 'jop', 'pic', 'status'])
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
@@ -87,7 +85,7 @@ export default function RollInventory() {
       </div>
 
       {/* Filters */}
-      <div className="card p-3 sm:p-4 flex flex-wrap gap-2.5 items-center justify-between">
+      <div className="card p-3 sm:p-4 grid grid-cols-1 min-[760px]:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-[200px]">
           <Search size={14} className="text-slate-400 shrink-0" />
           <input
@@ -97,41 +95,40 @@ export default function RollInventory() {
             className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
           />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <Filter size={13} className="text-slate-500" />
-            <select
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-              className="form-input text-xs py-1.5"
-            >
-              {statuses.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
+        <div className="flex items-center gap-1.5 min-[760px]:justify-end">
+          <Filter size={13} className="text-slate-500" />
           <select
-            value={gradeFilter}
-            onChange={e => { setGradeFilter(e.target.value); setPage(1) }}
-            className="form-input text-xs py-1.5"
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+            className="form-input text-xs py-1.5 w-full min-[760px]:w-auto"
           >
-            {grades.map(g => <option key={g}>{g}</option>)}
+            {statuses.map(s => (
+              <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
+            ))}
           </select>
-          <span className="text-xs font-semibold text-slate-500">{filtered.length} rolls</span>
+        </div>
+        <div className="min-[760px]:col-span-2">
+          <span className="text-xs font-semibold text-slate-500">Total: {filtered.length} rolls</span>
         </div>
       </div>
 
       {/* Table */}
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1050px] text-left border-collapse text-xs">
+        <table className="data-table w-full min-w-[1180px] table-fixed border-collapse text-xs">
           <thead>
             <tr>
               {cols.map(col => (
-                <th key={col.key} onClick={() => sort(col.key)} className="cursor-pointer select-none">
-                  <div className="flex items-center gap-1">
+                <th
+                  key={col.key}
+                  onClick={() => sort(col.key)}
+                  className={`cursor-pointer select-none ${centeredCols.has(col.key) ? 'text-center' : ''}`}
+                >
+                  <div className={`flex items-center gap-1 ${centeredCols.has(col.key) ? 'justify-center' : ''}`}>
                     {col.label} <SortIcon k={col.key} />
                   </div>
                 </th>
               ))}
-              <th className="text-right">Action</th>
+              <th className="text-center">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -144,19 +141,25 @@ export default function RollInventory() {
                   <td><span className="font-bold text-blue-700 font-mono text-xs">{r.id}</span></td>
                   <td className="font-mono text-xs">{r.form}</td>
                   <td className="text-center"><span className="badge bg-slate-100 text-slate-700 border-slate-200">{r.shift}</span></td>
-                  <td className="text-xs">{r.date}</td>
+                  <td className="text-center text-xs">{r.date}</td>
                   <td><span className="font-semibold text-slate-800">{r.grade}</span></td>
-                  <td className="text-right">{r.gsm}</td>
-                  <td className="text-right font-mono text-xs">{r.weight.toLocaleString()}</td>
-                  <td className="text-right">{r.width}</td>
-                  <td className="font-mono text-xs">{r.location || <span className="text-red-600">No Slot</span>}</td>
-                  <td className="text-xs">{r.jop}</td>
-                  <td className="text-xs">{r.pic}</td>
-                  <td><span className="badge" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span></td>
-                  <td className="text-right">
-                    <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer" onClick={() => router.visit('/roll-detail')} title="View Roll Detail">
-                      <Eye size={13} />
-                    </button>
+                  <td className="text-center">{r.gsm}</td>
+                  <td className="text-center font-mono text-xs">{r.weight.toLocaleString()}</td>
+                  <td className="text-center">{r.width}</td>
+                  <td className="text-center font-mono text-xs">{r.location || <span className="text-red-600">No Slot</span>}</td>
+                  <td className="text-center text-xs">{r.jop}</td>
+                  <td className="text-center text-xs">{r.pic}</td>
+                  <td className="text-center">
+                    <div className="flex w-full justify-center">
+                      <span className="badge inline-flex min-w-[88px] justify-center" style={{ backgroundColor: sc.bg, color: sc.color }}>{r.status}</span>
+                    </div>
+                  </td>
+                  <td className="text-center">
+                    <div className="flex w-full justify-center">
+                      <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer" onClick={() => router.visit('/roll-detail')} title="View Roll Detail">
+                        <Eye size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )

@@ -30,36 +30,36 @@ export default function TargetOrder() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[900px] text-left border-collapse text-xs">
+        <table className="data-table w-full min-w-[1120px] border-collapse text-xs">
           <thead>
             <tr>
-              <th>SPK</th>
-              <th>JOP</th>
-              <th>PO</th>
-              <th>Customer</th>
-              <th>Grade</th>
-              <th className="text-right">GSM</th>
-              <th className="text-right">RW (mm)</th>
-              <th className="text-right">Qty Roll</th>
-              <th className="text-right">Weight (kg)</th>
-              <th>Container</th>
-              <th>Notes</th>
+              <th className="text-left">SPK</th>
+              <th className="text-left">JOP</th>
+              <th className="text-left">PO</th>
+              <th className="text-left">Customer</th>
+              <th className="text-left">Grade</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>GSM</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>RW (mm)</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Qty Roll</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Weight (kg)</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Container</th>
+              <th className="text-center" style={{ textAlign: 'center' }}>Notes</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map(r => (
               <tr key={r.spk}>
-                <td className="font-bold text-blue-700 font-mono text-xs">{r.spk}</td>
-                <td className="font-mono text-xs">{r.jop}</td>
-                <td className="font-mono text-xs">{r.po}</td>
-                <td className="font-medium text-slate-900">{r.customer}</td>
-                <td>{r.grade}</td>
-                <td className="text-right">{r.gsm}</td>
-                <td className="text-right">{r.rw.toLocaleString()}</td>
-                <td className="text-right font-bold">{r.qtyRoll}</td>
-                <td className="text-right font-mono text-xs">{r.weight.toLocaleString()}</td>
-                <td>{r.container}</td>
-                <td className={`text-xs ${r.noted ? 'text-slate-700' : 'text-slate-400'}`}>{r.noted || '—'}</td>
+                <td className="text-left font-bold text-blue-700 font-mono text-xs">{r.spk}</td>
+                <td className="text-left font-mono text-xs">{r.jop}</td>
+                <td className="text-left font-mono text-xs">{r.po}</td>
+                <td className="text-left font-medium text-slate-900">{r.customer}</td>
+                <td className="text-left">{r.grade}</td>
+                <td className="text-center">{r.gsm}</td>
+                <td className="text-center">{r.rw.toLocaleString()}</td>
+                <td className="text-center font-bold">{r.qtyRoll}</td>
+                <td className="text-center font-mono text-xs">{r.weight.toLocaleString()}</td>
+                <td className="text-center">{r.container}</td>
+                <td className={`text-center text-xs ${r.noted ? 'text-slate-700' : 'text-slate-400'}`}>{r.noted || '—'}</td>
               </tr>
             ))}
           </tbody>
