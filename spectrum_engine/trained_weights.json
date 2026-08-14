@@ -1,0 +1,7 @@
+{
+  "engine_version": "4.1.0 (Strict Box-Count & Left-to-Right Sort)",
+  "model_file": "best_mlp.pkl",
+  "samples_processed": 0,
+  "corrections_learned": 0,
+  "last_trained_formatted": "Never"
+}

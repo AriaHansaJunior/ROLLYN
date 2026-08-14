@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DesignUiController;
+use App\Http\Controllers\SpectrumEngineController;
 
 Route::get('/', function () {
     return redirect('/dashboard');
@@ -22,3 +23,23 @@ Route::get('/reports', [DesignUiController::class, 'reports']);
 Route::get('/user-management', [DesignUiController::class, 'userManagement']);
 Route::get('/profile', [DesignUiController::class, 'profile']);
 Route::get('/notifications', [DesignUiController::class, 'notifications']);
+
+// Hidden SPECTRUM AI Training Dashboard (Accessible via URL only, not in main sidebar)
+Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
+
+// SPECTRUM Engine API Routes — GET endpoints (stats + retrain polling)
+Route::get('/api/spectrum/stats', [SpectrumEngineController::class, 'stats']);
+Route::get('/api/spectrum/retrain-status', [SpectrumEngineController::class, 'retrainStatus']);
+
+// SPECTRUM Engine API Routes — POST endpoints (CSRF-exempt so XHR fetch from Inertia pages works without SPA token issues)
+Route::withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->group(function () {
+        Route::post('/api/spectrum/detect', [SpectrumEngineController::class, 'detect']);
+        Route::post('/api/spectrum/log', [SpectrumEngineController::class, 'logTestResult']);
+        Route::post('/api/spectrum/retrain', [SpectrumEngineController::class, 'retrain']);
+        Route::post('/api/spectrum/save-dataset', [SpectrumEngineController::class, 'saveDataset']);
+    });
+
+
+
+
