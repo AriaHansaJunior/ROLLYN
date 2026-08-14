@@ -2,22 +2,7 @@
  * ============================================================
  * OCR/WeightDetectionEngine.tsx
  * ============================================================
- * Main orchestrating React component for weight OCR detection.
- *
- * RESPONSIBILITIES:
- *  1. Camera lifecycle  — starts on mount, stops on unmount.
- *  2. Custom permission modal — shown before getUserMedia().
- *  3. Live video preview — continuous; OCR is idle.
- *  4. "Take Photo" — single-frame capture → preprocessing → OCR.
- *  5. Result / error display — weight prominently displayed.
- *  6. Editable weight — administrator can correct OCR result.
- *  7. Callback to parent — onWeightConfirmed(weight: number).
- *
- * PORTABILITY:
- *   Zero dependency on IncomingRoll business logic.
- *   Parent only needs to:
- *     <WeightDetectionEngine onWeightConfirmed={(w) => setWeight(w)} />
- * ============================================================
+ * Legacy OCR React component for weight detection (Tesseract / Digital J).
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -52,40 +37,22 @@ import { SystemUI } from "@/Utils/SystemUI";
 // ---------------------------------------------------------------------------
 
 type EngineState =
-    | "permission_modal" // Showing custom permission explanation modal
-    | "requesting" // Awaiting navigator.mediaDevices.getUserMedia()
-    | "camera_active" // Camera live, OCR idle
-    | "processing" // OCR in progress
-    | "success" // OCR succeeded, showing result
-    | "error" // OCR failed, showing diagnostic
-    | "camera_denied"; // Camera permission was denied
+    | "permission_modal"
+    | "requesting"
+    | "camera_active"
+    | "processing"
+    | "success"
+    | "error"
+    | "camera_denied";
 
 interface WeightDetectionEngineProps {
-    /**
-     * Called when the administrator confirms the weight (via "Continue" button).
-     * @param weight        - The final numeric weight value (integer or decimal)
-     * @param weightDisplay - Formatted display string e.g. "1,900"
-     * @param source        - 'ocr' if from detection, 'manual' if administrator edited it
-     */
     onWeightConfirmed: (
         weight: number,
         weightDisplay: string,
         source: "ocr" | "manual",
     ) => void;
-
-    /**
-     * Region of Interest for OCR crop (fractional, 0–1).
-     * Default: full frame.  Narrow this once the camera is physically mounted.
-     *
-     * Example for a display in the centre third of the frame:
-     *   roi={{ x: 0.1, y: 0.25, width: 0.8, height: 0.5 }}
-     */
     roi?: ROI;
 }
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export default function WeightDetectionEngine({
     onWeightConfirmed,
@@ -94,23 +61,15 @@ export default function WeightDetectionEngine({
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
-    const [engineState, setEngineState] =
-        useState<EngineState>("permission_modal");
+    const [engineState, setEngineState] = useState<EngineState>("permission_modal");
     const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
     const [ocrError, setOcrError] = useState<OcrError | null>(null);
 
-    // Editable weight — initialised from OCR result, administrator may change it
     const [editedWeight, setEditedWeight] = useState<string>("");
     const [isManuallyEdited, setIsManuallyEdited] = useState(false);
 
     const latestVariantsRef = useRef<PreprocessedVariant[]>([]);
-
-    // Helper state flags
     const isProcessing = engineState === "processing";
-
-    // ---------------------------------------------------------------------------
-    // Camera management (declared before useEffect)
-    // ---------------------------------------------------------------------------
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -127,7 +86,7 @@ export default function WeightDetectionEngine({
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: "environment", // prefer rear camera on mobile
+                    facingMode: "environment",
                     width: { ideal: 1920 },
                     height: { ideal: 1080 },
                 },
@@ -139,8 +98,7 @@ export default function WeightDetectionEngine({
             }
             setEngineState("camera_active");
             SystemUI.toast({
-                message:
-                    "Camera active. Point at the display to capture weight.",
+                message: "Camera active. Point at display to capture weight.",
                 type: "info",
                 duration: 4000,
             });
@@ -149,22 +107,19 @@ export default function WeightDetectionEngine({
             setEngineState("camera_denied");
             SystemUI.alert({
                 title: "Camera Access Denied",
-                message:
-                    "Please allow camera access in your browser settings to use this feature.",
+                message: "Please allow camera access in browser settings.",
             });
         }
     }, []);
 
-    // Pre-init OCR worker on mount (background, so first capture is fast)
     useEffect(() => {
         initOCRWorker();
 
-        // Trigger permission modal on first load if needed
         if (engineState === "permission_modal") {
             SystemUI.confirm({
                 title: "Camera Access Required",
                 message:
-                    "Rollyn needs camera access to read the weighing scale display automatically. After clicking Allow, your browser will ask for permission. No images are sent to any external server.",
+                    "Rollyn needs camera access to read the weighing scale display automatically.",
                 confirmText: "Allow Camera Access",
                 cancelText: "Cancel",
                 onConfirm: (confirmed) => {
@@ -176,17 +131,12 @@ export default function WeightDetectionEngine({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Stop camera and terminate worker on unmount (page leave)
     useEffect(() => {
         return () => {
             stopCamera();
             terminateOCRWorker();
         };
     }, [stopCamera]);
-
-    // ---------------------------------------------------------------------------
-    // Take Photo — single frame capture + preprocessing + OCR
-    // ---------------------------------------------------------------------------
 
     const takePhoto = useCallback(async () => {
         const video = videoRef.current;
@@ -197,14 +147,10 @@ export default function WeightDetectionEngine({
         setOcrError(null);
 
         try {
-            // 1. Preprocess: capture frame, crop ROI, produce 6 variants
             const { variants, rawCanvas } = await preprocessImage(video, roi);
             latestVariantsRef.current = variants;
 
-            // 2. Analyse image quality for diagnostic generation
             const quality = analyseImageQuality(rawCanvas);
-
-            // 3. Multi-pass OCR
             const outcome = await recogniseWeight(variants, quality);
 
             if ("result" in outcome) {
@@ -225,24 +171,14 @@ export default function WeightDetectionEngine({
                 });
             }
         } catch (err) {
-            console.error("[OCR] Unexpected error during recognition:", err);
+            console.error("[OCR] Error during recognition:", err);
             const errorTitle = "Processing Error";
-            const errorMessage =
-                "An unexpected error occurred while processing the image. Please try again.";
-            setOcrError({
-                title: errorTitle,
-                message: errorMessage,
-            });
+            const errorMessage = "An unexpected error occurred while processing image.";
+            setOcrError({ title: errorTitle, message: errorMessage });
             setEngineState("error");
             SystemUI.alert({ title: errorTitle, message: errorMessage });
         }
     }, [roi]);
-
-
-
-    // ---------------------------------------------------------------------------
-    // Retry — go back to camera_active without reloading page
-    // ---------------------------------------------------------------------------
 
     function retryCapture() {
         setOcrResult(null);
@@ -252,26 +188,16 @@ export default function WeightDetectionEngine({
         setEngineState("camera_active");
     }
 
-    // ---------------------------------------------------------------------------
-    // Confirm weight
-    // ---------------------------------------------------------------------------
-
     function confirmWeight() {
         const numericWeight = parseFloat(editedWeight.replace(/,/g, ""));
         if (isNaN(numericWeight) || numericWeight <= 0) return;
 
-        // Automatically calibrate digit templates for user's scale font
-        const digitalVariant = latestVariantsRef.current.find(
-            (v) => v.digital && v.canvas,
-        );
+        const digitalVariant = latestVariantsRef.current.find((v) => v.digital && v.canvas);
         if (digitalVariant && digitalVariant.canvas) {
             try {
-                calibrateScaleFont(
-                    digitalVariant.canvas,
-                    String(numericWeight),
-                );
+                calibrateScaleFont(digitalVariant.canvas, String(numericWeight));
             } catch (err) {
-                console.warn("[OCR] Calibration on confirm skipped:", err);
+                console.warn("[OCR] Calibration skipped:", err);
             }
         }
 
@@ -280,20 +206,8 @@ export default function WeightDetectionEngine({
             minimumFractionDigits: 0,
         });
 
-        onWeightConfirmed(
-            numericWeight,
-            display,
-            isManuallyEdited ? "manual" : "ocr",
-        );
+        onWeightConfirmed(numericWeight, display, isManuallyEdited ? "manual" : "ocr");
     }
-
-    // ---------------------------------------------------------------------------
-    // Render helpers
-    // ---------------------------------------------------------------------------
-
-    // ---------------------------------------------------------------------------
-    // Render
-    // ---------------------------------------------------------------------------
 
     return (
         <div
@@ -305,13 +219,8 @@ export default function WeightDetectionEngine({
             }}
             className="max-[679px]:grid-cols-1!"
         >
-            {/* ════ LEFT PANEL: Camera Preview ════ */}
             <div className="card" style={{ padding: 16 }}>
-                <h3 className="section-title" style={{ marginBottom: 12 }}>
-                    Camera Preview
-                </h3>
-
-                {/* Video container */}
+                <h3 className="section-title" style={{ marginBottom: 12 }}>Camera Preview</h3>
                 <div
                     style={{
                         background: "#0f1923",
@@ -324,7 +233,6 @@ export default function WeightDetectionEngine({
                         justifyContent: "center",
                     }}
                 >
-                    {/* Live video — always rendered but hidden when camera not active */}
                     <video
                         ref={videoRef}
                         id="ocr-camera-feed"
@@ -346,7 +254,6 @@ export default function WeightDetectionEngine({
                         }}
                     />
 
-                    {/* ROI overlay — shows the expected capture region */}
                     {engineState === "camera_active" && (
                         <div
                             style={{
@@ -379,7 +286,6 @@ export default function WeightDetectionEngine({
                         </div>
                     )}
 
-                    {/* Processing overlay */}
                     {isProcessing && (
                         <div
                             style={{
@@ -393,107 +299,34 @@ export default function WeightDetectionEngine({
                                 gap: 10,
                             }}
                         >
-                            <Loader
-                                size={28}
-                                style={{
-                                    color: "#5CB85C",
-                                    animation: "spin 1s linear infinite",
-                                }}
-                            />
-                            <span
-                                style={{
-                                    color: "#fff",
-                                    fontSize: 13,
-                                    fontWeight: 500,
-                                }}
-                            >
-                                Processing image…
-                            </span>
+                            <Loader size={28} style={{ color: "#5CB85C", animation: "spin 1s linear infinite" }} />
+                            <span style={{ color: "#fff", fontSize: 13, fontWeight: 500 }}>Processing image…</span>
                         </div>
                     )}
 
-                    {/* States without active video */}
-                    {(engineState === "permission_modal" ||
-                        engineState === "requesting") && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                gap: 10,
-                            }}
-                        >
+                    {(engineState === "permission_modal" || engineState === "requesting") && (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                             {engineState === "requesting" ? (
-                                <Loader
-                                    size={32}
-                                    style={{
-                                        color: "rgba(255,255,255,0.5)",
-                                        animation: "spin 1s linear infinite",
-                                    }}
-                                />
+                                <Loader size={32} style={{ color: "rgba(255,255,255,0.5)", animation: "spin 1s linear infinite" }} />
                             ) : (
-                                <Camera
-                                    size={40}
-                                    style={{ color: "rgba(255,255,255,0.3)" }}
-                                />
+                                <Camera size={40} style={{ color: "rgba(255,255,255,0.3)" }} />
                             )}
-                            <span
-                                style={{
-                                    color: "rgba(255,255,255,0.5)",
-                                    fontSize: 13,
-                                }}
-                            >
-                                {engineState === "requesting"
-                                    ? "Requesting camera access…"
-                                    : "Camera permission pending"}
+                            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>
+                                {engineState === "requesting" ? "Requesting camera access…" : "Camera permission pending"}
                             </span>
                         </div>
                     )}
 
                     {engineState === "camera_denied" && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                gap: 10,
-                                padding: 20,
-                                textAlign: "center",
-                            }}
-                        >
-                            <AlertCircle
-                                size={36}
-                                style={{ color: "#e74c3c" }}
-                            />
-                            <span
-                                style={{
-                                    color: "#e74c3c",
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                }}
-                            >
-                                Camera access denied
-                            </span>
-                            <span
-                                style={{
-                                    color: "rgba(255,255,255,0.5)",
-                                    fontSize: 12,
-                                }}
-                            >
-                                Allow camera access in browser settings, then
-                                reload the page.
-                            </span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 20, textAlign: "center" }}>
+                            <AlertCircle size={36} style={{ color: "#e74c3c" }} />
+                            <span style={{ color: "#e74c3c", fontSize: 13, fontWeight: 600 }}>Camera access denied</span>
                         </div>
                     )}
                 </div>
 
-                {/* Buttons */}
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    {/* Take Photo button */}
-                    {(engineState === "camera_active" ||
-                        engineState === "processing" ||
-                        engineState === "success" ||
-                        engineState === "error") && (
+                    {(engineState === "camera_active" || engineState === "processing" || engineState === "success" || engineState === "error") && (
                         <button
                             id="ocr-take-photo-btn"
                             className="btn btn-primary"
@@ -506,7 +339,6 @@ export default function WeightDetectionEngine({
                         </button>
                     )}
 
-                    {/* Retry button (shown after success/error too) */}
                     {(engineState === "success" || engineState === "error") && (
                         <button
                             id="ocr-retry-btn"
@@ -518,25 +350,13 @@ export default function WeightDetectionEngine({
                         </button>
                     )}
 
-                    {/* Camera access denied — show grant-access button */}
                     {engineState === "camera_denied" && (
                         <button
                             id="ocr-grant-access-btn"
                             className="btn btn-primary"
                             onClick={() => {
                                 setEngineState("permission_modal");
-                                SystemUI.confirm({
-                                    title: "Camera Access Required",
-                                    message:
-                                        "Rollyn needs camera access to read the weighing scale display automatically. After clicking Allow, your browser will ask for permission. No images are sent to any external server.",
-                                    confirmText: "Allow Camera Access",
-                                    cancelText: "Cancel",
-                                    onConfirm: (confirmed) => {
-                                        if (confirmed) startCamera();
-                                    },
-                                    onCancel: () =>
-                                        setEngineState("camera_denied"),
-                                });
+                                startCamera();
                             }}
                             style={{ flex: 1, justifyContent: "center" }}
                         >
@@ -546,361 +366,80 @@ export default function WeightDetectionEngine({
                 </div>
             </div>
 
-            {/* ════ RIGHT PANEL: Weight Detection Result ════ */}
             <div className="card" style={{ padding: 16 }}>
-                <h3 className="section-title" style={{ marginBottom: 12 }}>
-                    Weight Detection Result
-                </h3>
+                <h3 className="section-title" style={{ marginBottom: 12 }}>Weight Detection Result</h3>
 
-                {/* ── IDLE state ── */}
-                {(engineState === "permission_modal" ||
-                    engineState === "requesting" ||
-                    engineState === "camera_active" ||
-                    engineState === "camera_denied") && (
-                    <div
-                        style={{
-                            textAlign: "center",
-                            padding: "36px 20px",
-                            color: "#999",
-                            fontSize: 13,
-                        }}
-                    >
-                        <Camera
-                            size={32}
-                            style={{ color: "#ddd", marginBottom: 12 }}
-                        />
-                        <p style={{ margin: 0 }}>
-                            Point the camera at the weighing display, then click{" "}
-                            <strong>Take Photo</strong>.
-                        </p>
+                {(engineState === "permission_modal" || engineState === "requesting" || engineState === "camera_active" || engineState === "camera_denied") && (
+                    <div style={{ textAlign: "center", padding: "36px 20px", color: "#999", fontSize: 13 }}>
+                        <Camera size={32} style={{ color: "#ddd", marginBottom: 12 }} />
+                        <p style={{ margin: 0 }}>Point camera at weighing display, then click <strong>Take Photo</strong>.</p>
                     </div>
                 )}
 
-                {/* ── PROCESSING state ── */}
                 {engineState === "processing" && (
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            height: 140,
-                            gap: 10,
-                            color: "#777",
-                            fontSize: 13,
-                        }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 140, gap: 10, color: "#777", fontSize: 13 }}>
                         <Loader size={20} style={{ color: "#337AB7" }} />
                         Running local OCR — processing image…
                     </div>
                 )}
 
-                {/* ── SUCCESS state ── */}
                 {engineState === "success" && ocrResult && (
                     <div>
-                        {/* Confidence banner */}
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                padding: "9px 13px",
-                                background: "#f2f9f2",
-                                border: "1px solid #d4edda",
-                                borderRadius: 6,
-                                marginBottom: 14,
-                            }}
-                        >
-                            <CheckCircle
-                                size={15}
-                                style={{ color: "#5CB85C", flexShrink: 0 }}
-                            />
-                            <span
-                                style={{
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    color: "#3C763D",
-                                }}
-                            >
-                                Recognition Successful —{" "}
-                                {ocrResult.confidence.toFixed(1)}% confidence
-                            </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 13px", background: "#f2f9f2", border: "1px solid #d4edda", borderRadius: 6, marginBottom: 14 }}>
+                            <CheckCircle size={15} style={{ color: "#5CB85C", flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, fontWeight: 600, color: "#3C763D" }}>Recognition Successful — {ocrResult.confidence.toFixed(1)}% confidence</span>
                         </div>
 
-                        {/* Detected weight — visually dominant */}
-                        <div
-                            style={{
-                                textAlign: "center",
-                                padding: "20px 0 16px",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    fontSize: 11,
-                                    color: "#888",
-                                    marginBottom: 6,
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.06em",
-                                }}
-                            >
-                                Detected Weight
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: 56,
-                                    fontWeight: 800,
-                                    color: "#286090",
-                                    fontFamily:
-                                        "JetBrains Mono, Consolas, monospace",
-                                    lineHeight: 1,
-                                    letterSpacing: "-0.02em",
-                                }}
-                            >
-                                {ocrResult.weightDisplay}
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: 18,
-                                    color: "#555",
-                                    fontWeight: 600,
-                                    marginTop: 4,
-                                }}
-                            >
-                                kg
+                        <div style={{ textAlign: "center", padding: "20px 0 16px" }}>
+                            <div style={{ fontSize: 11, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Detected Weight</div>
+                            <div style={{ fontSize: 56, fontWeight: 800, color: "#286090", fontFamily: "JetBrains Mono, Consolas, monospace", lineHeight: 1, letterSpacing: "-0.02em" }}>{ocrResult.weightDisplay}</div>
+                            <div style={{ fontSize: 18, color: "#555", fontWeight: 600, marginTop: 4 }}>kg</div>
+                        </div>
+
+                        <div style={{ fontSize: 10, color: "#999", marginBottom: 14, padding: 8, background: "#f9f9f9", border: "1px solid #eee", borderRadius: 4, fontFamily: "monospace", lineHeight: 1.4 }}>
+                            <div><strong>Raw OCR:</strong> "{ocrResult.rawText}"</div>
+                            <div><strong>Variant:</strong> {ocrResult.variantLabel}</div>
+                            <div style={{ marginTop: 8 }}><strong>Preprocessed Image:</strong>
+                                <img src={ocrResult.variantDataUrl} alt="Preprocessed OCR input" style={{ width: "100%", marginTop: 4, borderRadius: 2, border: "1px solid #ddd" }} />
                             </div>
                         </div>
 
-                        {/* Debug info — raw OCR text and variant */}
-                        <div
-                            style={{
-                                fontSize: 10,
-                                color: "#999",
-                                marginBottom: 14,
-                                padding: 8,
-                                background: "#f9f9f9",
-                                border: "1px solid #eee",
-                                borderRadius: 4,
-                                fontFamily: "monospace",
-                                lineHeight: 1.4,
-                            }}
-                        >
-                            <div>
-                                <strong>Raw OCR:</strong> "{ocrResult.rawText}"
-                            </div>
-                            <div>
-                                <strong>Variant:</strong>{" "}
-                                {ocrResult.variantLabel}
-                            </div>
-                            <div style={{ marginTop: 8 }}>
-                                <strong>Preprocessed Image:</strong>
-                                <img
-                                    src={ocrResult.variantDataUrl}
-                                    alt="Preprocessed OCR input"
-                                    style={{
-                                        width: "100%",
-                                        marginTop: 4,
-                                        borderRadius: 2,
-                                        border: "1px solid #ddd",
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Editable weight field */}
                         <div style={{ marginBottom: 14 }}>
-                            <label
-                                style={{
-                                    fontSize: 12,
-                                    color: "#666",
-                                    display: "block",
-                                    marginBottom: 5,
-                                }}
-                            >
-                                <Edit3
-                                    size={11}
-                                    style={{
-                                        marginRight: 4,
-                                        verticalAlign: "middle",
-                                    }}
-                                />
-                                Automatically detected. You may edit this value
-                                if needed.
+                            <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 5 }}>
+                                <Edit3 size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                                Automatically detected. You may edit this value if needed.
                             </label>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                }}
-                            >
-                                <input
-                                    id="ocr-weight-edit-input"
-                                    type="number"
-                                    value={editedWeight}
-                                    min={0}
-                                    step={0.1}
-                                    onChange={(e) => {
-                                        setEditedWeight(e.target.value);
-                                        setIsManuallyEdited(true);
-                                    }}
-                                    className="form-input"
-                                    style={{ flex: 1 }}
-                                />
-                                <span
-                                    style={{
-                                        fontSize: 14,
-                                        color: "#555",
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    kg
-                                </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <input id="ocr-weight-edit-input" type="number" value={editedWeight} min={0} step={0.1} onChange={(e) => { setEditedWeight(e.target.value); setIsManuallyEdited(true); }} className="form-input" style={{ flex: 1 }} />
+                                <span style={{ fontSize: 14, color: "#555", fontWeight: 600 }}>kg</span>
                             </div>
-                            {isManuallyEdited && (
-                                <div
-                                    style={{
-                                        fontSize: 11,
-                                        color: "#888",
-                                        marginTop: 4,
-                                    }}
-                                >
-                                    Value edited by administrator.
-                                </div>
-                            )}
+                            {isManuallyEdited && <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>Value edited by administrator.</div>}
                         </div>
 
-                        {/* Continue button */}
-                        <button
-                            id="ocr-continue-btn"
-                            className="btn btn-primary"
-                            style={{ width: "100%", justifyContent: "center" }}
-                            onClick={confirmWeight}
-                            disabled={
-                                !editedWeight || parseFloat(editedWeight) <= 0
-                            }
-                        >
-                            Continue to Roll Data Entry →
-                        </button>
+                        <button id="ocr-continue-btn" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={confirmWeight} disabled={!editedWeight || parseFloat(editedWeight) <= 0}>Continue to Roll Data Entry →</button>
                     </div>
                 )}
 
-                {/* ── ERROR state ── */}
                 {engineState === "error" && ocrError && (
                     <div>
-                        <div
-                            style={{
-                                padding: "14px 16px",
-                                background: "#fdf2f2",
-                                border: "1px solid #f5c6cb",
-                                borderRadius: 6,
-                                marginBottom: 14,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "flex-start",
-                                    gap: 8,
-                                    marginBottom: 6,
-                                }}
-                            >
-                                <AlertCircle
-                                    size={16}
-                                    style={{
-                                        color: "#C0392B",
-                                        flexShrink: 0,
-                                        marginTop: 1,
-                                    }}
-                                />
-                                <span
-                                    style={{
-                                        fontWeight: 700,
-                                        fontSize: 13,
-                                        color: "#C0392B",
-                                    }}
-                                >
-                                    {ocrError.title}
-                                </span>
+                        <div style={{ padding: "14px 16px", background: "#fdf2f2", border: "1px solid #f5c6cb", borderRadius: 6, marginBottom: 14 }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+                                <AlertCircle size={16} style={{ color: "#C0392B", flexShrink: 0, marginTop: 1 }} />
+                                <span style={{ fontWeight: 700, fontSize: 13, color: "#C0392B" }}>{ocrError.title}</span>
                             </div>
-                            <p
-                                style={{
-                                    fontSize: 13,
-                                    color: "#555",
-                                    margin: 0,
-                                    lineHeight: 1.5,
-                                }}
-                            >
-                                {ocrError.message}
-                            </p>
+                            <p style={{ fontSize: 13, color: "#555", margin: 0, lineHeight: 1.5 }}>{ocrError.message}</p>
                         </div>
 
-                        <p
-                            style={{
-                                fontSize: 12,
-                                color: "#888",
-                                marginBottom: 14,
-                            }}
-                        >
-                            You can click <strong>Take Photo</strong> again to
-                            retry, or enter the weight manually below.
-                        </p>
-
-                        {/* Manual entry fallback */}
                         <div style={{ marginBottom: 14 }}>
-                            <label
-                                style={{
-                                    fontSize: 12,
-                                    color: "#666",
-                                    display: "block",
-                                    marginBottom: 5,
-                                }}
-                            >
-                                Enter weight manually (kg)
-                            </label>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                }}
-                            >
-                                <input
-                                    id="ocr-manual-weight-input"
-                                    type="number"
-                                    value={editedWeight}
-                                    min={0}
-                                    step={0.1}
-                                    placeholder="e.g. 1900"
-                                    onChange={(e) => {
-                                        setEditedWeight(e.target.value);
-                                        setIsManuallyEdited(true);
-                                    }}
-                                    className="form-input"
-                                    style={{ flex: 1 }}
-                                />
-                                <span
-                                    style={{
-                                        fontSize: 14,
-                                        color: "#555",
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    kg
-                                </span>
+                            <label style={{ fontSize: 12, color: "#666", display: "block", marginBottom: 5 }}>Enter weight manually (kg)</label>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <input id="ocr-manual-weight-input" type="number" value={editedWeight} min={0} step={0.1} placeholder="e.g. 1900" onChange={(e) => { setEditedWeight(e.target.value); setIsManuallyEdited(true); }} className="form-input" style={{ flex: 1 }} />
+                                <span style={{ fontSize: 14, color: "#555", fontWeight: 600 }}>kg</span>
                             </div>
                         </div>
 
                         {editedWeight && parseFloat(editedWeight) > 0 && (
-                            <button
-                                id="ocr-manual-continue-btn"
-                                className="btn btn-primary"
-                                style={{
-                                    width: "100%",
-                                    justifyContent: "center",
-                                }}
-                                onClick={confirmWeight}
-                            >
-                                Continue with Manual Weight →
-                            </button>
+                            <button id="ocr-manual-continue-btn" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={confirmWeight}>Continue with Manual Weight →</button>
                         )}
                     </div>
                 )}

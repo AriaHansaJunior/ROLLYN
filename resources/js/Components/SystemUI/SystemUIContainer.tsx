@@ -49,7 +49,7 @@ export default function SystemUIContainer() {
             {/* Modal Layer */}
             {modal && (
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-200"
+                    className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200"
                 >
                     <div
                         className="w-full max-w-md mx-auto overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl transition-transform duration-200"
@@ -97,34 +97,89 @@ export default function SystemUIContainer() {
                 </div>
             )}
 
-            {/* Toast Layer */}
-            <div className="fixed top-4 right-4 z-[110] flex flex-col gap-2 pointer-events-none w-full max-w-sm">
+            {/* Toast Layer - High contrast, sharp readability */}
+            <div
+                style={{
+                    position: 'fixed',
+                    top: 20,
+                    right: 20,
+                    zIndex: 9999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    width: '100%',
+                    maxWidth: 420,
+                    pointerEvents: 'none',
+                }}
+            >
                 {toasts.map((toast) => {
-                    const Icon = 
+                    const Icon =
                         toast.type === 'success' ? CheckCircle2 :
                         toast.type === 'error' ? XCircle :
                         toast.type === 'warning' ? AlertCircle : Info;
+<<<<<<< HEAD
                         
                     const colors = 
                         toast.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800' :
                         toast.type === 'error' ? 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800' :
                         toast.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800' :
                         'bg-blue-50 dark:bg-blue-900/30 text-slate-900 dark:text-slate-100 border-blue-200 dark:border-blue-800';
+=======
+
+                    const bg =
+                        toast.type === 'success' ? '#064e3b' :
+                        toast.type === 'error' ? '#7f1d1d' :
+                        toast.type === 'warning' ? '#78350f' : '#1e3a8a';
+
+                    const border =
+                        toast.type === 'success' ? '#10b981' :
+                        toast.type === 'error' ? '#ef4444' :
+                        toast.type === 'warning' ? '#f59e0b' : '#3b82f6';
+
+                    const iconColor =
+                        toast.type === 'success' ? '#34d399' :
+                        toast.type === 'error' ? '#f87171' :
+                        toast.type === 'warning' ? '#fbbf24' : '#60a5fa';
+>>>>>>> c76d066d3dcf33b462651186838fbedda8242bb9
 
                     return (
                         <div
                             key={toast.id}
-                            className={`pointer-events-auto flex items-start p-4 border rounded-xl shadow-lg backdrop-blur-xs transition-all ${colors}`}
+                            style={{
+                                background: bg,
+                                border: `1px solid ${border}`,
+                                color: '#ffffff',
+                                padding: '12px 16px',
+                                borderRadius: 10,
+                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 10,
+                                fontSize: 13,
+                                fontWeight: 600,
+                                lineHeight: 1.4,
+                                pointerEvents: 'auto',
+                                wordBreak: 'break-word',
+                            }}
                         >
-                            <Icon className="w-5 h-5 mr-3 shrink-0 mt-0.5" />
-                            <div className="flex-1 text-sm font-medium">
+                            <Icon size={18} style={{ color: iconColor, flexShrink: 0, marginTop: 2 }} />
+                            <div style={{ flex: 1 }}>
                                 {toast.message}
                             </div>
-                            <button 
+                            <button
                                 onClick={() => SystemUI.removeToast(toast.id)}
-                                className="ml-4 opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'rgba(255,255,255,0.7)',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    marginLeft: 8,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                }}
                             >
-                                <X className="w-4 h-4" />
+                                <X size={16} />
                             </button>
                         </div>
                     );

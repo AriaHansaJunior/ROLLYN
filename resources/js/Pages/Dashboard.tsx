@@ -33,7 +33,6 @@ const alertBg: Record<string, string> = {
 export default function Dashboard() {
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-5 max-w-full overflow-x-hidden">
-      {/* Header & KPI Section */}
       <div>
         <div className="mb-3">
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Operations Overview</h2>
@@ -66,10 +65,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main Grid: Warehouse Condition Table + Operational Alerts */}
       <div className="grid grid-cols-1 min-[1180px]:grid-cols-[1fr_320px] gap-4">
         
-        {/* Warehouse Overview */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">
             <div>
@@ -148,7 +145,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Operational Alerts */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs flex flex-col">
           <div className="pb-2.5 mb-3 border-b border-slate-100">
             <h3 className="text-sm sm:text-base font-bold text-slate-900">Operational Alerts</h3>
@@ -173,18 +169,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Analytics Row: Demand Forecast & AI Insights */}
       <div className="grid grid-cols-1 min-[1180px]:grid-cols-[1fr_320px] gap-4">
-        {/* Demand Forecast Chart */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900">Demand Forecast</h3>
-              <p className="text-[11px] text-slate-400">Historical + AI-projected demand (rolls/month)</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Proyeksi Kebutuhan Roll</h3>
+              <p className="text-[11px] text-slate-400">Riwayat + Proyeksi kebutuhan (roll/bulan)</p>
             </div>
             <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-100 text-[11px] font-semibold">
               <TrendingUp size={13} />
-              <span>AI Forecast Active</span>
+              <span>Proyeksi Otomatis Aktif</span>
             </div>
           </div>
 
@@ -196,22 +190,21 @@ export default function Dashboard() {
                 <YAxis tick={{ fontSize: 10, fill: '#64748B' }} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} name="Actual" connectNulls={false} />
-                <Line type="monotone" dataKey="forecast" stroke="#16A34A" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3 }} name="Forecast (AI)" connectNulls={false} />
+                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} name="Realisasi" connectNulls={false} />
+                <Line type="monotone" dataKey="forecast" stroke="#16A34A" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3 }} name="Proyeksi Kebutuhan" connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* AI Insights Card */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
           <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-slate-100">
             <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
               <TrendingUp size={14} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">AI Insights</h3>
-              <p className="text-[11px] text-slate-400">Warehouse analytics summary</p>
+              <h3 className="text-sm font-bold text-slate-900">Analisis Gudang</h3>
+              <p className="text-[11px] text-slate-400">Ringkasan analisis operasional gudang</p>
             </div>
           </div>
 
@@ -231,7 +224,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Warehouse Slot Distribution Bar Chart */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
         <h3 className="text-sm sm:text-base font-bold text-slate-900 mb-2">Warehouse Slot Distribution</h3>
         <div className="w-full h-48">

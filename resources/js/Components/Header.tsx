@@ -4,6 +4,7 @@ import { router } from '@inertiajs/react'
 
 const pageLabels: Record<string, string[]> = {
   'dashboard': ['Dashboard'],
+  'training': ['SPECTRUM', 'Kalibrasi Pembaca Timbangan'],
   'warehouse-map': ['Warehouse', 'Warehouse Map'],
   'roll-inventory': ['Warehouse', 'Roll Inventory'],
   'slot-status': ['Warehouse', 'Slot Status'],
@@ -45,7 +46,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
 
   return (
     <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 min-[680px]:px-5 flex items-center justify-between gap-2 shadow-xs select-none">
-      {/* Mobile Brand / Toggle */}
       <div className="flex min-[680px]:hidden items-center gap-2.5 min-w-0 flex-1">
         <button
           onClick={onMenuClick}
@@ -67,7 +67,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         </div>
       </div>
 
-      {/* Desktop Toggle Button */}
       <button
         onClick={onToggleSidebar}
         className="hidden min-[680px]:flex items-center justify-center p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
@@ -76,7 +75,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         <PanelLeftClose size={18} className={sidebarCollapsed ? "rotate-180 transition-transform" : "transition-transform"} />
       </button>
 
-      {/* Desktop Breadcrumbs */}
       <div className="hidden min-[680px]:flex items-center gap-1.5 text-xs flex-1 min-w-0 ml-2">
         {crumbs.map((c, i) => (
           <span key={c} className="flex items-center gap-1.5 text-slate-500 font-medium whitespace-nowrap">
@@ -88,9 +86,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         ))}
       </div>
 
-      {/* Right Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        {/* Desktop Search Bar */}
         <div className="hidden min-[680px]:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 w-44 focus-within:w-56 focus-within:bg-white focus-within:border-blue-500 transition-all">
           <Search size={14} className="text-slate-400 shrink-0" />
           <input
@@ -99,7 +95,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
           />
         </div>
 
-        {/* Mobile Search Icon Button */}
         <button
           onClick={() => setMobileSearchOpen(true)}
           className="flex min-[680px]:hidden items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
@@ -108,7 +103,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
           <Search size={18} />
         </button>
 
-        {/* Notification Bell */}
         <button 
           onClick={() => router.visit('/notifications')}
           className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
@@ -117,7 +111,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
         </button>
 
-        {/* User Profile */}
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
@@ -159,7 +152,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         </div>
       </div>
 
-      {/* Mobile Search Overlay */}
       {mobileSearchOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs p-3 flex flex-col">
           <div className="bg-white rounded-xl shadow-2xl p-2.5 flex items-center gap-2">

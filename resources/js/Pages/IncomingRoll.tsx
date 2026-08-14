@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CheckCircle, Save, Scale, Edit3, ArrowLeft, ArrowRight } from 'lucide-react'
-import WeightDetectionEngine from '../OCR/WeightDetectionEngine'
+import WeightDetectionEngine from '../SPECTRUM/SpectrumWeightDetectionEngine'
 import { SystemUI } from '@/Utils/SystemUI'
 import { router } from '@inertiajs/react'
 
@@ -10,7 +10,7 @@ const steps = ['Camera & Weight Detection', 'Roll Data Entry', 'Review & Save']
 interface WeightState {
   value: number
   display: string
-  source: 'ocr' | 'manual' | 'none'
+  source: 'ocr' | 'spectrum' | 'manual' | 'none'
 }
 
 export default function IncomingRoll() {
@@ -25,7 +25,7 @@ export default function IncomingRoll() {
 
   const [errors, setErrors] = useState<{ rollNumber?: string; formNumber?: string; gsm?: string }>({})
 
-  function handleWeightConfirmed(value: number, display: string, source: 'ocr' | 'manual') {
+  function handleWeightConfirmed(value: number, display: string, source: 'ocr' | 'spectrum' | 'manual') {
     setWeight({ value, display, source })
     setStep(1)
   }
