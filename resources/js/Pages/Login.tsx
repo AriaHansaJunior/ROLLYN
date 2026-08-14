@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 
@@ -7,7 +7,7 @@ export default function Login() {
   const [password, setPassword] = useState('password')
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
 
-  function handleLogin(e: React.FormEvent) {
+  function handleLogin(e: FormEvent) {
     e.preventDefault()
     const errs: { email?: string; password?: string } = {}
     if (!email.trim()) {
