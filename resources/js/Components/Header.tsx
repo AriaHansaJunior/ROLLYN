@@ -4,7 +4,7 @@ import { router } from '@inertiajs/react'
 
 const pageLabels: Record<string, string[]> = {
   'dashboard': ['Dashboard'],
-  'training': ['SPECTRUM', 'Kalibrasi Pembaca Timbangan'],
+  'training': ['SPECTRUM', 'Scale Reader Calibration'],
   'warehouse-map': ['Warehouse', 'Warehouse Map'],
   'roll-inventory': ['Warehouse', 'Roll Inventory'],
   'slot-status': ['Warehouse', 'Slot Status'],

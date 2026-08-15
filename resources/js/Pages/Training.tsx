@@ -184,10 +184,10 @@ export default function Training() {
                 }
             }, 100);
 
-            SystemUI.toast({ message: 'Kamera live aktif! Posisikan angka LED di dalam bingkai hijau.', type: 'info', duration: 3500 });
+            SystemUI.toast({ message: 'Live camera active! Position the LED numbers within the green frame.', type: 'info', duration: 3500 });
         } catch (err) {
             console.error('[Camera Error]', err);
-            SystemUI.toast({ message: 'Gagal mengakses kamera. Pastikan izin kamera diberikan di browser.', type: 'error' });
+            SystemUI.toast({ message: 'Failed to access camera. Ensure camera permissions are granted in the browser.', type: 'error' });
         }
     };
 
@@ -246,19 +246,19 @@ export default function Training() {
 
             if (data.weight_detected > 0) {
                 SystemUI.toast({
-                    message: `🎯 Pembacaan Timbangan: ${detectedVal} kg (Terverifikasi 100% Multi-Frame)`,
+                    message: `🎯 Weight Reading: ${detectedVal} kg (100% Multi-Frame Verified)`,
                     type: 'success',
                     duration: 4000,
                 });
             } else {
                 SystemUI.toast({
-                    message: `Sistem belum membaca angka dengan jelas. Silakan masukkan angka berat di bawah.`,
+                    message: `System could not read the number clearly. Please enter the weight below.`,
                     type: 'warning',
                     duration: 4000,
                 });
             }
         } catch (err) {
-            SystemUI.toast({ message: 'Terjadi kesalahan saat memproses pembacaan timbangan.', type: 'error' });
+            SystemUI.toast({ message: 'An error occurred while processing the weight reading.', type: 'error' });
         } finally {
             setIsDetecting(false);
         }
@@ -267,13 +267,13 @@ export default function Training() {
 
     const handleSaveCapturedToDataset = async () => {
         if (!capturedFrame || !confirmedWeightInput) {
-            SystemUI.toast({ message: 'Masukkan angka berat yang benar terlebih dahulu.', type: 'warning' });
+            SystemUI.toast({ message: 'Please enter the correct weight first.', type: 'warning' });
             return;
         }
 
         const numericWeight = Number(confirmedWeightInput);
         if (isNaN(numericWeight) || numericWeight <= 0) {
-            SystemUI.toast({ message: 'Format berat harus berupa angka positif (misal: 882 atau 1500).', type: 'error' });
+            SystemUI.toast({ message: 'Weight format must be a positive number (e.g., 882 or 1500).', type: 'error' });
             return;
         }
 
@@ -290,7 +290,7 @@ export default function Training() {
 
             if (result.status === 'success' || result.message) {
                 SystemUI.toast({
-                    message: `📸 Foto Timbangan & Berat [${numericWeight} kg] berhasil disimpan ke data sampel!`,
+                    message: `📸 Scale Photo & Weight [${numericWeight} kg] saved to sample data successfully!`,
                     type: 'success',
                     duration: 5000,
                 });
@@ -302,10 +302,10 @@ export default function Training() {
 
                 fetchStats();
             } else {
-                SystemUI.toast({ message: 'Gagal menyimpan sampel foto.', type: 'error' });
+                SystemUI.toast({ message: 'Failed to save sample photo.', type: 'error' });
             }
         } catch (err) {
-            SystemUI.toast({ message: 'Error koneksi saat menyimpan sampel foto.', type: 'error' });
+            SystemUI.toast({ message: 'Connection error while saving sample photo.', type: 'error' });
         } finally {
             setIsSaving(false);
         }
@@ -313,15 +313,15 @@ export default function Training() {
 
 
     const PHASE_LABELS: Record<string, string> = {
-        INIT:              '⚙️ Inisialisasi Sistem Pembacaan...',
-        AUTO_ANNOTATION:   '🔍 Pemotongan & pemetaan digit timbangan...',
-        FEATURE_EXTRACTION:'📐 Pengolahan karakteristik angka LED...',
-        MLP_TRAINING:      '🧠 Penyesuaian presisi pembacaan timbangan...',
-        SAVING_MODEL:      '💾 Menyimpan konfigurasi pembacaan...',
-        DONE:              '✅ Kalibrasi selesai!',
-        SUCCESS:           '✅ Pembacaan timbangan berhasil diperbarui!',
-        ERROR:             '❌ Pembaruan gagal.',
-        NO_DATASET:        '⚠️ Belum ada sampel foto tersimpan.',
+        INIT:              '⚙️ Initializing Weight Reading System...',
+        AUTO_ANNOTATION:   '🔍 Cropping & mapping scale digits...',
+        FEATURE_EXTRACTION:'📐 Processing LED number characteristics...',
+        MLP_TRAINING:      '🧠 Adjusting weight reading precision...',
+        SAVING_MODEL:      '💾 Saving reading configuration...',
+        DONE:              '✅ Calibration complete!',
+        SUCCESS:           '✅ Scale reading updated successfully!',
+        ERROR:             '❌ Update failed.',
+        NO_DATASET:        '⚠️ No sample photos saved yet.',
         IDLE:              '',
     };
 
@@ -334,11 +334,11 @@ export default function Training() {
         setIsRetraining(true);
         setTrainingResult(null);
         setRetrainProgress(2);
-        setRetrainProgressMsg('⚙️ Memproses pembaruan sistem pembacaan timbangan...');
+        setRetrainProgressMsg('⚙️ Processing weight reading system update...');
         setRetrainPhase('INIT');
         stopPolling();
 
-        SystemUI.toast({ message: '🔄 Pembaruan sistem pembacaan timbangan dimulai...', type: 'info', duration: 5000 });
+        SystemUI.toast({ message: '🔄 Weight reading system update started...', type: 'info', duration: 5000 });
 
         try {
             const res = await fetch('/api/spectrum/retrain', {
@@ -348,7 +348,7 @@ export default function Training() {
 
             const startData = await res.json();
             if (startData.status === 'ALREADY_RUNNING') {
-                SystemUI.toast({ message: 'Proses pembaruan sedang berjalan di background.', type: 'info' });
+                SystemUI.toast({ message: 'Update process is running in the background.', type: 'info' });
             }
 
             pollTimer.current = setInterval(async () => {
@@ -377,14 +377,14 @@ export default function Training() {
 
                         if (statusVal === 'SUCCESS') {
                             SystemUI.toast({
-                                message: '✅ Pembacaan timbangan berhasil diperbarui dan disesuaikan!',
+                                message: '✅ Scale reading updated and adjusted successfully!',
                                 type: 'success',
                                 duration: 7000,
                             });
                             fetchStats();
                         } else {
                             SystemUI.toast({
-                                message: pollData.message || 'Pembaruan selesai dengan status: ' + statusVal,
+                                message: pollData.message || 'Update finished with status: ' + statusVal,
                                 type: statusVal === 'ERROR' ? 'error' : 'warning',
                                 duration: 5000,
                             });
@@ -404,7 +404,7 @@ export default function Training() {
             stopPolling();
             setIsRetraining(false);
             setRetrainProgress(0);
-            SystemUI.toast({ message: 'Koneksi ke sistem SPECTRUM gagal.', type: 'error' });
+            SystemUI.toast({ message: 'Connection to SPECTRUM system failed.', type: 'error' });
         }
     };
 
@@ -413,7 +413,7 @@ export default function Training() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const manualWeight = prompt('Masukkan berat timbangan yang benar untuk foto ini (kg):');
+        const manualWeight = prompt('Enter the correct scale weight for this photo (kg):');
         if (!manualWeight || isNaN(Number(manualWeight))) return;
 
         const reader = new FileReader();
@@ -429,10 +429,10 @@ export default function Training() {
                     actual_manual_input: Number(manualWeight),
                     selected_source: String(manualWeight) === String(data.weight_detected) ? 'spectrum' : 'manual',
                 });
-                SystemUI.toast({ message: `Foto berhasil ditambahkan ke sampel! (Berat: ${manualWeight} kg)`, type: 'success', duration: 4000 });
+                SystemUI.toast({ message: `Photo added to sample successfully! (Weight: ${manualWeight} kg)`, type: 'success', duration: 4000 });
                 fetchStats();
             } catch {
-                SystemUI.toast({ message: 'Gagal menyimpan foto ke data sampel.', type: 'error' });
+                SystemUI.toast({ message: 'Failed to save photo to sample data.', type: 'error' });
             }
         };
         reader.readAsDataURL(file);
@@ -441,7 +441,7 @@ export default function Training() {
 
     return (
         <>
-            <Head title="SPECTRUM — Kalibrasi Pembaca Timbangan" />
+            <Head title="SPECTRUM — Scale Reader Calibration" />
 
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg); } }
@@ -477,7 +477,7 @@ export default function Training() {
                         padding: '4px 10px', borderRadius: 5,
                         letterSpacing: '0.03em',
                     }}>
-                        SPECTRUM / Kalibrasi Pembaca Timbangan
+                        SPECTRUM / Scale Reader Calibration
                     </span>
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <button
@@ -512,15 +512,15 @@ export default function Training() {
                             </div>
                             <div>
                                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                                    SPECTRUM Engine 4.0 · Deteksi Timbangan Presisi
+                                    SPECTRUM Engine 4.0 · Precision Scale Detection
                                 </div>
                                 <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
-                                    Kalibrasi & Pembaruan Pembaca Timbangan
+                                    Scale Reader Calibration & Update
                                 </h1>
                             </div>
                         </div>
                         <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.65)', maxWidth: 480 }}>
-                            Ambil foto kamera live LED timbangan dengan bingkai penargetan presisi → konfirmasi/koreksi berat → simpan ke sampel → perbarui sistem pembacaan SPECTRUM.
+                            Capture live camera photo of the scale LED with precision targeting frame → confirm/correct weight → save to sample → update SPECTRUM reading system.
                         </p>
                     </div>
 
@@ -542,7 +542,7 @@ export default function Training() {
                             }}
                         >
                             {isCameraOpen ? <VideoOff size={16} /> : <Camera size={16} />}
-                            {isCameraOpen ? 'Tutup Kamera' : '📷 Buka Kamera Live'}
+                            {isCameraOpen ? 'Close Camera' : '📷 Open Live Camera'}
                         </button>
 
                         <button
@@ -566,12 +566,12 @@ export default function Training() {
                             {isRetraining ? (
                                 <>
                                     <RotateCw size={15} style={{ animation: 'spin 1s linear infinite' }} />
-                                    Memproses {Math.round(retrainProgress)}%…
+                                    Processing {Math.round(retrainProgress)}%…
                                 </>
                             ) : (
                                 <>
                                     <Sparkles size={15} />
-                                    🔄 Perbarui Pembaca Timbangan
+                                    🔄 Update Scale Reader
                                 </>
                             )}
                         </button>
@@ -584,7 +584,7 @@ export default function Training() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <RotateCw size={13} style={{ color: '#0284c7', animation: 'spin 1s linear infinite' }} />
                                 <span style={{ fontSize: 12, fontWeight: 700, color: '#0284c7' }}>
-                                    Pembaruan Pembacaan Timbangan SPECTRUM 4.0
+                                    SPECTRUM 4.0 Scale Reader Update
                                 </span>
                             </div>
                             <span style={{ fontSize: 13, fontWeight: 800, color: '#0284c7' }}>
@@ -608,7 +608,7 @@ export default function Training() {
                             </p>
                         )}
                         <p style={{ fontSize: 10, color: '#64748b', margin: '6px 0 0', fontStyle: 'italic' }}>
-                            Proses berjalan di background — Mohon tunggu sebentar
+                            Process running in background — Please wait a moment
                         </p>
                     </div>
                 )}
@@ -617,30 +617,30 @@ export default function Training() {
                     className="min-[640px]:grid-cols-4!">
                     <StatCard
                         icon={<Database size={14} />}
-                        label="Sampel Foto Timbangan"
+                        label="Scale Photo Samples"
                         value={stats?.total_samples ?? 0}
-                        sub="Foto tersimpan di data sampel"
+                        sub="Photos saved in sample data"
                         color="#2563eb"
                     />
                     <StatCard
                         icon={<CheckCircle2 size={14} />}
-                        label="Sampel Terverifikasi"
+                        label="Verified Samples"
                         value={stats?.corrections_count ?? 0}
-                        sub="Koreksi terverifikasi oleh operator"
+                        sub="Corrections verified by operator"
                         color="#16a34a"
                     />
                     <StatCard
                         icon={<Sliders size={14} />}
-                        label="Versi Pembacaan"
+                        label="Reading Version"
                         value={<span style={{ fontSize: 15 }}>v4.1.0</span>}
-                        sub="Deteksi Presisi LED Timbangan"
+                        sub="Precision Scale LED Detection"
                         color="#7c3aed"
                     />
                     <StatCard
                         icon={<Clock size={14} />}
-                        label="Kalibrasi Terakhir"
-                        value={<span style={{ fontSize: 13 }}>{stats?.last_trained ?? 'Belum Pernah'}</span>}
-                        sub="Konfigurasi Terkalibrasi"
+                        label="Last Calibration"
+                        value={<span style={{ fontSize: 13 }}>{stats?.last_trained ?? 'Never'}</span>}
+                        sub="Calibrated Configuration"
                         color="#f59e0b"
                     />
                 </div>
@@ -664,12 +664,12 @@ export default function Training() {
                         {trainingResult.status === 'SUCCESS' && (
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                                 {[
-                                    { label: 'Foto Diproses', value: `${trainingResult.samples_processed ?? '—'}` },
-                                    { label: 'Sampel Terverifikasi', value: `${trainingResult.corrections_learned ?? '—'}` },
-                                    { label: 'Sampel Angka', value: `${trainingResult.crops_saved ?? '—'}` },
-                                    { label: 'Tingkat Akurasi', value: trainingResult.val_accuracy ?? '—' },
-                                    { label: 'Peningkatan Presisi', value: trainingResult.accuracy_gain ?? '—' },
-                                    { label: 'Siklus Kalibrasi', value: `${trainingResult.epochs ?? '—'}` },
+                                    { label: 'Photos Processed', value: `${trainingResult.samples_processed ?? '—'}` },
+                                    { label: 'Verified Samples', value: `${trainingResult.corrections_learned ?? '—'}` },
+                                    { label: 'Number Samples', value: `${trainingResult.crops_saved ?? '—'}` },
+                                    { label: 'Accuracy Level', value: trainingResult.val_accuracy ?? '—' },
+                                    { label: 'Precision Gain', value: trainingResult.accuracy_gain ?? '—' },
+                                    { label: 'Calibration Cycle', value: `${trainingResult.epochs ?? '—'}` },
                                 ].map(item => (
                                     <div key={item.label} style={{ background: '#fff', padding: '6px 14px', borderRadius: 6, border: '1px solid #dcfce7' }}>
                                         <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{item.label}</div>
@@ -692,14 +692,14 @@ export default function Training() {
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#38bdf8', fontSize: 14, fontWeight: 800 }}>
-                                <Camera size={18} /> TAMPILAN KAMERA LIVE — BINGKAI PENARGETAN PRESI
+                                <Camera size={18} /> LIVE CAMERA VIEW — PRECISION TARGETING FRAME
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Ukuran Bingkai:</span>
+                                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Frame Size:</span>
                                 {[
-                                    { id: 'small', label: '📱 Kecil (50%)' },
-                                    { id: 'medium', label: '📷 Sedang (65%)' },
-                                    { id: 'large', label: '🖼️ Besar (80%)' },
+                                    { id: 'small', label: '📱 Small (50%)' },
+                                    { id: 'medium', label: '📷 Medium (65%)' },
+                                    { id: 'large', label: '🖼️ Large (80%)' },
                                     { id: 'full', label: '🖥️ Full' },
                                 ].map(size => (
                                     <button
@@ -770,7 +770,7 @@ export default function Training() {
                                                     padding: '3px 8px', borderRadius: 4,
                                                     letterSpacing: '0.04em',
                                                 }}>
-                                                    🎯 Posisikan LED Timbangan di Sini
+                                                    🎯 Position Scale LED Here
                                                 </span>
                                             </div>
 
@@ -801,11 +801,11 @@ export default function Training() {
                                         {isCapturing || isDetecting ? (
                                             <>
                                                 <RotateCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                                                Memproses Foto...
+                                                Processing Photo...
                                             </>
                                         ) : (
                                             <>
-                                                <Camera size={16} /> 📸 Tangkap Foto LED
+                                                <Camera size={16} /> 📸 Capture LED Photo
                                             </>
                                         )}
                                     </button>
@@ -821,37 +821,37 @@ export default function Training() {
                                 flexDirection: 'column',
                             }}>
                                 <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <Sparkles size={14} style={{ color: '#38bdf8' }} /> Hasil Pembacaan Foto
+                                    <Sparkles size={14} style={{ color: '#38bdf8' }} /> Photo Reading Result
                                 </h4>
 
                                 {capturedFrame ? (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                                             <div>
-                                                <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4, fontWeight: 600 }}>Foto Asli Crop</div>
+                                                <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4, fontWeight: 600 }}>Original Cropped Photo</div>
                                                 <img src={capturedFrame} alt="Cropped Frame" style={{ width: '100%', height: 100, objectFit: 'contain', background: '#000', borderRadius: 6, border: '1px solid #475569' }} />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: 10, color: '#38bdf8', marginBottom: 4, fontWeight: 600 }}>Deteksi Presisi</div>
+                                                <div style={{ fontSize: 10, color: '#38bdf8', marginBottom: 4, fontWeight: 600 }}>Precision Detection</div>
                                                 {spectrumData?.spectrum_processed_image ? (
                                                     <img src={spectrumData.spectrum_processed_image} alt="Mask Processed" style={{ width: '100%', height: 100, objectFit: 'contain', background: '#000', borderRadius: 6, border: '1px solid #0284c7' }} />
                                                 ) : (
                                                     <div style={{ width: '100%', height: 100, background: '#090d16', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 10 }}>
-                                                        {isDetecting ? 'Memproses...' : 'Tanda LED'}
+                                                        {isDetecting ? 'Processing...' : 'LED Mark'}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
 
                                         <div style={{ background: '#0f172a', borderRadius: 8, padding: 12, border: '1px solid #334155' }}>
-                                            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Angka Hasil Pembacaan:</div>
+                                            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Reading Result Number:</div>
                                             {isCorrecting ? (
                                                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                                                     <input
                                                         type="number"
                                                         value={confirmedWeightInput}
                                                         onChange={(e) => setConfirmedWeightInput(e.target.value)}
-                                                        placeholder="Ketik angka berat..."
+                                                        placeholder="Type weight number..."
                                                         autoFocus
                                                         style={{
                                                             width: '100%',
@@ -874,7 +874,7 @@ export default function Training() {
                                                         onClick={() => setIsCorrecting(true)}
                                                         style={{ fontSize: 11, color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
                                                     >
-                                                        ✏️ Ubah Angka
+                                                        ✏️ Edit Number
                                                     </button>
                                                 </div>
                                             )}
@@ -900,12 +900,12 @@ export default function Training() {
                                             {isSaving ? (
                                                 <>
                                                     <RotateCw size={15} style={{ animation: 'spin 1s linear infinite' }} />
-                                                    Menyimpan Foto Sampel...
+                                                    Saving Sample Photo...
                                                 </>
                                             ) : (
                                                 <>
                                                     <Check size={16} />
-                                                    💾 Simpan Sampel & Perbarui Sistem
+                                                    💾 Save Sample & Update System
                                                 </>
                                             )}
                                         </button>
@@ -913,8 +913,8 @@ export default function Training() {
                                 ) : (
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', padding: '30px 10px', textAlign: 'center', border: '2px dashed #334155', borderRadius: 8 }}>
                                         <Camera size={32} style={{ color: '#475569', marginBottom: 8 }} />
-                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>Belum ada foto ditangkap</div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Posisikan layar HP / timbangan di dalam bingkai hijau, lalu klik "📸 Tangkap Foto LED".</div>
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>No photo captured yet</div>
+                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Position phone screen / scale within the green frame, then click "📸 Capture LED Photo".</div>
                                     </div>
                                 )}
                             </div>
@@ -933,10 +933,10 @@ export default function Training() {
                                 padding: 18,
                             }}>
                                 <h3 style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 700, color: '#1e40af', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <Camera size={15} style={{ color: '#2563eb' }} /> Ambil Foto Timbangan Live
+                                    <Camera size={15} style={{ color: '#2563eb' }} /> Take Live Scale Photo
                                 </h3>
                                 <p style={{ fontSize: 11, color: '#3b82f6', margin: '0 0 12px', lineHeight: 1.4 }}>
-                                    Gunakan webcam/kamera HP langsung dengan bingkai penargetan presisi untuk menambah data sampel.
+                                    Use webcam/phone camera directly with precision targeting frame to add sample data.
                                 </p>
                                 <button
                                     onClick={startCamera}
@@ -951,7 +951,7 @@ export default function Training() {
                                         boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
                                     }}
                                 >
-                                    <Camera size={14} /> Buka Kamera Live Now
+                                    <Camera size={14} /> Open Live Camera Now
                                 </button>
                             </div>
                         )}
@@ -963,10 +963,10 @@ export default function Training() {
                             padding: 18,
                         }}>
                             <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Upload size={14} style={{ color: '#2563eb' }} /> Upload File Foto Manual
+                                <Upload size={14} style={{ color: '#2563eb' }} /> Upload Manual Photo File
                             </h3>
                             <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 12px' }}>
-                                Upload foto kamera LED timbangan dari komputer untuk menambah data sampel.
+                                Upload scale LED camera photo from computer to add sample data.
                             </p>
                             <label
                                 className="upload-zone"
@@ -978,7 +978,7 @@ export default function Training() {
                                 }}
                             >
                                 <ImageIcon size={22} style={{ color: '#94a3b8' }} />
-                                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Klik atau drag foto ke sini</span>
+                                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Click or drag photo here</span>
                                 <span style={{ fontSize: 10, color: '#cbd5e1' }}>JPG / PNG / WEBP</span>
                                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleManualImageUpload} />
                             </label>
@@ -991,14 +991,14 @@ export default function Training() {
                             padding: 18,
                         }}>
                             <h3 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: '#1e40af', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <FlaskConical size={14} /> Cara Kerja Kalibrasi Timbangan
+                                <FlaskConical size={14} /> How Scale Calibration Works
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {[
-                                    { step: '1', text: 'Posisikan LED timbangan di bingkai hijau & tangkap foto', color: '#dbeafe', tc: '#1e40af' },
-                                    { step: '2', text: 'Operator konfirmasi/koreksi angka berat yang terdeteksi', color: '#dcfce7', tc: '#166534' },
-                                    { step: '3', text: 'Foto dan angka disimpan sebagai sampel terverifikasi', color: '#fef9c3', tc: '#854d0e' },
-                                    { step: '4', text: 'Klik Perbarui Pembaca Timbangan agar sistem semakin presisi', color: '#fae8ff', tc: '#7c3aed' },
+                                    { step: '1', text: 'Position scale LED in green frame & capture photo', color: '#dbeafe', tc: '#1e40af' },
+                                    { step: '2', text: 'Operator confirms/corrects detected weight number', color: '#dcfce7', tc: '#166534' },
+                                    { step: '3', text: 'Photo and number saved as verified sample', color: '#fef9c3', tc: '#854d0e' },
+                                    { step: '4', text: 'Click Update Scale Reader to make system more precise', color: '#fae8ff', tc: '#7c3aed' },
                                 ].map(({ step, text, color, tc }) => (
                                     <div key={step} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                                         <div style={{ width: 20, height: 20, borderRadius: '50%', background: color, color: tc, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
@@ -1017,14 +1017,14 @@ export default function Training() {
                             padding: 18,
                         }}>
                             <h3 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <TrendingUp size={14} style={{ color: '#7c3aed' }} /> Sistem Deteksi Presisi LED
+                                <TrendingUp size={14} style={{ color: '#7c3aed' }} /> LED Precision Detection System
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                                 {[
-                                    { label: 'Angka 6 vs 8', rule: 'Atas Kanan Kosong + Bawah Kiri Aktif → 6', badge: '#1e40af' },
-                                    { label: 'Angka 9 vs 4', rule: 'Bawah Kiri Kosong + Atas & Kiri Aktif → 9', badge: '#7c3aed' },
-                                    { label: 'Angka 0 vs 8', rule: 'Garis Tengah Kosong → 0', badge: '#059669' },
-                                    { label: 'Angka 3 vs 2', rule: 'Kanan Atas + Kanan Bawah Aktif, Bawah Kiri Kosong → 3', badge: '#d97706' },
+                                    { label: 'Number 6 vs 8', rule: 'Top Right Empty + Bottom Left Active → 6', badge: '#1e40af' },
+                                    { label: 'Number 9 vs 4', rule: 'Bottom Left Empty + Top & Left Active → 9', badge: '#7c3aed' },
+                                    { label: 'Number 0 vs 8', rule: 'Center Line Empty → 0', badge: '#059669' },
+                                    { label: 'Number 3 vs 2', rule: 'Top Right + Bottom Right Active, Bottom Left Empty → 3', badge: '#d97706' },
                                 ].map(({ label, rule, badge }) => (
                                     <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: '5px 0', borderBottom: '1px solid #f1f5f9' }}>
                                         <span style={{ fontSize: 9, fontWeight: 800, background: badge, color: '#fff', padding: '2px 5px', borderRadius: 3, whiteSpace: 'nowrap', marginTop: 1 }}>{label}</span>
@@ -1050,10 +1050,10 @@ export default function Training() {
                         }}>
                             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <Layers size={14} style={{ color: '#2563eb' }} />
-                                Riwayat Sampel Foto Timbangan
+                                Scale Photo Sample History
                                 {stats?.total_samples != null && (
                                     <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: '#dbeafe', color: '#1e40af', padding: '2px 7px', borderRadius: 10 }}>
-                                        {stats.total_samples} sampel
+                                        {stats.total_samples} samples
                                     </span>
                                 )}
                             </h3>
@@ -1070,23 +1070,23 @@ export default function Training() {
                             {isLoadingStats ? (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0', color: '#94a3b8', gap: 8 }}>
                                     <RotateCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                                    <span style={{ fontSize: 13 }}>Memuat data sampel…</span>
+                                    <span style={{ fontSize: 13 }}>Loading sample data…</span>
                                 </div>
                             ) : stats?.recent_entries && stats.recent_entries.length > 0 ? (
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                                     <thead>
                                         <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                                             <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                                Foto
+                                                Photo
                                             </th>
                                             <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                Nama File
+                                                File Name
                                             </th>
                                             <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                                Konfirmasi Operator
+                                                Operator Confirmation
                                             </th>
                                             <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                                Hasil Deteksi Sistem
+                                                System Detection Result
                                             </th>
                                             <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                 Status
@@ -1123,11 +1123,11 @@ export default function Training() {
                                                     <td style={{ padding: '8px 14px', textAlign: 'center' }}>
                                                         {isCorr ? (
                                                             <span style={{ fontSize: 10, fontWeight: 700, background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: 99 }}>
-                                                                Dikoreksi
+                                                                Corrected
                                                             </span>
                                                         ) : (
                                                             <span style={{ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#166534', padding: '3px 8px', borderRadius: 99 }}>
-                                                                Sesuai
+                                                                Matched
                                                             </span>
                                                         )}
                                                     </td>
@@ -1139,9 +1139,9 @@ export default function Training() {
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '50px 20px', textAlign: 'center' }}>
                                     <Database size={36} style={{ color: '#cbd5e1', marginBottom: 10 }} />
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>Belum ada sampel foto tersimpan</div>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>No sample photos saved yet</div>
                                     <div style={{ fontSize: 12, color: '#94a3b8', maxWidth: 360 }}>
-                                        Ambil foto timbangan via bingkai kamera live di atas atau upload file foto untuk mulai mengumpulkan sampel.
+                                        Take scale photos via the live camera frame above or upload photo files to start collecting samples.
                                     </div>
                                 </div>
                             )}

@@ -101,7 +101,7 @@ export async function retrainSpectrumEngine(): Promise<{ status: string; samples
         console.error("[SPECTRUM Service] Retrain failed:", err);
         return {
             status: "ERROR",
-            message: "Gagal terhubung ke sistem pembacaan SPECTRUM.",
+            message: "Failed to connect to SPECTRUM reading system.",
         };
     }
 }

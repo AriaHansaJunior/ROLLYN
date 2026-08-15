@@ -191,12 +191,12 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900">Proyeksi Kebutuhan Roll</h3>
-              <p className="text-[11px] text-slate-400">Riwayat + Proyeksi kebutuhan (roll/bulan)</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Roll Demand Forecast</h3>
+              <p className="text-[11px] text-slate-400">History + Demand forecast (rolls/month)</p>
             </div>
             <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-100 text-[11px] font-semibold">
               <TrendingUp size={13} />
-              <span>Proyeksi Otomatis Aktif</span>
+              <span>Auto Forecast Active</span>
             </div>
           </div>
 
@@ -208,8 +208,8 @@ export default function Dashboard() {
                 <YAxis tick={{ fontSize: 10, fill: '#64748B' }} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} name="Realisasi" connectNulls={false} />
-                <Line type="monotone" dataKey="forecast" stroke="#16A34A" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3 }} name="Proyeksi Kebutuhan" connectNulls={false} />
+                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 3 }} name="Actual" connectNulls={false} />
+                <Line type="monotone" dataKey="forecast" stroke="#16A34A" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3 }} name="Demand Forecast" connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -221,8 +221,8 @@ export default function Dashboard() {
               <TrendingUp size={14} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Analisis Gudang</h3>
-              <p className="text-[11px] text-slate-400">Ringkasan analisis operasional gudang</p>
+              <h3 className="text-sm font-bold text-slate-900">Warehouse Analysis</h3>
+              <p className="text-[11px] text-slate-400">Summary of warehouse operations analysis</p>
             </div>
           </div>
 

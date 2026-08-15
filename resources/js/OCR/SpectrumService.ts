@@ -112,7 +112,7 @@ export async function retrainSpectrumEngine(): Promise<{ status: string; samples
         console.error("[SPECTRUM Service] Retrain failed:", err);
         return {
             status: "ERROR",
-            message: "Gagal terhubung ke endpoint re-training SPECTRUM AI.",
+            message: "Failed to connect to SPECTRUM AI re-training endpoint.",
         };
     }
 }

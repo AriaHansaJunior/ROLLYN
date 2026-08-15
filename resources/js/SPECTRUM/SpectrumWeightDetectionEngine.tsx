@@ -238,24 +238,24 @@ export default function SpectrumWeightDetectionEngine({
 
     const handleAutoTeach = async () => {
         setIsRetraining(true);
-        SystemUI.toast({ message: "Memperbarui sistem pembacaan timbangan…", type: "info" });
+        SystemUI.toast({ message: "Updating scale reading system…", type: "info" });
         try {
             const res = await retrainSpectrumEngine();
             if (res.status === "SUCCESS") {
                 SystemUI.toast({
-                    message: res.message || "Sistem pembacaan timbangan berhasil diperbarui!",
+                    message: res.message || "Scale reading system updated successfully!",
                     type: "success",
                     duration: 5000,
                 });
             } else {
                 SystemUI.toast({
-                    message: res.message || "Belum ada dataset baru di storage sampel.",
+                    message: res.message || "No new dataset found in sample storage.",
                     type: "warning",
                     duration: 5000,
                 });
             }
         } catch (err) {
-            SystemUI.toast({ message: "Pembaruan sistem gagal dilakukan", type: "error" });
+            SystemUI.toast({ message: "System update failed", type: "error" });
         } finally {
             setIsRetraining(false);
         }
@@ -290,7 +290,7 @@ export default function SpectrumWeightDetectionEngine({
             selected_source: effectiveSource,
         });
 
-        const toastMsg = logRes.message || `Terima kasih! Foto & Koreksi Berat [${numericWeight} kg] Telah Disimpan ke Data Sampel.`;
+        const toastMsg = logRes.message || `Thank you! Photo & Weight Correction [${numericWeight} kg] saved to sample data.`;
         SystemUI.toast({
             message: toastMsg,
             type: "success",
@@ -322,14 +322,14 @@ export default function SpectrumWeightDetectionEngine({
             <div className="card p-4 sm:p-5">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <h3 className="section-title" style={{ margin: 0 }}>
-                        Pratinjau Kamera Live
+                        Live Camera Preview
                     </h3>
                     <div style={{ display: "flex", gap: 6 }}>
                         <button
                             className="btn btn-secondary btn-sm"
                             onClick={handleAutoTeach}
                             disabled={isRetraining}
-                            title="Perbarui sistem pembacaan dari sampel tersimpan"
+                            title="Update reading system from saved samples"
                             style={{ fontSize: 11, padding: "4px 8px" }}
                         >
                             {isRetraining ? (
@@ -337,18 +337,18 @@ export default function SpectrumWeightDetectionEngine({
                             ) : (
                                 <Sparkles size={12} style={{ color: "#2563EB" }} />
                             )}
-                            <span>{isRetraining ? "Memproses…" : "🔄 Perbarui Sistem"}</span>
+                            <span>{isRetraining ? "Processing…" : "🔄 Update System"}</span>
                         </button>
                         <a
                             href="/training"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="btn btn-secondary btn-sm"
-                            title="Buka Halaman Kalibrasi Timbangan"
+                            title="Open Scale Calibration Page"
                             style={{ fontSize: 11, padding: "4px 8px", textDecoration: "none" }}
                         >
                             <BookOpen size={12} style={{ color: "#7c3aed" }} />
-                            <span>Kalibrasi</span>
+                            <span>Calibration</span>
                         </a>
                     </div>
                 </div>
@@ -509,7 +509,7 @@ export default function SpectrumWeightDetectionEngine({
             <div className="card p-4 sm:p-5">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <h3 className="section-title" style={{ margin: 0 }}>
-                        Hasil Pembacaan Timbangan
+                        Scale Reading Result
                     </h3>
                     <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: "#dbeafe", color: "#1e40af", border: "1px solid #bfdbfe" }}>
                         SPECTRUM Engine 4.0
@@ -520,7 +520,7 @@ export default function SpectrumWeightDetectionEngine({
                     <div style={{ textAlign: "center", padding: "40px 20px", color: "#999", fontSize: 13 }}>
                         <Camera size={36} style={{ color: "#ddd", marginBottom: 12 }} />
                         <p style={{ margin: 0 }}>
-                            Arahkan kamera ke layar LED timbangan, lalu klik <strong>Ambil Foto</strong>.
+                            Point camera at scale LED display, then click <strong>Take Photo</strong>.
                         </p>
                     </div>
                 )}
@@ -528,7 +528,7 @@ export default function SpectrumWeightDetectionEngine({
                 {engineState === "processing" && (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 160, gap: 10, color: "#777", fontSize: 13 }}>
                         <Loader size={22} style={{ color: "#2563EB" }} />
-                        Memproses deteksi presisi LED timbangan…
+                        Processing precision scale LED detection…
                     </div>
                 )}
 
@@ -537,7 +537,7 @@ export default function SpectrumWeightDetectionEngine({
 
                         <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 10 }}>
                             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>
-                                Pilih Engine Berat Timbangan:
+                                Select Scale Weight Engine:
                             </div>
                             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: selectedEngine === "spectrum" ? "#1e40af" : "#475569" }}>
@@ -558,7 +558,7 @@ export default function SpectrumWeightDetectionEngine({
                                         onChange={() => handleEngineToggle("ocr")}
                                     />
                                     <Cpu size={14} style={{ color: "#16A34A" }} />
-                                    OCR Lama (Tesseract)
+                                    Legacy OCR (Tesseract)
                                 </label>
                             </div>
                         </div>
@@ -638,7 +638,7 @@ export default function SpectrumWeightDetectionEngine({
                             }}>
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                                     <span style={{ fontSize: 11, fontWeight: 700, color: "#14532d", display: "flex", alignItems: "center", gap: 4 }}>
-                                        <Cpu size={12} style={{ color: "#16a34a" }} /> OCR Lama
+                                        <Cpu size={12} style={{ color: "#16a34a" }} /> Legacy OCR
                                     </span>
                                     {ocrResult && (
                                         <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "#dcfce7", color: "#166534" }}>

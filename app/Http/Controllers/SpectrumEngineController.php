@@ -175,7 +175,7 @@ print(json.dumps(res))
 
         return response()->json([
             'status' => 'success',
-            'message' => "📸 Foto & Koreksi Berat [{$actualWeight} kg] Tersimpan ke Dataset SPECTRUM AI! (#{$imageFilename})",
+            'message' => "📸 Photo & Weight Correction [{$actualWeight} kg] Saved to SPECTRUM AI Dataset! (#{$imageFilename})",
             'image_saved' => $imageFilename,
             'log_id' => $log->id,
         ]);
@@ -287,7 +287,7 @@ print(json.dumps(res))
 
         return response()->json([
             'status'  => 'STARTED',
-            'message' => 'Training request dikirim. Pantau progress via /api/spectrum/retrain-status.',
+            'message' => 'Training request sent. Monitor progress via /api/spectrum/retrain-status.',
         ]);
     }
 
@@ -312,7 +312,7 @@ print(json.dumps(res))
             'status'       => 'IDLE',
             'phase'        => 'IDLE',
             'progress_pct' => 0.0,
-            'message'      => 'Belum ada training berjalan.',
+            'message'      => 'No training currently running.',
         ]);
     }
 }
