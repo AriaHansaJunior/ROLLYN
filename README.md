@@ -95,3 +95,7 @@ The system database architecture was designed using an initial reference dataset
 ## Future Scope
 
 Future development will focus on **AI-Based Location Determination**. The system will intelligently determine and suggest the optimal storage location for newly received rolls based on available space, roll specifications, and warehouse layout patterns.
+
+---
+
+&copy; 2026 Rollyn. All Rights Reserved.
