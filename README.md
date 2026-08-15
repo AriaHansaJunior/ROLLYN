@@ -14,10 +14,10 @@ This project is built as a modern, web-based administration system utilizing a r
 - **Framework:** Laravel 13
 - **Backend Language:** PHP 8.3+
 - **Frontend Framework:** React 19 (via Inertia.js)
-- **Frontend Styling:** Tailwind CSS 4
-- **Frontend Build Tool:** Vite
-- **Database:** MySQL
-- **Computer Vision (AI):** Tesseract.js / YOLOv8 for automated weighing display processing.
+- **Frontend Styling:** Tailwind CSS 4.3.3
+- **Frontend Build Tool:** Vite 8.2.1
+- **Database:** MySQL 8.4.3
+- **Computer Vision (AI):** Tesseract.js & YOLOv8 
 
 ### Project Organization
 The application responsibilities remain separated and maintainable:
