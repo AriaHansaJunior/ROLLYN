@@ -107,7 +107,7 @@ export default function SystemUIContainer() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 8,
-                    width: '100%',
+                    width: 'calc(100% - 40px)',
                     maxWidth: 420,
                     pointerEvents: 'none',
                 }}
