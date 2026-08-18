@@ -22,17 +22,17 @@ export default function TargetOrder() {
       </div>
 
       <div className="card p-3 sm:p-4 flex flex-col gap-2.5">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 w-full min-w-0">
-          <Search size={14} className="text-slate-400 shrink-0" />
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full min-w-0">
+          <Search size={16} className="text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search SPK, customer, JOP, grade..."
-            className="w-full min-w-0 bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+            className="w-full min-w-0 bg-transparent border-none outline-none text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
           />
         </div>
         <div>
-          <span className="text-xs font-semibold text-slate-500">Total: {filtered.length} orders</span>
+          <span className="text-sm sm:text-base font-semibold text-slate-500">Total: {filtered.length} orders</span>
         </div>
       </div>
 

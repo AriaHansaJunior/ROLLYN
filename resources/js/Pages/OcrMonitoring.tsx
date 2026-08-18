@@ -27,13 +27,13 @@ export default function OcrMonitoring() {
       </div>
 
       <div className="card p-3 sm:p-4 grid grid-cols-1 min-[760px]:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 w-full min-[760px]:flex-1 min-w-0">
-          <Search size={14} className="text-slate-400 shrink-0" />
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full min-[760px]:flex-1 min-w-0">
+          <Search size={16} className="text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search roll, admin, ID..."
-            className="w-full min-w-0 bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
+            className="w-full min-w-0 bg-transparent border-none outline-none text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
           />
         </div>
         <div className="flex items-center gap-2 justify-between w-full min-[760px]:w-auto min-[760px]:justify-end">
@@ -51,7 +51,7 @@ export default function OcrMonitoring() {
           </div>
         </div>
         <div className="min-[760px]:col-span-2 mt-1 min-[760px]:mt-0">
-          <span className="text-xs font-semibold text-slate-500">Total: {filtered.length} records</span>
+          <span className="text-sm sm:text-base font-semibold text-slate-500">Total: {filtered.length} records</span>
         </div>
       </div>
 

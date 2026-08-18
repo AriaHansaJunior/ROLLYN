@@ -51,7 +51,7 @@ export default function SlotStatus() {
               <div className="w-3 h-3 rounded-full shrink-0 border" style={{ backgroundColor: s.bg, borderColor: s.border }} />
               <span className="text-[11px] font-semibold text-slate-600 truncate">{s.label}</span>
             </div>
-            <div className="text-2xl font-extrabold" style={{ color: s.border }}>{totals[s.key] || 0}</div>
+            <div className="text-2xl font-extrabold" style={{ color: s.color }}>{totals[s.key] || 0}</div>
             <div className="text-[10px] font-medium text-slate-400 mt-1">
               {totalSlots > 0 ? Math.round(((totals[s.key] || 0) / totalSlots) * 100) : 0}% of total
             </div>

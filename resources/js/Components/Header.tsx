@@ -82,7 +82,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         <PanelLeftClose size={18} className={sidebarCollapsed ? "rotate-180 transition-transform" : "transition-transform"} />
       </button>
 
-      <div className="hidden min-[680px]:flex items-center gap-1.5 text-xs flex-1 min-w-0 ml-2">
+      <div className="hidden min-[680px]:flex items-center gap-1.5 text-sm sm:text-base flex-1 min-w-0 ml-2">
         {crumbs.map((c, i) => (
           <span key={c} className="flex items-center gap-1.5 text-slate-500 font-medium whitespace-nowrap">
             {i > 0 && <span className="text-slate-300">/</span>}
@@ -94,11 +94,11 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        <div className="hidden min-[680px]:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 w-44 focus-within:w-56 focus-within:bg-white focus-within:border-blue-500 transition-all">
-          <Search size={14} className="text-slate-400 shrink-0" />
+        <div className="hidden min-[680px]:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 w-48 focus-within:w-64 focus-within:bg-white focus-within:border-blue-500 transition-all">
+          <Search size={16} className="text-slate-400 shrink-0" />
           <input
             placeholder="Search..."
-            className="bg-transparent border-none outline-none text-xs text-slate-800 w-full placeholder:text-slate-400"
+            className="bg-transparent border-none outline-none text-sm text-slate-800 w-full placeholder:text-slate-400"
           />
         </div>
 
@@ -166,7 +166,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
             <input
               autoFocus
               placeholder="Search warehouse, rolls, orders..."
-              className="flex-1 bg-transparent border-none outline-none text-sm text-slate-900 py-1"
+              className="flex-1 bg-transparent border-none outline-none text-base text-slate-900 py-2"
             />
             <button
               onClick={() => setMobileSearchOpen(false)}
