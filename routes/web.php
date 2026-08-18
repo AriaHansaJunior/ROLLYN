@@ -17,31 +17,33 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
-Route::get('/dashboard', [DashboardController::class, 'index']);
-Route::get('/warehouse-map', [DesignUiController::class, 'warehouseMap']);
-Route::get('/slot-status', [DesignUiController::class, 'slotStatus']);
-Route::get('/incoming-roll', [DesignUiController::class, 'incomingRoll']);
-Route::post('/incoming-roll', [IncomingRollController::class, 'store']);
+Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/warehouse-map', [DesignUiController::class, 'warehouseMap']);
+    Route::get('/slot-status', [DesignUiController::class, 'slotStatus']);
+    Route::get('/incoming-roll', [DesignUiController::class, 'incomingRoll']);
+    Route::post('/incoming-roll', [IncomingRollController::class, 'store']);
 
-Route::get('/ocr-monitoring', [DesignUiController::class, 'ocrMonitoring']);
-Route::get('/target-order', [DesignUiController::class, 'targetOrder']);
-Route::get('/jop', [DesignUiController::class, 'jop']);
-Route::get('/spk-po', [DesignUiController::class, 'spkPo']);
-Route::get('/reports', [DesignUiController::class, 'reports']);
-Route::get('/profile', [DesignUiController::class, 'profile']);
-Route::get('/notifications', [DesignUiController::class, 'notifications']);
+    Route::get('/ocr-monitoring', [DesignUiController::class, 'ocrMonitoring']);
+    Route::get('/target-order', [DesignUiController::class, 'targetOrder']);
+    Route::get('/jop', [DesignUiController::class, 'jop']);
+    Route::get('/spk-po', [DesignUiController::class, 'spkPo']);
+    Route::get('/reports', [DesignUiController::class, 'reports']);
+    Route::get('/profile', [DesignUiController::class, 'profile']);
+    Route::get('/notifications', [DesignUiController::class, 'notifications']);
 
-Route::get('/user-management', [UserController::class, 'index']);
-Route::post('/user-management', [UserController::class, 'store']);
-Route::put('/user-management/{user}', [UserController::class, 'update']);
-Route::delete('/user-management/{user}', [UserController::class, 'destroy']);
+    Route::get('/user-management', [UserController::class, 'index']);
+    Route::post('/user-management', [UserController::class, 'store']);
+    Route::put('/user-management/{user}', [UserController::class, 'update']);
+    Route::delete('/user-management/{user}', [UserController::class, 'destroy']);
 
-Route::get('/roll-inventory', [RollController::class, 'index']);
-Route::get('/roll-detail/{id?}', [RollController::class, 'show']);
-Route::put('/rolls/{id}', [RollController::class, 'update']);
-Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
+    Route::get('/roll-inventory', [RollController::class, 'index']);
+    Route::get('/roll-detail/{id?}', [RollController::class, 'show']);
+    Route::put('/rolls/{id}', [RollController::class, 'update']);
+    Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
 
-Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
+    Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
+});
 
 Route::get('/api/spectrum/stats', [SpectrumEngineController::class, 'stats']);
 Route::get('/api/spectrum/retrain-status', [SpectrumEngineController::class, 'retrainStatus']);

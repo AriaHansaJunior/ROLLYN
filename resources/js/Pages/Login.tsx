@@ -1,28 +1,38 @@
-import { useState, type FormEvent } from 'react'
-import { router } from '@inertiajs/react'
+import { type FormEvent } from 'react'
+import { useForm, router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 
 export default function Login() {
-  const [email, setEmail] = useState('budi.s@spectacore.id')
-  const [password, setPassword] = useState('password')
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
+    email: 'admin@spectacore.id',
+    password: 'password',
+    remember: true,
+  })
 
   function handleLogin(e: FormEvent) {
     e.preventDefault()
-    const errs: { email?: string; password?: string } = {}
-    if (!email.trim()) {
-      errs.email = 'Email address is required.'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errs.email = 'Please enter a valid email address.'
+    clearErrors()
+    
+    let hasError = false
+    if (!data.email.trim()) {
+      setError('email', 'Email address is required.')
+      hasError = true
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      setError('email', 'Please enter a valid email address.')
+      hasError = true
     }
-    if (!password) {
-      errs.password = 'Password is required.'
+    
+    if (!data.password) {
+      setError('password', 'Password is required.')
+      hasError = true
     }
 
-    setErrors(errs)
-    if (Object.keys(errs).length === 0) {
-      SystemUI.toast({ message: 'Welcome back, Budi Santoso!', type: 'success' })
-      router.visit('/dashboard')
+    if (!hasError) {
+      post('/login', {
+        onSuccess: () => {
+          SystemUI.toast({ message: 'Welcome back!', type: 'success' })
+        },
+      })
     }
   }
 
@@ -52,10 +62,10 @@ export default function Login() {
                 className={`form-input w-full ${errors.email ? 'border-red-500 focus:ring-red-200' : ''}`}
                 type="email"
                 placeholder="admin@spectacore.id"
-                value={email}
+                value={data.email}
                 onChange={e => {
-                  setEmail(e.target.value)
-                  if (errors.email) setErrors(err => ({ ...err, email: undefined }))
+                  setData('email', e.target.value)
+                  if (errors.email) clearErrors('email')
                 }}
               />
               {errors.email && <p className="text-red-600 text-[11px] mt-1">{errors.email}</p>}
@@ -67,26 +77,33 @@ export default function Login() {
                 className={`form-input w-full ${errors.password ? 'border-red-500 focus:ring-red-200' : ''}`}
                 type="password"
                 placeholder="••••••••"
-                value={password}
+                value={data.password}
                 onChange={e => {
-                  setPassword(e.target.value)
-                  if (errors.password) setErrors(err => ({ ...err, password: undefined }))
+                  setData('password', e.target.value)
+                  if (errors.password) clearErrors('password')
                 }}
               />
               {errors.password && <p className="text-red-600 text-[11px] mt-1">{errors.password}</p>}
             </div>
 
             <div className="flex items-center gap-2 pt-1">
-              <input type="checkbox" id="remember" defaultChecked className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+              <input 
+                type="checkbox" 
+                id="remember" 
+                checked={data.remember}
+                onChange={e => setData('remember', e.target.checked)} 
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+              />
               <label htmlFor="remember" className="text-xs text-slate-600 font-medium cursor-pointer">Remember this session</label>
             </div>
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary w-full justify-center py-2.5 text-xs font-bold rounded-xl shadow-md shadow-blue-500/25 cursor-pointer mt-2"
+            disabled={processing}
+            className="btn btn-primary w-full justify-center py-2.5 text-xs font-bold rounded-xl shadow-md shadow-blue-500/25 cursor-pointer mt-2 disabled:opacity-75"
           >
-            Sign In to Dashboard
+            {processing ? 'Signing In...' : 'Sign In to Dashboard'}
           </button>
         </form>
 
