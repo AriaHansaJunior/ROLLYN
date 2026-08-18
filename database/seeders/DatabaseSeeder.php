@@ -13,9 +13,12 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      */
-    public function run(): void{
-            $this->call([
+    public function run(): void
+    {
+        $this->call([
             RollDatabaseSeeder::class,
+            LocationSeeder::class,
+            RealDataSeeder::class,
         ]);
     }
 }

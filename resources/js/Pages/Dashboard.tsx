@@ -1,20 +1,33 @@
 import { AlertTriangle, CheckCircle, Info, XCircle, TrendingUp, Package, Weight, Boxes, BarChart2, ArrowUpRight } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
-import { demandForecast, warehouseData, alerts } from '../data/dummy'
-import { router } from '@inertiajs/react'
+import { usePage, router } from '@inertiajs/react'
 
-const kpis = [
-  { label: 'Total Rolls', value: '1,248', sub: '+12 today', color: '#2563EB', bg: 'bg-blue-50', text: 'text-blue-700', icon: Package },
-  { label: 'Total Weight (ton)', value: '1,253.4', sub: 'in warehouse', color: '#0284C7', bg: 'bg-sky-50', text: 'text-sky-700', icon: Weight },
-  { label: 'Received Today', value: '24', sub: 'rolls', color: '#16A34A', bg: 'bg-green-50', text: 'text-green-700', icon: Boxes },
-  { label: 'Needs Verification', value: '3', sub: 'pending', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-700', icon: AlertTriangle },
-  { label: 'Occupied Slots', value: '260', sub: 'of 420 total', color: '#4F46E5', bg: 'bg-indigo-50', text: 'text-indigo-700', icon: BarChart2 },
-  { label: 'Available Slots', value: '160', sub: 'across all WH', color: '#059669', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Boxes },
-  { label: 'Shipment Plan', value: '62', sub: 'rolls', color: '#2563EB', bg: 'bg-blue-50', text: 'text-blue-700', icon: Package },
-  { label: 'Hold', value: '15', sub: 'rolls', color: '#1D4ED8', bg: 'bg-blue-50', text: 'text-blue-800', icon: Package },
-  { label: 'Non-PO', value: '18', sub: 'rolls', color: '#DC2626', bg: 'bg-red-50', text: 'text-red-700', icon: Package },
-  { label: 'Move Warehouse', value: '9', sub: 'rolls', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-800', icon: Package },
-]
+interface DashboardProps {
+  stats: {
+    total_rolls: number;
+    total_weight: number;
+    received_today: number;
+    occupied_slots: number;
+    total_slots: number;
+    available_slots: number;
+    active_jops: number;
+  };
+  warehouseData: any[];
+  alerts: any[];
+  demandForecast: any[];
+}
+
+export default function Dashboard() {
+  const { stats, warehouseData, alerts, demandForecast } = usePage<any>().props as unknown as DashboardProps;
+
+  const kpis = [
+    { label: 'Total Rolls', value: stats.total_rolls.toLocaleString(), sub: 'in inventory', color: '#2563EB', bg: 'bg-blue-50', text: 'text-blue-700', icon: Package },
+    { label: 'Total Weight (kg)', value: stats.total_weight.toLocaleString(), sub: 'in warehouse', color: '#0284C7', bg: 'bg-sky-50', text: 'text-sky-700', icon: Weight },
+    { label: 'Received Today', value: stats.received_today.toString(), sub: 'rolls', color: '#16A34A', bg: 'bg-green-50', text: 'text-green-700', icon: Boxes },
+    { label: 'Active JOPs', value: stats.active_jops.toString(), sub: 'jobs', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-700', icon: AlertTriangle },
+    { label: 'Occupied Slots', value: stats.occupied_slots.toString(), sub: `of ${stats.total_slots} total`, color: '#4F46E5', bg: 'bg-indigo-50', text: 'text-indigo-700', icon: BarChart2 },
+    { label: 'Available Slots', value: stats.available_slots.toString(), sub: 'across all WH', color: '#059669', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Boxes },
+  ]
 
 function AlertIcon({ type }: { type: string }) {
   if (type === 'error') return <XCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
@@ -30,7 +43,7 @@ const alertBg: Record<string, string> = {
   success: 'bg-green-50/60 border-green-500',
 }
 
-export default function Dashboard() {
+
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-5 max-w-full overflow-x-hidden">
       <div>

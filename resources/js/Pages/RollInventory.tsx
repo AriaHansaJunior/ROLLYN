@@ -1,8 +1,47 @@
 import { useState } from 'react'
-import { Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Download } from 'lucide-react'
-import { rollInventory } from '../data/dummy'
+import { Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X, Download } from 'lucide-react'
 import { router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
+
+interface RollItem {
+  id: string
+  raw_id: number
+  no_roll: string
+  form: string
+  raw_form?: number
+  shift: string
+  shifts_id?: number
+  date: string
+  grade: string
+  grades_id?: number
+  gsm: number
+  weight: number
+  width: number
+  location: string
+  locations_id?: number
+  jop: string
+  jops_id?: number
+  pic: string
+  status: string
+  exMaterial: string
+  visual: string
+}
+
+interface OptionItem {
+  id: number
+  shift?: string
+  grade?: string
+  location?: string
+  jop?: string
+}
+
+interface Props {
+  rolls?: RollItem[]
+  shifts?: OptionItem[]
+  grades?: OptionItem[]
+  locations?: OptionItem[]
+  jops?: OptionItem[]
+}
 
 const statusColors: Record<string, { bg: string; color: string }> = {
   'Slotted': { bg: '#d0e8f5', color: '#286090' },
@@ -14,16 +53,39 @@ const statusColors: Record<string, { bg: string; color: string }> = {
 
 const PER_PAGE = 8
 
-export default function RollInventory() {
+export default function RollInventory({
+  rolls = [],
+  shifts = [],
+  grades = [],
+  locations = [],
+  jops = []
+}: Props) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sortKey, setSortKey] = useState<string>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
 
-  const statuses = ['All', ...Array.from(new Set(rollInventory.map(r => r.status)))]
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingRoll, setEditingRoll] = useState<RollItem | null>(null)
+  const [editForm, setEditForm] = useState({
+    no_roll: '',
+    form: '',
+    shifts_id: 1,
+    entry_date: '',
+    grades_id: 1,
+    weight: 0,
+    locations_id: '',
+    jops_id: '',
+    exmaterial: 'IMPORT',
+    visual: 'OK'
+  })
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
 
-  const filtered = rollInventory.filter(r => {
+  const statuses = ['All', 'Slotted', 'Shipment Plan', 'Incoming', 'Hold']
+
+  const filtered = rolls.filter(r => {
     const q = search.toLowerCase()
     const matchSearch = !q || r.id.toLowerCase().includes(q) || r.grade.toLowerCase().includes(q) || r.jop.toLowerCase().includes(q) || r.location.toLowerCase().includes(q)
     const matchStatus = statusFilter === 'All' || r.status === statusFilter
@@ -54,6 +116,55 @@ export default function RollInventory() {
     SystemUI.toast({ message: 'Roll inventory exported successfully.', type: 'success' })
   }
 
+  function openEdit(r: RollItem) {
+    setEditingRoll(r)
+    setEditForm({
+      no_roll: r.no_roll || r.id,
+      form: r.raw_form ? String(r.raw_form) : '',
+      shifts_id: r.shifts_id || (shifts[0]?.id ?? 1),
+      entry_date: r.date && r.date !== '—' ? r.date : new Date().toISOString().slice(0, 10),
+      grades_id: r.grades_id || (grades[0]?.id ?? 1),
+      weight: r.weight || 0,
+      locations_id: r.locations_id ? String(r.locations_id) : '',
+      jops_id: r.jops_id ? String(r.jops_id) : '',
+      exmaterial: r.exMaterial || 'IMPORT',
+      visual: r.visual || 'OK'
+    })
+    setEditErrors({})
+    setShowEditModal(true)
+  }
+
+  function saveEdit() {
+    if (!editingRoll) return
+
+    router.put(`/rolls/${editingRoll.raw_id}`, editForm, {
+      onSuccess: () => {
+        SystemUI.toast({ message: `Roll ${editForm.no_roll} updated successfully.`, type: 'success' })
+        setShowEditModal(false)
+      },
+      onError: (errs) => {
+        setEditErrors(errs as any)
+      }
+    })
+  }
+
+  async function handleDelete(r: RollItem) {
+    const confirmed = await SystemUI.confirm({
+      title: 'Delete Roll',
+      message: `Are you sure you want to delete roll "${r.id}"? This will free any allocated location slot and cannot be undone.`,
+      confirmText: 'Delete Roll',
+      cancelText: 'Cancel'
+    })
+
+    if (confirmed) {
+      router.delete(`/rolls/${r.raw_id}`, {
+        onSuccess: () => {
+          SystemUI.toast({ message: 'Roll deleted successfully', type: 'success' })
+        }
+      })
+    }
+  }
+
   const cols: { key: string; label: string }[] = [
     { key: 'id', label: 'Roll No.' },
     { key: 'form', label: 'Form No.' },
@@ -68,7 +179,6 @@ export default function RollInventory() {
     { key: 'pic', label: 'PIC' },
     { key: 'status', label: 'Status' },
   ]
-  const centeredCols = new Set(['shift', 'date', 'gsm', 'weight', 'width', 'location', 'jop', 'pic', 'status'])
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
@@ -78,7 +188,7 @@ export default function RollInventory() {
           <p className="text-xs text-slate-500 mt-0.5">Comprehensive catalog of physical rolls across all warehouses</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-secondary btn-sm" onClick={handleExport}>
+          <button className="btn btn-secondary btn-sm cursor-pointer" onClick={handleExport}>
             <Download size={13} /> <span>Export</span>
           </button>
         </div>
@@ -118,19 +228,19 @@ export default function RollInventory() {
       <div className="card overflow-x-auto">
         <table className="data-table w-full min-w-[1300px] lg:min-w-[1060px] table-fixed border-collapse text-xs">
           <colgroup>
-            <col className="w-[120px] lg:w-[90px]" />
-            <col className="w-[110px] lg:w-[80px]" />
+            <col className="w-[130px] lg:w-[100px]" />
+            <col className="w-[100px] lg:w-[75px]" />
+            <col className="w-[80px] lg:w-[55px]" />
+            <col className="w-[100px] lg:w-[90px]" />
+            <col className="w-[110px] lg:w-[90px]" />
             <col className="w-[80px] lg:w-[50px]" />
             <col className="w-[100px] lg:w-[90px]" />
-            <col className="w-[100px] lg:w-[80px]" />
-            <col className="w-[80px] lg:w-[50px]" />
-            <col className="w-[100px] lg:w-[95px]" />
-            <col className="w-[100px] lg:w-[95px]" />
-            <col className="w-[100px] lg:w-[80px]" />
-            <col className="w-[120px] lg:w-[90px]" />
-            <col className="w-[110px] lg:w-[90px]" />
-            <col className="w-[100px] lg:w-[100px]" />
-            <col className="w-[80px] lg:w-[70px]" />
+            <col className="w-[100px] lg:w-[85px]" />
+            <col className="w-[100px] lg:w-[85px]" />
+            <col className="w-[120px] lg:w-[95px]" />
+            <col className="w-[110px] lg:w-[85px]" />
+            <col className="w-[100px] lg:w-[90px]" />
+            <col className="w-[110px] lg:w-[95px]" />
           </colgroup>
           <thead>
             <tr>
@@ -148,23 +258,23 @@ export default function RollInventory() {
                   </th>
                 );
               })}
-              <th style={{ textAlign: 'center' }}>Action</th>
+              <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {paged.length === 0 ? (
-              <tr><td colSpan={cols.length + 1} className="text-center py-8 text-slate-400">No rolls found.</td></tr>
+              <tr><td colSpan={cols.length + 1} className="text-center py-8 text-slate-400">No rolls found in database.</td></tr>
             ) : paged.map(r => {
               const sc = statusColors[r.status] || { bg: '#EEEEEE', color: '#333' }
               return (
-                <tr key={r.id}>
+                <tr key={r.raw_id || r.id}>
                   <td style={{ textAlign: 'left' }}><span className="font-bold text-blue-700 font-mono text-xs">{r.id}</span></td>
                   <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.form}</td>
                   <td style={{ textAlign: 'center' }}><span className="badge bg-slate-100 text-slate-700 border-slate-200">{r.shift}</span></td>
                   <td style={{ textAlign: 'center' }} className="text-xs">{r.date}</td>
                   <td style={{ textAlign: 'center' }}><span className="font-semibold text-slate-800">{r.grade}</span></td>
                   <td style={{ textAlign: 'center' }}>{r.gsm}</td>
-                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.weight.toLocaleString()}</td>
+                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.weight ? r.weight.toLocaleString() : 0}</td>
                   <td style={{ textAlign: 'center' }}>{r.width}</td>
                   <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.location || <span className="text-red-600">No Slot</span>}</td>
                   <td style={{ textAlign: 'center' }} className="text-xs">{r.jop}</td>
@@ -175,9 +285,15 @@ export default function RollInventory() {
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <div className="flex w-full justify-center">
-                      <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer" onClick={() => router.visit('/roll-detail')} title="View Roll Detail">
+                    <div className="flex gap-1 justify-center">
+                      <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer" onClick={() => router.visit(`/roll-detail/${r.raw_id}`)} title="View Roll Detail">
                         <Eye size={13} />
+                      </button>
+                      <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer text-blue-600 hover:text-blue-800" onClick={() => openEdit(r)} title="Edit Roll">
+                        <Edit size={13} />
+                      </button>
+                      <button className="btn btn-danger btn-sm p-1.5 cursor-pointer" onClick={() => handleDelete(r)} title="Delete Roll">
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </td>
@@ -201,6 +317,147 @@ export default function RollInventory() {
           <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
         </div>
       </div>
+
+      {/* Edit Roll Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-lg p-5 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Edit Roll Data</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Roll Number <span className="text-red-500">*</span></label>
+                <input
+                  value={editForm.no_roll}
+                  onChange={e => setEditForm(f => ({ ...f, no_roll: e.target.value }))}
+                  className="form-input w-full"
+                />
+                {editErrors.no_roll && <p className="text-red-600 text-[11px] mt-0.5">{editErrors.no_roll}</p>}
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Form Number</label>
+                <input
+                  type="number"
+                  value={editForm.form}
+                  onChange={e => setEditForm(f => ({ ...f, form: e.target.value }))}
+                  className="form-input w-full"
+                  placeholder="e.g. 1"
+                />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Shift</label>
+                <select
+                  value={editForm.shifts_id}
+                  onChange={e => setEditForm(f => ({ ...f, shifts_id: Number(e.target.value) }))}
+                  className="form-input w-full"
+                >
+                  {shifts.map(s => (
+                    <option key={s.id} value={s.id}>Shift {s.shift}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Entry Date</label>
+                <input
+                  type="date"
+                  value={editForm.entry_date}
+                  onChange={e => setEditForm(f => ({ ...f, entry_date: e.target.value }))}
+                  className="form-input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Grade</label>
+                <select
+                  value={editForm.grades_id}
+                  onChange={e => setEditForm(f => ({ ...f, grades_id: Number(e.target.value) }))}
+                  className="form-input w-full"
+                >
+                  {grades.map(g => (
+                    <option key={g.id} value={g.id}>{g.grade}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Weight (kg)</label>
+                <input
+                  type="number"
+                  value={editForm.weight}
+                  onChange={e => setEditForm(f => ({ ...f, weight: Number(e.target.value) }))}
+                  className="form-input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Warehouse Location</label>
+                <select
+                  value={editForm.locations_id}
+                  onChange={e => setEditForm(f => ({ ...f, locations_id: e.target.value }))}
+                  className="form-input w-full"
+                >
+                  <option value="">Unallocated (No Slot)</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.location}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">JOP Order</label>
+                <select
+                  value={editForm.jops_id}
+                  onChange={e => setEditForm(f => ({ ...f, jops_id: e.target.value }))}
+                  className="form-input w-full"
+                >
+                  <option value="">No JOP Assigned</option>
+                  {jops.map(j => (
+                    <option key={j.id} value={j.id}>{j.jop}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Ex Material</label>
+                <select
+                  value={editForm.exmaterial}
+                  onChange={e => setEditForm(f => ({ ...f, exmaterial: e.target.value }))}
+                  className="form-input w-full"
+                >
+                  <option value="IMPORT">IMPORT</option>
+                  <option value="LOCAL">LOCAL</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Visual</label>
+                <input
+                  value={editForm.visual}
+                  onChange={e => setEditForm(f => ({ ...f, visual: e.target.value }))}
+                  className="form-input w-full"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
+              <button className="btn btn-secondary text-xs px-3 py-1.5" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary text-xs px-3 py-1.5" onClick={saveEdit}>
+                Update Roll
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

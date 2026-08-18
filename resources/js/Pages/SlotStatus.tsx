@@ -1,4 +1,4 @@
-import { warehouseData } from '../data/dummy'
+import { usePage } from '@inertiajs/react'
 
 const statusDef = [
   { key: 'available', label: 'Free Space', bg: '#FFFFFF', border: '#CBD5E1', color: '#334155' },
@@ -11,14 +11,31 @@ const statusDef = [
 ]
 
 export default function SlotStatus() {
+  const { locations = [] } = usePage<any>().props;
+
+  // Compute from database `locations`
+  const occupiedCount = locations.filter((loc: any) => loc.status === 1).length;
+  const availableCount = locations.filter((loc: any) => loc.status === 0).length;
+  const totalSlots = locations.length;
+
+  const warehouseData = totalSlots > 0 ? [{
+    id: 'E17',
+    total: totalSlots,
+    available: availableCount,
+    occupied: occupiedCount,
+    planning: 0,
+    shipment: 0,
+    nonPO: 0,
+    moveWH: 0,
+    hold: 0,
+  }] : [];
+
   const totals = warehouseData.reduce((acc, wh) => {
     statusDef.forEach(s => {
       acc[s.key] = (acc[s.key] || 0) + ((wh as unknown as Record<string, number>)[s.key] || 0)
     })
     return acc
   }, {} as Record<string, number>)
-
-  const totalSlots = warehouseData.reduce((s, w) => s + w.total, 0)
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">

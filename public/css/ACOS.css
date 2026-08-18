@@ -1,0 +1,29 @@
+/* ACOS.css - AiraCode OS Custom Styles */
+
+/* macOS style smooth slide-in and fade animation */
+@keyframes macOsSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-30px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.acos-sidebar-enter {
+    animation: macOsSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Optional: Smooth transition for hover states */
+.acos-smooth-hover {
+    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.acos-layout-transition {
+    transition-property: width, max-width, height, max-height, opacity, margin, padding;
+    transition-duration: 500ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: top left;
+}

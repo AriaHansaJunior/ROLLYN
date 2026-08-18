@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Search, Filter } from 'lucide-react'
-import { ocrLogs } from '../data/dummy'
+import { usePage } from '@inertiajs/react'
 
 const statusBadge: Record<string, { bg: string; color: string }> = {
   'Success': { bg: '#d4edda', color: '#3C763D' },
@@ -8,6 +8,7 @@ const statusBadge: Record<string, { bg: string; color: string }> = {
 }
 
 export default function OcrMonitoring() {
+  const { ocrLogs = [] } = usePage<any>().props;
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
 

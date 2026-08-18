@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
-import { targetOrders } from '../data/dummy'
+import { usePage } from '@inertiajs/react'
 
 export default function TargetOrder() {
+  const { targetOrders = [] } = usePage<any>().props;
   const [search, setSearch] = useState('')
   const filtered = targetOrders.filter(r => {
     const q = search.toLowerCase()

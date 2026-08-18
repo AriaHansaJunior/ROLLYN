@@ -1,6 +1,6 @@
 import { Bell, Search, ChevronDown, PanelLeftClose, Menu, X } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { router } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 
 const pageLabels: Record<string, string[]> = {
   'dashboard': ['Dashboard'],
@@ -27,12 +27,19 @@ interface HeaderProps {
 }
 
 export default function Header({ activePage, onMenuClick, onToggleSidebar, sidebarCollapsed }: HeaderProps) {
+  const { props } = usePage()
+  const authUser = (props.auth as any)?.user
+
   const [profileOpen, setProfileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
   const crumbs = pageLabels[activePage] || ['Dashboard']
   const currentPageTitle = crumbs[crumbs.length - 1]
+
+  const userName = authUser?.username || 'Admin User'
+  const userRole = authUser?.role ? (authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1)) : 'Administrator'
+  const userInitials = userName.substring(0, 2).toUpperCase()
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -117,17 +124,17 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
             className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <div className="w-7 h-7 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold shadow-xs">
-              BS
+              {userInitials}
             </div>
-            <span className="hidden min-[680px]:inline text-xs font-medium text-slate-700 ml-0.5">Budi S.</span>
+            <span className="hidden min-[680px]:inline text-xs font-medium text-slate-700 ml-0.5">{userName}</span>
             <ChevronDown size={14} className="text-slate-400" />
           </button>
 
           {profileOpen && (
             <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl min-w-[170px] shadow-xl z-50 overflow-hidden py-1">
               <div className="px-3.5 py-2.5 border-b border-slate-100">
-                <div className="text-xs font-semibold text-slate-900">Budi Santoso</div>
-                <div className="text-[11px] text-slate-500">Administrator</div>
+                <div className="text-xs font-semibold text-slate-900">{userName}</div>
+                <div className="text-[11px] text-slate-500">{userRole}</div>
               </div>
               <button
                 className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
@@ -142,7 +149,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
                 className="w-full text-left px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 border-t border-slate-100 transition-colors"
                 onClick={() => {
                   setProfileOpen(false)
-                  router.visit('/login')
+                  router.post('/logout')
                 }}
               >
                 Sign Out

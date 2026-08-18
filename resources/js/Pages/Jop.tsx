@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Search, Filter } from 'lucide-react'
-import { jopData } from '../data/dummy'
+import { usePage } from '@inertiajs/react'
 
 export default function Jop() {
+  const { jopData = [] } = usePage<any>().props;
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
 

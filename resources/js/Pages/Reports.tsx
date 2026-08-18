@@ -1,35 +1,14 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts'
-import { warehouseData, demandForecast } from '../data/dummy'
-
-const statusDistribution = [
-  { name: 'Slotted', value: 260, color: '#9ecae1' },
-  { name: 'Shipment Plan', value: 62, color: '#5CB85C' },
-  { name: 'Hold', value: 15, color: '#337AB7' },
-  { name: 'Non-PO', value: 18, color: '#e74c3c' },
-  { name: 'Move WH', value: 9, color: '#f39c12' },
-  { name: 'Free Space', value: 160, color: '#CBD5E1' },
-]
-
-const ocrActivity = [
-  { day: 'Mon', success: 18, error: 2 },
-  { day: 'Tue', success: 22, error: 1 },
-  { day: 'Wed', success: 15, error: 3 },
-  { day: 'Thu', success: 24, error: 0 },
-  { day: 'Fri', success: 20, error: 2 },
-  { day: 'Sat', success: 12, error: 1 },
-  { day: 'Sun', success: 8, error: 0 },
-]
-
-const kpis = [
-  { label: 'Total Rolls This Week', value: '119' },
-  { label: 'Total Weight Received (ton)', value: '119.8' },
-  { label: 'Order Completion Rate', value: '62%' },
-  { label: 'OCR Success Rate', value: '91.7%' },
-  { label: 'Avg Weight per Roll (kg)', value: '1,006' },
-  { label: 'Warehouse Utilization', value: '61.9%' },
-]
+import { usePage } from '@inertiajs/react'
 
 export default function Reports() {
+  const { 
+    warehouseData = [], 
+    demandForecast = [], 
+    statusDistribution = [], 
+    ocrActivity = [], 
+    kpis = [] 
+  } = usePage<any>().props;
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
       <div>
