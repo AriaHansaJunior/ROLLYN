@@ -4,7 +4,7 @@ import { SystemUI } from '@/Utils/SystemUI'
 import { router } from '@inertiajs/react'
 
 export default function Profile() {
-  const [name, setName] = useState('Budi Santoso')
+  const [name, setName] = useState('Budi Suprapto')
   const [email] = useState('budi.s@spectacore.id')
   const [nameError, setNameError] = useState<string | null>(null)
 
@@ -81,7 +81,7 @@ export default function Profile() {
               BS
             </div>
             <div>
-              <div className="font-bold text-base text-slate-900">Budi Santoso</div>
+              <div className="font-bold text-base text-slate-900">Budi Suprapto</div>
               <div className="text-xs font-semibold text-blue-700">System Administrator</div>
               <div className="text-xs text-slate-500 font-mono mt-0.5">{email}</div>
             </div>

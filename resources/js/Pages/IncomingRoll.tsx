@@ -264,7 +264,7 @@ export default function IncomingRoll() {
 
               <div>
                 <label className="form-label text-xs font-semibold block mb-1">PIC</label>
-                <input value={form.pic} onChange={e => setForm(f => ({ ...f, pic: e.target.value }))} className="form-input w-full" placeholder="e.g. Budi Santoso" />
+                <input value={form.pic} onChange={e => setForm(f => ({ ...f, pic: e.target.value }))} className="form-input w-full" placeholder="e.g. Budi Suprapto" />
               </div>
             </div>
 
