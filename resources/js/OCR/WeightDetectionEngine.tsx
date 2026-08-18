@@ -1,10 +1,3 @@
-/**
- * ============================================================
- * OCR/WeightDetectionEngine.tsx
- * ============================================================
- * Legacy OCR React component for weight detection (Tesseract / Digital J).
- */
-
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     Camera,
@@ -31,10 +24,6 @@ import {
     type OcrError,
 } from "./OCRService";
 import { SystemUI } from "@/Utils/SystemUI";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type EngineState =
     | "permission_modal"
@@ -128,7 +117,7 @@ export default function WeightDetectionEngine({
                 onCancel: () => setEngineState("camera_denied"),
             });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, []);
 
     useEffect(() => {

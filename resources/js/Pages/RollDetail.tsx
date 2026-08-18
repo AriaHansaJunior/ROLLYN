@@ -272,7 +272,7 @@ export default function RollDetail({
         </div>
       </div>
 
-      {/* Edit Roll Modal */}
+      {}
       {showEditModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-lg p-5 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">

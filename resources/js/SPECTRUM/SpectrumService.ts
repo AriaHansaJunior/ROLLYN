@@ -1,4 +1,3 @@
-
 export interface SpectrumResult {
     status: "SUCCESS" | "WARNING_LOW_CONFIDENCE";
     weight_detected: number;

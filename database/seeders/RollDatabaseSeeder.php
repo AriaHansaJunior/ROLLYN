@@ -10,7 +10,7 @@ class RollDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Seed Master Data Simple
+
         DB::table('shifts')->insertOrIgnore([
             ['id' => 1, 'shift' => '1', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 2, 'shift' => '2', 'created_at' => now(), 'updated_at' => now()],

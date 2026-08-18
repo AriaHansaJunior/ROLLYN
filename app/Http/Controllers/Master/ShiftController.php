@@ -25,7 +25,7 @@ class ShiftController extends Controller
     public function update(Request $request, $id)
     {
         $item = Shift::findOrFail($id);
-        
+
         $validated = $request->validate([
             'shift' => 'required'
         ]);

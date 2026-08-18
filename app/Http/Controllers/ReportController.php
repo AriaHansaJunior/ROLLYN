@@ -14,7 +14,7 @@ class ReportController extends Controller
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('entry_date', [$request->start_date, $request->end_date]);
         }
-        
+
         if ($request->filled('shifts_id')) {
             $query->where('shifts_id', $request->shifts_id);
         }
@@ -30,7 +30,7 @@ class ReportController extends Controller
             'filters' => $request->all()
         ]);
     }
-    
+
     public function export()
     {
         return response()->json(['message' => 'Export feature coming soon']);

@@ -13,13 +13,12 @@ return new class extends Migration
             $table->string('spk', 45);
             $table->string('jop', 45);
             $table->string('po', 45);
-            
-            // Foreign Keys
+
             $table->foreignId('customers_id')->constrained('customers')->onDelete('cascade');
             $table->foreignId('grades_id')->constrained('grades')->onDelete('cascade');
             $table->foreignId('gsms_id')->constrained('gsms')->onDelete('cascade');
             $table->foreignId('rolls_widths_id')->nullable()->constrained('rolls_widths')->onDelete('set null');
-            
+
             $table->integer('quantity')->nullable();
             $table->integer('weight')->nullable();
             $table->integer('container')->nullable();

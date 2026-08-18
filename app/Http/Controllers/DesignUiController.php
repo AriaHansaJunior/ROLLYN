@@ -10,7 +10,7 @@ use Inertia\Inertia;
 class DesignUiController extends Controller
 {
     public function login() { return Inertia::render('Login'); }
-    
+
     public function warehouseMap()
     {
         $locations = Location::with(['rolls' => function($query) {
@@ -18,13 +18,13 @@ class DesignUiController extends Controller
         }])->get();
         return Inertia::render('WarehouseMap', ['locations' => $locations]);
     }
-    
+
     public function slotStatus()
     {
         $locations = Location::all();
         return Inertia::render('SlotStatus', ['locations' => $locations]);
     }
-    
+
     public function incomingRoll() { return Inertia::render('IncomingRoll'); }
     public function ocrMonitoring() { return Inertia::render('OcrMonitoring'); }
     public function targetOrder() { return Inertia::render('TargetOrder'); }

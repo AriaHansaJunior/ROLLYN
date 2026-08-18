@@ -10,20 +10,20 @@ export default function SpkPo() {
   const processedOrders = targetOrders.map(o => {
     const relatedRolls = rollInventory.filter(r => r.jop === o.jop).length
     const status = relatedRolls >= o.qtyRoll ? 'Complete' : relatedRolls > 0 ? 'In Progress' : 'Pending'
-    const sc = status === 'Complete' 
-      ? 'bg-green-50 text-green-700 border-green-200' 
-      : status === 'In Progress' 
-      ? 'bg-blue-50 text-blue-700 border-blue-200' 
+    const sc = status === 'Complete'
+      ? 'bg-green-50 text-green-700 border-green-200'
+      : status === 'In Progress'
+      ? 'bg-blue-50 text-blue-700 border-blue-200'
       : 'bg-amber-50 text-amber-700 border-amber-200'
     return { ...o, relatedRolls, status, sc }
   })
 
   const filtered = processedOrders.filter(o => {
     const q = search.toLowerCase()
-    const matchSearch = !q || 
-      o.spk.toLowerCase().includes(q) || 
-      o.jop.toLowerCase().includes(q) || 
-      o.po.toLowerCase().includes(q) || 
+    const matchSearch = !q ||
+      o.spk.toLowerCase().includes(q) ||
+      o.jop.toLowerCase().includes(q) ||
+      o.po.toLowerCase().includes(q) ||
       o.customer.toLowerCase().includes(q) ||
       o.grade.toLowerCase().includes(q)
     const matchStatus = statusFilter === 'All' || o.status === statusFilter

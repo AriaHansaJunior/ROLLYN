@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import 'tailwindcss';
 
-/* Components */
 @import './components/variables.css';
 @import './components/base.css';
 @import './components/sidebar.css';

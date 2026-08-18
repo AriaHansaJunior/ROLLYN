@@ -29,7 +29,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
-        {/* Logo */}
+        {}
         <div className="text-center">
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center mx-auto mb-3 shadow-md">
             <span className="text-white text-2xl font-black">R</span>
@@ -38,7 +38,7 @@ export default function Login() {
           <p className="text-xs text-slate-500 mt-1 font-medium">Warehouse Administration System</p>
         </div>
 
-        {/* Login Card */}
+        {}
         <form onSubmit={handleLogin} className="card p-6 sm:p-7 space-y-4 shadow-xl rounded-2xl bg-white border border-slate-200/80">
           <div>
             <h2 className="text-base font-bold text-slate-900 mb-0.5">Sign In</h2>

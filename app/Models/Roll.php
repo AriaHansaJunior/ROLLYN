@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Roll extends Model
 {
     protected $primaryKey = 'no';
-    public $incrementing = false; 
+    public $incrementing = false;
     protected $keyType = 'int';
     protected $guarded = [];
 

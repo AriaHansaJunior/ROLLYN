@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
     Camera,
@@ -36,7 +35,6 @@ import {
 } from "./SpectrumService";
 import { SystemUI } from "@/Utils/SystemUI";
 
-
 type EngineState =
     | "permission_modal"
     | "requesting"
@@ -55,7 +53,6 @@ interface SpectrumWeightDetectionEngineProps {
 
     roi?: ROI;
 }
-
 
 export default function SpectrumWeightDetectionEngine({
     onWeightConfirmed,
@@ -80,7 +77,6 @@ export default function SpectrumWeightDetectionEngine({
     const latestVariantsRef = useRef<PreprocessedVariant[]>([]);
 
     const isProcessing = engineState === "processing";
-
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -147,7 +143,6 @@ export default function SpectrumWeightDetectionEngine({
             terminateOCRWorker();
         };
     }, [stopCamera]);
-
 
     const takePhoto = useCallback(async () => {
         const video = videoRef.current;
@@ -261,7 +256,6 @@ export default function SpectrumWeightDetectionEngine({
         }
     };
 
-
     function retryCapture() {
         setOcrResult(null);
         setOcrError(null);
@@ -313,7 +307,6 @@ export default function SpectrumWeightDetectionEngine({
 
         onWeightConfirmed(numericWeight, display, effectiveSource);
     }
-
 
     const isSpectrumLowConf = spectrumResult && (spectrumResult.confidence < 0.80 || spectrumResult.status === "WARNING_LOW_CONFIDENCE");
 

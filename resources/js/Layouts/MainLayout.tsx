@@ -13,7 +13,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [isMobile, setIsMobile] = useState(false)
   const { url } = usePage()
 
-  // Derive activePage from URL (e.g., "/dashboard" -> "dashboard")
   const activePage = url === '/' ? 'dashboard' : url.split('/')[1] || 'dashboard'
 
   const sidebarWidth = sidebarCollapsed ? 56 : 280
@@ -41,7 +40,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      {/* Main content area */}
+      {}
       <div
         style={{
           flex: 1,

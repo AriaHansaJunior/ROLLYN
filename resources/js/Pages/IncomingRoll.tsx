@@ -77,7 +77,7 @@ export default function IncomingRoll() {
         <p className="text-xs text-slate-500 mt-0.5">Physical roll weight capture and specification logging</p>
       </div>
 
-      {/* Step Indicator */}
+      {}
       <div className="flex items-center gap-2 w-full lg:max-w-4xl py-2">
         {steps.map((s, i) => (
           <div key={s} className="flex items-center flex-1 last:flex-none">
@@ -104,7 +104,7 @@ export default function IncomingRoll() {
         ))}
       </div>
 
-      {/* STEP 0: Camera & Weight Detection */}
+      {}
       {step === 0 && (
         <WeightDetectionEngine
           onWeightConfirmed={handleWeightConfirmed}
@@ -112,10 +112,10 @@ export default function IncomingRoll() {
         />
       )}
 
-      {/* STEP 1: Roll Data Entry */}
+      {}
       {step === 1 && (
         <div className="w-full 2xl:max-w-7xl space-y-4 lg:space-y-6">
-          {/* Prominent Weight Display */}
+          {}
           <div className="card p-4">
             <div className="flex items-center justify-between gap-4 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl">
               <div className="flex items-center gap-3">
@@ -155,7 +155,7 @@ export default function IncomingRoll() {
             </div>
           </div>
 
-          {/* Roll Data Form */}
+          {}
           <div className="card p-4 sm:p-5">
             <h3 className="text-sm font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">Roll Data Entry</h3>
             <div className="grid grid-cols-1 min-[680px]:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
@@ -280,7 +280,7 @@ export default function IncomingRoll() {
         </div>
       )}
 
-      {/* STEP 2: Review & Save */}
+      {}
       {step === 2 && (
         <div className="w-full 2xl:max-w-7xl space-y-4">
           <div className="card p-4 sm:p-6 lg:p-8">

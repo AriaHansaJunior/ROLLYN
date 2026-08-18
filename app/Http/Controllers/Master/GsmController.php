@@ -25,7 +25,7 @@ class GsmController extends Controller
     public function update(Request $request, $id)
     {
         $item = Gsm::findOrFail($id);
-        
+
         $validated = $request->validate([
             'gsm' => 'required'
         ]);

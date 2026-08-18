@@ -43,7 +43,6 @@ const alertBg: Record<string, string> = {
   success: 'bg-green-50/60 border-green-500',
 }
 
-
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-5 max-w-full overflow-x-hidden">
       <div>
@@ -79,7 +78,7 @@ const alertBg: Record<string, string> = {
       </div>
 
       <div className="grid grid-cols-1 min-[1180px]:grid-cols-[1fr_320px] gap-4">
-        
+
         <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-100">
             <div>

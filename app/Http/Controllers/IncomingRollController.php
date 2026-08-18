@@ -35,24 +35,24 @@ class IncomingRollController extends Controller
             'cobbs_id' => 'nullable|exists:cobbs,id',
             'exmaterial' => 'required|in:IMPORT,LOCAL',
             'visual' => 'nullable|string',
-            'weight' => 'required|integer', 
+            'weight' => 'required|integer',
         ]);
 
         $bulk = null;
-        if (!empty($validated['thicknesses_id']) && !empty($request->gsm_value)) { 
-            $bulk = $request->thickness_value / $request->gsm_value; 
+        if (!empty($validated['thicknesses_id']) && !empty($request->gsm_value)) {
+            $bulk = $request->thickness_value / $request->gsm_value;
         }
 
         DB::beginTransaction();
         try {
             $validated['bulk'] = $bulk;
             $validated['users_id'] = auth()->id();
-            
+
             $roll = Roll::create($validated);
-            
+
             DB::commit();
-            session()->forget('incoming_roll_weight'); 
-            
+            session()->forget('incoming_roll_weight');
+
             return response()->json(['message' => 'Roll saved successfully', 'data' => $roll]);
         } catch (\Exception $e) {
             DB::rollBack();

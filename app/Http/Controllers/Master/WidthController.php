@@ -25,7 +25,7 @@ class WidthController extends Controller
     public function update(Request $request, $id)
     {
         $item = RollsWidth::findOrFail($id);
-        
+
         $validated = $request->validate([
             'width' => 'required'
         ]);

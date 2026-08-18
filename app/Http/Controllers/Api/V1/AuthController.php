@@ -11,9 +11,6 @@ class AuthController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * Login User and issue a Sanctum token
-     */
     public function login(Request $request)
     {
         $request->validate([
@@ -26,10 +23,9 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        
-        // Remove all previous tokens if you want single device login, or keep them for multi-device
+
         $user->tokens()->delete();
-        
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->successResponse([
@@ -39,14 +35,11 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'username' => $user->username,
-                'role' => $user->role, // Ensure the User model has a role property/column
+                'role' => $user->role,
             ]
         ], 'Login successful');
     }
 
-    /**
-     * Logout User (Revoke the token)
-     */
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
@@ -54,9 +47,6 @@ class AuthController extends Controller
         return $this->successResponse(null, 'Successfully logged out');
     }
 
-    /**
-     * Get authenticated User profile
-     */
     public function me(Request $request)
     {
         return $this->successResponse([

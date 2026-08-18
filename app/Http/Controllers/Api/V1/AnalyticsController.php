@@ -13,24 +13,20 @@ class AnalyticsController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * Dashboard Summary endpoint
-     */
     public function dashboardSummary(Request $request)
     {
         $today = Carbon::today()->toDateString();
-        
+
         $rollsTodayQuery = Roll::whereDate('entry_date', $today);
-        
+
         $totalRollsToday = clone $rollsTodayQuery;
         $totalWeightToday = clone $rollsTodayQuery;
-        
+
         $activeJops = Jop::where(function ($q) {
             $q->has('rolls', '<', \DB::raw('jops.quantity'))
               ->orWhereNull('quantity');
         })->count();
 
-        // Shift distribution for today
         $shiftDistribution = clone $rollsTodayQuery;
         $shiftDistribution = $shiftDistribution->selectRaw('shifts_id, count(*) as total')
                                                ->with('shift:id,shift')
@@ -52,9 +48,6 @@ class AnalyticsController extends Controller
         ], 'Dashboard summary retrieved successfully');
     }
 
-    /**
-     * Report listing endpoint for Rolls
-     */
     public function rollReports(Request $request)
     {
         $query = Roll::with(['shift', 'grade', 'jop']);
@@ -74,8 +67,7 @@ class AnalyticsController extends Controller
 
         $sort = $request->query('sort', 'entry_date');
         $order = $request->query('order', 'desc');
-        
-        // Sorting relation fallback logic could be added here if needed, keeping it simple
+
         $query->orderBy($sort, $order);
 
         $limit = $request->query('limit', 20);
@@ -83,9 +75,6 @@ class AnalyticsController extends Controller
         return $this->successResponse($query->paginate($limit), 'Roll reports retrieved successfully');
     }
 
-    /**
-     * Export rolls to CSV/Excel
-     */
     public function exportExcel(Request $request)
     {
         $query = Roll::with(['shift', 'grade', 'jop', 'user']);

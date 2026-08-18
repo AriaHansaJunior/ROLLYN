@@ -22,7 +22,7 @@ class GradeController extends Controller
         } else {
             $query->orderBy('id', 'desc');
         }
-        
+
         $limit = $request->query('limit', 15);
         return $this->successResponse($query->paginate($limit), 'Data retrieved successfully');
     }

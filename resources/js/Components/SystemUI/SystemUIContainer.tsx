@@ -46,7 +46,7 @@ export default function SystemUIContainer() {
 
     return (
         <>
-            {/* Modal Layer */}
+            {}
             {modal && (
                 <div
                     className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200"
@@ -97,7 +97,7 @@ export default function SystemUIContainer() {
                 </div>
             )}
 
-            {/* Toast Layer - High contrast, sharp readability */}
+            {}
             <div
                 style={{
                     position: 'fixed',

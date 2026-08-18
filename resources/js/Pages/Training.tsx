@@ -27,7 +27,6 @@ import {
     type SpectrumResult,
 } from '@/SPECTRUM/SpectrumService';
 
-
 interface DatasetStats {
     total_samples: number;
     corrections_count: number;
@@ -53,7 +52,6 @@ interface TrainingResult {
     phase?: string;
     progress_pct?: number;
 }
-
 
 function strToBool(val: string | boolean): boolean {
     if (typeof val === 'boolean') return val;
@@ -99,7 +97,6 @@ function StatCard({ icon, label, value, sub, color }: StatCardProps) {
     );
 }
 
-
 export default function Training() {
     const [stats, setStats] = useState<DatasetStats | null>(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -141,7 +138,6 @@ export default function Training() {
     const [confirmedWeightInput, setConfirmedWeightInput] = useState<string>('');
     const [isCorrecting, setIsCorrecting] = useState(false);
 
-
     const fetchStats = async () => {
         setIsLoadingStats(true);
         try {
@@ -159,13 +155,12 @@ export default function Training() {
 
     useEffect(() => {
         fetchStats();
-        const interval = setInterval(fetchStats, 30000); // Auto-refresh every 30s
+        const interval = setInterval(fetchStats, 30000);
         return () => {
             clearInterval(interval);
             stopCamera();
         };
     }, []);
-
 
     const startCamera = async () => {
         try {
@@ -198,7 +193,6 @@ export default function Training() {
         }
         setIsCameraOpen(false);
     };
-
 
     const handleCaptureAndDetect = async () => {
         const video = videoRef.current;
@@ -264,7 +258,6 @@ export default function Training() {
         }
     };
 
-
     const handleSaveCapturedToDataset = async () => {
         if (!capturedFrame || !confirmedWeightInput) {
             SystemUI.toast({ message: 'Please enter the correct weight first.', type: 'warning' });
@@ -310,7 +303,6 @@ export default function Training() {
             setIsSaving(false);
         }
     };
-
 
     const PHASE_LABELS: Record<string, string> = {
         INIT:              '⚙️ Initializing Weight Reading System...',
@@ -408,7 +400,6 @@ export default function Training() {
         }
     };
 
-
     const handleManualImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -437,7 +428,6 @@ export default function Training() {
         };
         reader.readAsDataURL(file);
     };
-
 
     return (
         <>

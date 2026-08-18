@@ -110,7 +110,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
           <Search size={18} />
         </button>
 
-        <button 
+        <button
           onClick={() => router.visit('/notifications')}
           className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
         >

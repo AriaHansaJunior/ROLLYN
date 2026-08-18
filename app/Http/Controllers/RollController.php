@@ -13,9 +13,7 @@ use Inertia\Inertia;
 
 class RollController extends Controller
 {
-    /**
-     * Display a listing of physical roll inventory.
-     */
+
     public function index()
     {
         $rolls = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop'])
@@ -68,9 +66,6 @@ class RollController extends Controller
         ]);
     }
 
-    /**
-     * Display detailed specifications of a roll.
-     */
     public function show($id)
     {
         $roll = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop'])
@@ -129,9 +124,6 @@ class RollController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified roll record in storage.
-     */
     public function update(Request $request, $id)
     {
         $roll = Roll::where('no', $id)->orWhere('no_roll', $id)->first();
@@ -153,9 +145,10 @@ class RollController extends Controller
             'visual' => 'nullable|string',
         ]);
 
-        DB::beginTransaction();
+        DB::beginTransaction(); // ensure atomic slot reallocation
         try {
-            // Update location status if location changed
+
+            // free old slot and lock new slot to prevent race condition
             if (!empty($validated['locations_id']) && $validated['locations_id'] != $roll->locations_id) {
                 if ($roll->locations_id) {
                     Location::where('id', $roll->locations_id)->update(['status' => 0]);
@@ -174,9 +167,6 @@ class RollController extends Controller
         }
     }
 
-    /**
-     * Remove the specified roll from storage.
-     */
     public function destroy($id)
     {
         $roll = Roll::where('no', $id)->orWhere('no_roll', $id)->first();
@@ -185,9 +175,10 @@ class RollController extends Controller
             return redirect()->back()->with('error', 'Roll record not found.');
         }
 
-        DB::beginTransaction();
+        DB::beginTransaction(); // prevent orphan slotted locations on deletion failure
         try {
-            // Free allocated warehouse location if any
+
+            // release physical warehouse map slot
             if ($roll->locations_id) {
                 Location::where('id', $roll->locations_id)->update(['status' => 0]);
             }

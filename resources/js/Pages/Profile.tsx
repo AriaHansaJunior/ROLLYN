@@ -69,7 +69,7 @@ export default function Profile() {
       </div>
 
       <div className="space-y-4">
-        {/* Account info */}
+        {}
         <div className="card p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4 pb-2.5 border-b border-slate-100">
             <User size={16} className="text-blue-700" />
@@ -117,7 +117,7 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Reset password */}
+        {}
         <div className="card p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4 pb-2.5 border-b border-slate-100">
             <Lock size={16} className="text-blue-700" />
@@ -176,7 +176,7 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Logout */}
+        {}
         <div className="card p-4 sm:p-5 border-red-100">
           <div className="flex items-center gap-2 mb-2 pb-2 border-b border-red-50">
             <LogOut size={16} className="text-red-600" />

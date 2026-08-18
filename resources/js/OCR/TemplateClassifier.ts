@@ -1,23 +1,3 @@
-/**
- * ============================================================
- * OCR/TemplateClassifier.ts
- * ============================================================
- * OCR Classifier using Structural Template Matching against
- * calibrated digit templates.
- *
- * HOW IT WORKS:
- *   1. Extracts digit bounding boxes from preprocessed canvas.
- *   2. Normalises each digit to 32x48 binary grid.
- *   3. Compares the digit against stored reference templates
- *      (user-calibrated scale font + built-in defaults).
- *   4. Calculates Intersection over Union (IoU) and pixel Hamming similarity.
- *   5. Returns exact recognised digit string and confidence (0-100%).
- *
- * PORTABILITY:
- *   100% browser-native, fully offline, sub-millisecond execution.
- * ============================================================
- */
-
 import {
   loadDigitTemplates,
   normaliseDigitRegion,
@@ -39,10 +19,6 @@ export interface TemplateMatchResult {
   details: TemplateMatchDetails[];
 }
 
-/**
- * Compare two 32x48 binary arrays (1=ink, 0=bg).
- * Returns a similarity score 0.0 to 1.0 (IoU + Hamming blend).
- */
 function computeSimilarity(a: number[], b: number[]): number {
   let intersection = 0;
   let union = 0;
@@ -61,13 +37,9 @@ function computeSimilarity(a: number[], b: number[]): number {
   const iou = union === 0 ? 1 : intersection / union;
   const hamming = matches / total;
 
-  // 70% IoU + 30% Hamming similarity
   return 0.7 * iou + 0.3 * hamming;
 }
 
-/**
- * Classify a 32x48 digit binary array against all stored templates.
- */
 function classifyDigit(
   pixelData: number[],
   templates: Record<string, StoredDigitTemplate>,
@@ -82,7 +54,6 @@ function classifyDigit(
 
     const score = computeSimilarity(pixelData, tmpl.pixelData);
 
-    // Give a small bonus if template was user-calibrated
     const calibratedBonus = tmpl.sampleCount > 1 ? 0.05 : 0;
     const finalScore = score + calibratedBonus;
 
@@ -92,7 +63,6 @@ function classifyDigit(
     }
   }
 
-  // Convert similarity score to confidence % (0.50 score -> 70%, 0.80+ -> 95-100%)
   const confidence = Math.min(100, Math.max(0, Math.round(bestScore * 100)));
 
   return {
@@ -102,9 +72,6 @@ function classifyDigit(
   };
 }
 
-/**
- * Run Template Matching Classifier on a preprocessed canvas.
- */
 export function classifyWithTemplates(canvas: HTMLCanvasElement): TemplateMatchResult | null {
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
@@ -112,7 +79,6 @@ export function classifyWithTemplates(canvas: HTMLCanvasElement): TemplateMatchR
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const { width, height, data } = imageData;
 
-  // Extract all 2D black connected components
   const visited = new Uint8Array(width * height);
   const getIdx = (x: number, y: number) => y * width + x;
 
@@ -173,7 +139,6 @@ export function classifyWithTemplates(canvas: HTMLCanvasElement): TemplateMatchR
 
   components.sort((a, b) => a.minX - b.minX);
 
-  // Group components by horizontal proximity (gap <= 4% width)
   const maxGap = Math.max(4, width * 0.04);
   const groups: Array<{ minX: number; maxX: number; minY: number; maxY: number }> = [];
 

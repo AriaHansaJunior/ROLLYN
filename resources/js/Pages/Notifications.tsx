@@ -55,10 +55,10 @@ export default function Notifications() {
 
   return (
     <div className="py-4 px-2.5 sm:px-6 max-w-3xl mx-auto space-y-4 min-h-[80vh]">
-      {/* Header */}
+      {}
       <div className="flex items-center gap-3 mb-6">
-        <button 
-          onClick={() => window.history.back()} 
+        <button
+          onClick={() => window.history.back()}
           className="p-2 rounded-lg hover:bg-slate-200 bg-slate-100 text-slate-700 transition-colors cursor-pointer"
           title="Go back"
         >
@@ -73,7 +73,7 @@ export default function Notifications() {
         </div>
       </div>
 
-      {/* Notifications List */}
+      {}
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
         {dummyNotifications.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
@@ -83,8 +83,8 @@ export default function Notifications() {
         ) : (
           <div className="divide-y divide-slate-100">
             {dummyNotifications.map(notif => (
-              <div 
-                key={notif.id} 
+              <div
+                key={notif.id}
                 className={`p-4 sm:p-5 flex gap-3.5 transition-colors hover:bg-slate-50 ${notif.unread ? 'bg-blue-50/30' : ''}`}
               >
                 <div className="mt-0.5 shrink-0">

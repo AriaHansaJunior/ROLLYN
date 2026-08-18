@@ -25,7 +25,7 @@ class CustomerController extends Controller
     public function update(Request $request, $id)
     {
         $item = Customer::findOrFail($id);
-        
+
         $validated = $request->validate([
             'customer' => 'required'
         ]);

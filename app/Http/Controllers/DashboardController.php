@@ -12,20 +12,17 @@ class DashboardController extends Controller
     public function index()
     {
         $today = Carbon::today();
-        
+
         $totalRolls = Roll::count();
         $totalWeight = Roll::sum('weight');
         $receivedToday = Roll::whereDate('entry_date', $today)->count();
-        
-        // Location stats
+
         $occupiedSlots = \App\Models\Location::where('status', 1)->count();
         $totalSlots = \App\Models\Location::count();
         $availableSlots = $totalSlots - $occupiedSlots;
-        
-        $activeJops = Jop::count(); 
-        
-        // Warehouse condition summary
-        // For now, group all as 'E17' since they are all E17
+
+        $activeJops = Jop::count();
+
         $warehouseData = [
             [
                 'id' => 'E17',
@@ -51,7 +48,7 @@ class DashboardController extends Controller
             ],
             'warehouseData' => $warehouseData,
             'alerts' => [
-                // Minimal dummy alerts or empty, since we don't have an alerts table yet
+
                 [
                     'id' => 1,
                     'type' => 'info',
@@ -61,7 +58,7 @@ class DashboardController extends Controller
                 ]
             ],
             'demandForecast' => [
-                // Minimal placeholder for the chart to not break
+
                 ['month' => 'Jan', 'actual' => 0, 'forecast' => 0]
             ]
         ]);

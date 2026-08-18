@@ -20,10 +20,10 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials)) {
-            /** @var \App\Models\User $user */
+
             $user = Auth::user();
             $user->update(['last_login_at' => now()]);
-            
+
             $request->session()->regenerate();
             return redirect()->intended('/dashboard');
         }

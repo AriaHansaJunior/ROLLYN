@@ -13,7 +13,6 @@ const statusDef = [
 export default function SlotStatus() {
   const { locations = [] } = usePage<any>().props;
 
-  // Compute from database `locations`
   const occupiedCount = locations.filter((loc: any) => loc.status === 1).length;
   const availableCount = locations.filter((loc: any) => loc.status === 0).length;
   const totalSlots = locations.length;
@@ -44,7 +43,7 @@ export default function SlotStatus() {
         <p className="text-xs text-slate-500 mt-0.5">Overview of warehouse slot locations and status distribution</p>
       </div>
 
-      {/* Summary cards */}
+      {}
       <div className="grid grid-cols-2 min-[680px]:grid-cols-3 min-[960px]:grid-cols-4 min-[1180px]:grid-cols-7 gap-2.5">
         {statusDef.map(s => (
           <div key={s.key} className="bg-white border rounded-xl p-3.5 shadow-2xs" style={{ borderColor: s.border }}>
@@ -60,7 +59,7 @@ export default function SlotStatus() {
         ))}
       </div>
 
-      {/* Per-warehouse breakdown */}
+      {}
       <div className="card overflow-x-auto">
         <div className="p-3.5 sm:p-4 border-b border-slate-100">
           <h3 className="text-sm sm:text-base font-bold text-slate-900">Per-Warehouse Slot Distribution</h3>

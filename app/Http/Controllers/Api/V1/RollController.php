@@ -13,9 +13,6 @@ class RollController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * Validate if a no_roll is unique before submitting.
-     */
     public function validateNo(Request $request)
     {
         $request->validate([
@@ -30,14 +27,10 @@ class RollController extends Controller
         ], $exists ? 'no_roll already exists' : 'no_roll is available');
     }
 
-    /**
-     * Display a listing of rolls.
-     */
     public function index(Request $request)
     {
         $query = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop']);
 
-        // Filters
         if ($dateFrom = $request->query('date_from')) {
             $query->whereDate('entry_date', '>=', $dateFrom);
         }
@@ -66,9 +59,6 @@ class RollController extends Controller
         return $this->successResponse($query->paginate($limit), 'Rolls retrieved successfully');
     }
 
-    /**
-     * Store a newly created roll in storage.
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -98,15 +88,12 @@ class RollController extends Controller
             DB::beginTransaction();
 
             $data = $validator->validated();
-            
-            // Auto-assign primary key 'no' since incrementing is false
+
             $maxNo = Roll::max('no');
             $data['no'] = $maxNo ? $maxNo + 1 : 1;
 
-            // Auto-attach current user
             $data['users_id'] = $request->user()->id;
-            
-            // Default exmaterial if missing
+
             if (!isset($data['exmaterial'])) {
                 $data['exmaterial'] = 'IMPORT';
             }
@@ -125,14 +112,11 @@ class RollController extends Controller
         }
     }
 
-    /**
-     * Display the specified roll.
-     */
     public function show($id)
     {
-        // Using 'no' as primary key
+
         $roll = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop'])->find($id);
-        
+
         if (!$roll) {
             return $this->errorResponse('Roll not found', 404);
         }
@@ -140,13 +124,10 @@ class RollController extends Controller
         return $this->successResponse($roll, 'Roll detail retrieved successfully');
     }
 
-    /**
-     * Update the specified roll in storage.
-     */
     public function update(Request $request, $id)
     {
         $roll = Roll::find($id);
-        
+
         if (!$roll) {
             return $this->errorResponse('Roll not found', 404);
         }

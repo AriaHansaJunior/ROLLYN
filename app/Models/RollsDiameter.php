@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class RollsDiameter extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'rolls_diameters';
     protected $fillable = ['diameter'];
 }

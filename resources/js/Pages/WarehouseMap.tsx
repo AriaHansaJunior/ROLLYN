@@ -31,14 +31,13 @@ const statusConfig: Record<SlotStatus, { label: string; bgClass: string; dot: st
 export default function WarehouseMap({ locations = [] }: Props) {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
 
-  // Map 48 database locations (E17-01-1 to E17-12-4)
   const slotList: Slot[] = locations.length > 0 ? locations.map(loc => ({
     id: loc.id,
     code: loc.location,
     status: loc.status === 1 ? 'slotted' : 'free',
     rollId: loc.rolls && loc.rolls.length > 0 ? loc.rolls[0].no : undefined,
     rollNumber: loc.rolls && loc.rolls.length > 0 ? loc.rolls[0].no_roll : undefined,
-  })) : Array.from({ length: 12 }, (_, colIdx) => 
+  })) : Array.from({ length: 12 }, (_, colIdx) =>
     Array.from({ length: 4 }, (_, tierIdx) => ({
       id: colIdx * 4 + tierIdx + 1,
       code: `E17-${String(colIdx + 1).padStart(2, '0')}-${tierIdx + 1}`,
@@ -48,17 +47,17 @@ export default function WarehouseMap({ locations = [] }: Props) {
 
   return (
     <div className="py-4 px-2.5 sm:px-6 max-w-full overflow-x-hidden">
-      {/* Header Title */}
+      {}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Warehouse Map</h2>
         </div>
       </div>
 
-      {/* Main Flex Layout Container */}
+      {}
       <div className="flex flex-col lg:flex-row items-stretch gap-6 overflow-x-hidden w-full relative">
-        
-        {/* Map Card */}
+
+        {}
         <div className="flex-1 min-w-0 transition-all duration-500 ease-in-out transform-gpu bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
@@ -78,10 +77,10 @@ export default function WarehouseMap({ locations = [] }: Props) {
             </div>
           </div>
 
-          {/* Grid Layout (Cinema Seat Approach) */}
+          {}
           <div className="w-full overflow-x-auto pb-4 pt-2 px-2 no-scrollbar snap-x">
             <div className="flex flex-col gap-3 min-w-[700px] md:min-w-full">
-              {/* Column Labels */}
+              {}
               <div className="flex items-center gap-3">
                 <div className="grid grid-cols-12 gap-3 flex-1">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(col => (
@@ -92,10 +91,10 @@ export default function WarehouseMap({ locations = [] }: Props) {
                 </div>
               </div>
 
-              {/* Rows (Tiers from top to bottom) */}
+              {}
               {[1, 2, 3, 4].map(tier => (
                 <div key={tier} className="flex items-center gap-3">
-                  {/* Row Slots */}
+                  {}
                   <div className="grid grid-cols-12 gap-3 flex-1">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map(col => {
                       const code = `E17-${String(col).padStart(2, '0')}-${tier}`;
@@ -121,7 +120,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
                           >
                             {code}
                           </button>
-                          {/* Elegant Tooltip */}
+                          {}
                           <div className={`hidden md:block absolute bottom-full mb-2 w-max px-3 py-1.5 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl whitespace-nowrap ${
                             col === 1 ? 'left-0' : col === 12 ? 'right-0' : 'left-1/2 -translate-x-1/2'
                           }`}>
@@ -139,7 +138,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
             </div>
           </div>
 
-          {/* Slot Legend */}
+          {}
           <div className="mt-3 pt-3 border-t border-slate-100">
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Slot Status Legend</div>
             <div className="flex flex-wrap gap-2 text-xs">
@@ -156,8 +155,8 @@ export default function WarehouseMap({ locations = [] }: Props) {
           </div>
         </div>
 
-        {/* Selected Slot Side Panel Wrapper */}
-        <div 
+        {}
+        <div
           className={`flex-shrink-0 overflow-hidden acos-layout-transition ${
             selectedSlot ? "w-full lg:w-80 opacity-100 max-h-[1000px] mt-2 lg:mt-0" : "w-full lg:w-0 opacity-0 max-h-0 lg:max-h-[1000px]"
           }`}

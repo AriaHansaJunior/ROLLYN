@@ -25,7 +25,7 @@ class GradeController extends Controller
     public function update(Request $request, $id)
     {
         $item = Grade::findOrFail($id);
-        
+
         $validated = $request->validate([
             'grade' => 'required'
         ]);

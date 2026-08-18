@@ -1,10 +1,3 @@
-/**
- * ============================================================
- * OCR/SpectrumService.ts
- * ============================================================
- * Service helper to communicate with SPECTRUM Engine AI microservice via Laravel.
- */
-
 export interface SpectrumResult {
     status: "SUCCESS" | "WARNING_LOW_CONFIDENCE";
     weight_detected: number;
@@ -23,9 +16,6 @@ export interface SpectrumLogPayload {
     selected_source?: "ocr" | "spectrum" | "manual";
 }
 
-/**
- * Sends a captured frame (base64 image) to SPECTRUM AI Engine endpoint.
- */
 export async function detectSpectrumWeight(base64Image: string): Promise<SpectrumResult> {
     try {
         const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";
@@ -58,9 +48,6 @@ export async function detectSpectrumWeight(base64Image: string): Promise<Spectru
     }
 }
 
-/**
- * Logs test result comparison & saves frame image + CSV label to Active Learning dataset.
- */
 export async function logSpectrumTest(payload: SpectrumLogPayload): Promise<{ status: string; message: string }> {
     try {
         const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";
@@ -86,9 +73,6 @@ export async function logSpectrumTest(payload: SpectrumLogPayload): Promise<{ st
     }
 }
 
-/**
- * Triggers local Auto-Teaching / Dataset Re-training.
- */
 export async function retrainSpectrumEngine(): Promise<{ status: string; samples_processed?: number; message?: string; accuracy_gain?: string }> {
     try {
         const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";

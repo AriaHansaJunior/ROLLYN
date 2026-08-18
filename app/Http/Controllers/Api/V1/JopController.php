@@ -12,21 +12,15 @@ class JopController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * Display a listing of the JOPs.
-     */
     public function index(Request $request)
     {
         $query = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])
                     ->withCount('rolls');
 
-        // Filter by customer_id
         if ($customerId = $request->query('customer_id')) {
             $query->where('customers_id', $customerId);
         }
 
-        // Filter by JOP status (e.g., active = has rolls < quantity)
-        // (This is basic implementation; can be extended based on exact requirements)
         if ($request->query('status') === 'active') {
             $query->where(function ($q) {
                 $q->has('rolls', '<', \DB::raw('jops.quantity'))
@@ -34,7 +28,6 @@ class JopController extends Controller
             });
         }
 
-        // Search by spk, jop, po
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('spk', 'like', "%{$search}%")
@@ -43,19 +36,15 @@ class JopController extends Controller
             });
         }
 
-        // Sort
         $sort = $request->query('sort', 'created_at');
         $order = $request->query('order', 'desc');
         $query->orderBy($sort, $order);
 
         $limit = $request->query('limit', 15);
-        
+
         return $this->successResponse($query->paginate($limit), 'JOP list retrieved successfully');
     }
 
-    /**
-     * Store a newly created JOP in storage.
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -77,16 +66,12 @@ class JopController extends Controller
         }
 
         $jop = Jop::create($validator->validated());
-        
-        // Eager load for the response
+
         $jop->load(['customer', 'grade', 'gsm', 'rollsWidth']);
 
         return $this->successResponse($jop, 'JOP created successfully', 201);
     }
 
-    /**
-     * Display the specified JOP.
-     */
     public function show($id)
     {
         $jop = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'rolls' => function($q) {
@@ -100,9 +85,6 @@ class JopController extends Controller
         return $this->successResponse($jop, 'JOP detail retrieved successfully');
     }
 
-    /**
-     * Update the specified JOP in storage.
-     */
     public function update(Request $request, $id)
     {
         $jop = Jop::find($id);
@@ -129,13 +111,10 @@ class JopController extends Controller
         }
 
         $jop->update($validator->validated());
-        
+
         return $this->successResponse($jop, 'JOP updated successfully');
     }
 
-    /**
-     * Remove the specified JOP from storage.
-     */
     public function destroy($id)
     {
         $jop = Jop::withCount('rolls')->find($id);
@@ -152,12 +131,9 @@ class JopController extends Controller
         return $this->successResponse(null, 'JOP deleted successfully');
     }
 
-    /**
-     * Lightweight endpoint for dropdown selection.
-     */
     public function dropdownActive(Request $request)
     {
-        // For dropdown, we typically just need ID and a label (e.g., JOP number / SPK)
+
         $jops = Jop::select('id', 'jop', 'spk', 'customers_id', 'grades_id')
                    ->with(['customer:id,customer', 'grade:id,grade'])
                    ->orderBy('id', 'desc')

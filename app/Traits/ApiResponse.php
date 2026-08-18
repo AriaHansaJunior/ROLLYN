@@ -6,14 +6,7 @@ use Illuminate\Http\JsonResponse;
 
 trait ApiResponse
 {
-    /**
-     * Build a success response
-     *
-     * @param mixed $data
-     * @param string $message
-     * @param int $code
-     * @return \Illuminate\Http\JsonResponse
-     */
+
     protected function successResponse($data = null, string $message = 'Success', int $code = 200): JsonResponse
     {
         return response()->json([
@@ -23,14 +16,6 @@ trait ApiResponse
         ], $code);
     }
 
-    /**
-     * Build an error response
-     *
-     * @param string $message
-     * @param int $code
-     * @param mixed $debug
-     * @return \Illuminate\Http\JsonResponse
-     */
     protected function errorResponse(string $message, int $code, $debug = null): JsonResponse
     {
         $response = [
@@ -45,14 +30,6 @@ trait ApiResponse
         return response()->json($response, $code);
     }
 
-    /**
-     * Build a validation error response
-     *
-     * @param mixed $errors
-     * @param string $message
-     * @param int $code
-     * @return \Illuminate\Http\JsonResponse
-     */
     protected function validationErrorResponse($errors, string $message = 'Validation Error', int $code = 422): JsonResponse
     {
         return response()->json([

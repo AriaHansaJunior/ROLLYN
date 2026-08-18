@@ -35,7 +35,7 @@ class JopController extends Controller
     public function update(Request $request, $id)
     {
         $jop = Jop::findOrFail($id);
-        
+
         $validated = $request->validate([
             'spk' => 'required',
             'jop' => 'required',

@@ -66,7 +66,6 @@ export default function RollInventory({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
 
-  // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingRoll, setEditingRoll] = useState<RollItem | null>(null)
   const [editForm, setEditForm] = useState({
@@ -194,7 +193,7 @@ export default function RollInventory({
         </div>
       </div>
 
-      {/* Filters */}
+      {}
       <div className="card p-3 sm:p-4 grid grid-cols-1 min-[760px]:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 w-full min-[760px]:flex-1 min-w-0">
           <Search size={14} className="text-slate-400 shrink-0" />
@@ -224,7 +223,7 @@ export default function RollInventory({
         </div>
       </div>
 
-      {/* Table */}
+      {}
       <div className="card overflow-x-auto">
         <table className="data-table w-full min-w-[1300px] lg:min-w-[1060px] table-fixed border-collapse text-xs">
           <colgroup>
@@ -253,7 +252,7 @@ export default function RollInventory({
                     className="cursor-pointer select-none"
                     style={{ textAlign: isCenter ? 'center' : 'left' }}
                   >
-                    {col.label} 
+                    {col.label}
                     <span className="inline-block align-middle ml-1"><SortIcon k={col.key} /></span>
                   </th>
                 );
@@ -304,7 +303,7 @@ export default function RollInventory({
         </table>
       </div>
 
-      {/* Pagination */}
+      {}
       <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
         <span className="text-xs text-slate-500">
           Showing {Math.min((page - 1) * PER_PAGE + 1, filtered.length)}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
@@ -318,7 +317,7 @@ export default function RollInventory({
         </div>
       </div>
 
-      {/* Edit Roll Modal */}
+      {}
       {showEditModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-lg p-5 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">

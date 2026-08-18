@@ -2,12 +2,12 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { usePage } from '@inertiajs/react'
 
 export default function Reports() {
-  const { 
-    warehouseData = [], 
-    demandForecast = [], 
-    statusDistribution = [], 
-    ocrActivity = [], 
-    kpis = [] 
+  const {
+    warehouseData = [],
+    demandForecast = [],
+    statusDistribution = [],
+    ocrActivity = [],
+    kpis = []
   } = usePage<any>().props;
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
@@ -16,7 +16,7 @@ export default function Reports() {
         <p className="text-xs text-slate-500 mt-0.5">Historical operational summary, OCR performance, and warehouse utilization</p>
       </div>
 
-      {/* KPI summary */}
+      {}
       <div className="grid grid-cols-2 min-[680px]:grid-cols-3 min-[1180px]:grid-cols-6 gap-2.5">
         {kpis.map(kpi => (
           <div key={kpi.label} className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
@@ -27,7 +27,7 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 min-[680px]:grid-cols-2 gap-4">
-        {/* WH Occupancy */}
+        {}
         <div className="card p-4">
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Warehouse Occupancy (Slots)</h3>
           <div className="h-52 w-full pt-2">
@@ -44,7 +44,7 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Status distribution */}
+        {}
         <div className="card p-4">
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Roll Status Distribution</h3>
           <div className="h-52 w-full pt-2">
@@ -60,7 +60,7 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* OCR Activity */}
+        {}
         <div className="card p-4">
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">OCR Recognition Activity (Last 7 Days)</h3>
           <div className="h-52 w-full pt-2">
@@ -78,7 +78,7 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Demand trend */}
+        {}
         <div className="card p-4">
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Demand Trend & Forecast</h3>
           <div className="h-52 w-full pt-2">

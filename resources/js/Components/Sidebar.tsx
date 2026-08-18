@@ -52,7 +52,7 @@ interface SidebarProps {
 export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: SidebarProps) {
   return (
     <>
-      {/* Mobile overlay */}
+      {}
       {mobileOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 min-[680px]:hidden"
@@ -77,7 +77,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
         }}
         className={mobileOpen ? "max-[679px]:translate-x-0" : "max-[679px]:-translate-x-full"}
       >
-        {/* Logo */}
+        {}
         <div style={{ padding: '0 12px', height: 56, display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{
             width: 32, height: 32, borderRadius: 4,
@@ -99,7 +99,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
           )}
         </div>
 
-        {/* Nav */}
+        {}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingTop: 8 }}>
           {navSections.map(section => (
             <div key={section.label} style={{ marginBottom: 12 }}>
@@ -130,7 +130,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
           ))}
         </nav>
 
-        {/* Version */}
+        {}
         {(!collapsed || mobileOpen) && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
             ROLLYN v1.0.0 &copy; 2026 All Rights Reserved

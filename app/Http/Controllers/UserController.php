@@ -9,9 +9,7 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of system administrators / users.
-     */
+
     public function index()
     {
         $users = User::orderBy('id', 'desc')->get()->map(function ($user) {
@@ -32,9 +30,6 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created administrator in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -54,9 +49,6 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'New administrator created successfully.');
     }
 
-    /**
-     * Update the specified administrator in storage.
-     */
     public function update(Request $request, User $user)
     {
         $validated = $request->validate([
@@ -81,9 +73,6 @@ class UserController extends Controller
         return redirect()->back()->with('success', 'Administrator record updated successfully.');
     }
 
-    /**
-     * Remove the specified administrator from storage.
-     */
     public function destroy(User $user)
     {
         $user->delete();

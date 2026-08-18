@@ -22,6 +22,7 @@ class SpectrumEngineController extends Controller
         $images = $request->input('images');
 
         if (empty($base64Image) && empty($images)) {
+            // fail fast on missing payload to save processing cycles
             return response()->json([
                 'status' => 'ERROR',
                 'weight_detected' => 0,
@@ -33,6 +34,7 @@ class SpectrumEngineController extends Controller
         $payload = !empty($images) ? ['images' => $images] : ['image' => $base64Image];
 
         try {
+            // offload heavy inference to specialized ML microservice
             $response = Http::timeout(5)->post('http://127.0.0.1:8001/api/spectrum/detect', $payload);
 
             if ($response->successful()) {
@@ -43,6 +45,7 @@ class SpectrumEngineController extends Controller
         }
 
         try {
+            // fallback to inline execution if proxy fails
             $tempImg = sys_get_temp_dir() . '/spectrum_in_' . uniqid() . '.txt';
             file_put_contents($tempImg, $base64Image);
 
@@ -96,6 +99,8 @@ print(json.dumps(res))
         $actualWeight = $validated['actual_manual_input'] ?? 0;
         $spectrumPred = $validated['spectrum_result'] ?? '0';
         $timestamp = time();
+        
+        // track operator override for model drift analysis
         $isCorrected = ($validated['selected_source'] === 'manual') || (string)$actualWeight !== (string)$spectrumPred;
 
         $imagesDir = storage_path('app/public/dataset/images');
@@ -138,6 +143,7 @@ print(json.dumps(res))
             }
         }
 
+        // prepare raw input for ML retraining pipeline
         $csvLine = sprintf(
             "%s,%s,%s,%s\n",
             $imageFilename,
@@ -231,7 +237,7 @@ print(json.dumps(res))
 
                     $totalSamples = count($rows);
                     $recentEntries = array_values(array_slice($rows, -10));
-                    break; // Found a valid CSV, stop searching
+                    break;
                 } catch (\Exception $e) {
                     Log::warning('[SPECTRUM Stats] CSV read error: ' . $e->getMessage());
                 }

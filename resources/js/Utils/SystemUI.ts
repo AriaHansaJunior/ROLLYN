@@ -6,7 +6,7 @@ export interface ModalOptions {
     type?: ModalType;
     confirmText?: string;
     cancelText?: string;
-    defaultValue?: string; // for prompt
+    defaultValue?: string;
     onConfirm?: (value?: string | boolean) => void;
     onCancel?: () => void;
 }
@@ -26,7 +26,6 @@ class SystemUIManager {
     private toastListeners: ToastListener[] = [];
     private toastRemoveListeners: ToastRemoveListener[] = [];
 
-    // --- Modal Methods ---
     subscribeModal(listener: ModalListener) {
         this.modalListeners.push(listener);
         return () => {
@@ -93,7 +92,6 @@ class SystemUIManager {
         this.triggerModal(null);
     }
 
-    // --- Toast Methods ---
     subscribeToast(listener: ToastListener) {
         this.toastListeners.push(listener);
         return () => {
@@ -111,15 +109,15 @@ class SystemUIManager {
     toast(options: ToastOptions | string) {
         const id = Math.random().toString(36).substring(2, 9);
         const opt = typeof options === 'string' ? { message: options } : options;
-        
+
         this.toastListeners.forEach(listener => listener({ ...opt, id }));
-        
+
         if (opt.duration !== Infinity) {
             setTimeout(() => {
                 this.removeToast(id);
             }, opt.duration || 3000);
         }
-        
+
         return id;
     }
 

@@ -16,10 +16,10 @@ export default function Jop() {
 
   const filtered = processedJop.filter(r => {
     const q = search.toLowerCase()
-    const matchSearch = !q || 
-      r.jop.toLowerCase().includes(q) || 
-      r.spk.toLowerCase().includes(q) || 
-      r.po.toLowerCase().includes(q) || 
+    const matchSearch = !q ||
+      r.jop.toLowerCase().includes(q) ||
+      r.spk.toLowerCase().includes(q) ||
+      r.po.toLowerCase().includes(q) ||
       r.customer.toLowerCase().includes(q) ||
       r.grade.toLowerCase().includes(q)
     const matchStatus = statusFilter === 'All' || r.status === statusFilter

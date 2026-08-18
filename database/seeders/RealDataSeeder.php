@@ -7,9 +7,7 @@ use Illuminate\Database\Seeder;
 
 class RealDataSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+
     public function run(): void
     {
         $user = \App\Models\User::firstOrCreate(
@@ -51,7 +49,6 @@ class RealDataSeeder extends Seeder
             ]
         );
 
-        // Get max roll no to auto increment manually if it doesn't have auto increment setup correctly
         $maxNo = \App\Models\Roll::max('no') ?? 0;
 
         \App\Models\Roll::firstOrCreate(
