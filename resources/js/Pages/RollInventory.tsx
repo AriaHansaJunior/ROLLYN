@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X, Download } from 'lucide-react'
+import { Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X, Download, MapPin } from 'lucide-react'
 import { router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 
@@ -194,8 +194,8 @@ export default function RollInventory({
       </div>
 
       {}
-      <div className="card p-3 sm:p-4 grid grid-cols-1 min-[760px]:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full min-[760px]:flex-1 min-w-0">
+      <div className="card p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:flex-1 min-w-0">
           <Search size={16} className="text-slate-400 shrink-0" />
           <input
             value={search}
@@ -204,7 +204,7 @@ export default function RollInventory({
             className="w-full min-w-0 bg-transparent border-none outline-none text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
           />
         </div>
-        <div className="flex items-center gap-2 justify-between w-full min-[760px]:w-auto min-[760px]:justify-end">
+        <div className="flex items-center gap-2 justify-between w-full sm:w-auto sm:justify-end">
           <div className="flex items-center gap-1.5 min-w-0">
             <Filter size={13} className="text-slate-500 shrink-0" />
             <select
@@ -218,7 +218,7 @@ export default function RollInventory({
             </select>
           </div>
         </div>
-        <div className="min-[760px]:col-span-2 mt-1 min-[760px]:mt-0">
+        <div className="sm:col-span-2 mt-1 sm:mt-0">
           <span className="text-sm sm:text-base font-semibold text-slate-500">Total: {filtered.length} rolls</span>
         </div>
       </div>
@@ -290,6 +290,13 @@ export default function RollInventory({
                       </button>
                       <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer text-blue-600 hover:text-blue-800" onClick={() => openEdit(r)} title="Edit Roll">
                         <Edit size={13} />
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm p-1.5 cursor-pointer text-emerald-600 hover:text-emerald-800"
+                        onClick={() => router.visit(`/warehouse-map?assign_roll=${r.raw_id}&roll_no=${encodeURIComponent(r.id)}`)}
+                        title="Assign Roll to Warehouse Slot"
+                      >
+                        <MapPin size={13} />
                       </button>
                       <button className="btn btn-danger btn-sm p-1.5 cursor-pointer" onClick={() => handleDelete(r)} title="Delete Roll">
                         <Trash2 size={13} />

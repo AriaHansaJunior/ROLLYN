@@ -26,7 +26,6 @@ const navSections = [
     items: [
       { id: 'target-order', label: 'Target Order', icon: Target },
       { id: 'jop', label: 'Job Order Production (JOP)', icon: FileText },
-      { id: 'spk-po', label: 'SPK / PO', icon: FileText },
     ]
   },
   {
@@ -59,7 +58,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
       {}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 min-[680px]:hidden"
+          className="fixed inset-0 z-30 bg-black/50 sm:hidden"
           style={{ display: 'block', backdropFilter: 'blur(2px)' }}
           onClick={onClose}
         />
@@ -79,7 +78,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
           zIndex: 40,
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
-        className={mobileOpen ? "max-[679px]:translate-x-0" : "max-[679px]:-translate-x-full"}
+        className={mobileOpen ? "max-sm:translate-x-0" : "max-sm:-translate-x-full"}
       >
         {}
         <div style={{ padding: '0 12px', height: 56, display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -94,7 +93,7 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
           )}
           {mobileOpen && (
             <button
-              className="max-[679px]:flex hidden ml-auto"
+              className="max-sm:flex hidden ml-auto"
               onClick={onClose}
               style={{ background: 'none', border: 'none', color: '#aaa', cursor: 'pointer', padding: 4 }}
             >

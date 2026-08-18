@@ -6,7 +6,7 @@ const statusDef = [
   { key: 'occupied', label: 'Slotted', bg: '#E0F2FE', border: '#0284C7', color: '#0369A1' },
   { key: 'shipment', label: 'Shipment Plan', bg: '#DCFCE7', border: '#16A34A', color: '#15803D' },
   { key: 'nonPO', label: 'Non-PO', bg: '#FEE2E2', border: '#DC2626', color: '#B91C1C' },
-  { key: 'moveWH', label: 'Move Warehouse', bg: '#FEF3C7', border: '#D97706', color: '#B45309' },
+  { key: 'moveWH', label: 'Move to Another Warehouse', bg: '#FEF3C7', border: '#D97706', color: '#B45309' },
   { key: 'hold', label: 'Hold', bg: '#DBEAFE', border: '#2563EB', color: '#1D4ED8' },
 ]
 

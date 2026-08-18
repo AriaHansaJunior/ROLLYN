@@ -12,7 +12,6 @@ const pageLabels: Record<string, string[]> = {
   'ocr-monitoring': ['Production', 'OCR Monitoring'],
   'target-order': ['Orders', 'Target Order'],
   'jop': ['Orders', 'JOP (Job Order Production)'],
-  'spk-po': ['Orders', 'SPK / PO'],
   'reports': ['Reports'],
   'user-management': ['Administration', 'User Management'],
   'profile': ['Administration', 'Profile'],
@@ -52,8 +51,8 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
   }, [])
 
   return (
-    <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 min-[680px]:px-5 flex items-center justify-between gap-2 shadow-xs select-none">
-      <div className="flex min-[680px]:hidden items-center gap-2.5 min-w-0 flex-1">
+    <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 sm:px-5 flex items-center justify-between gap-2 shadow-xs select-none">
+      <div className="flex sm:hidden items-center gap-2.5 min-w-0 flex-1">
         <button
           onClick={onMenuClick}
           className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-100 active:bg-slate-200 text-slate-700 transition-colors shrink-0"
@@ -76,13 +75,13 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
 
       <button
         onClick={onToggleSidebar}
-        className="hidden min-[680px]:flex items-center justify-center p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+        className="hidden sm:flex items-center justify-center p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
         title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         <PanelLeftClose size={18} className={sidebarCollapsed ? "rotate-180 transition-transform" : "transition-transform"} />
       </button>
 
-      <div className="hidden min-[680px]:flex items-center gap-1.5 text-sm sm:text-base flex-1 min-w-0 ml-2">
+      <div className="hidden sm:flex items-center gap-1.5 text-sm sm:text-base flex-1 min-w-0 ml-2">
         {crumbs.map((c, i) => (
           <span key={c} className="flex items-center gap-1.5 text-slate-500 font-medium whitespace-nowrap">
             {i > 0 && <span className="text-slate-300">/</span>}
@@ -94,7 +93,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        <div className="hidden min-[680px]:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 w-48 focus-within:w-64 focus-within:bg-white focus-within:border-blue-500 transition-all">
+        <div className="hidden sm:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 w-48 focus-within:w-64 focus-within:bg-white focus-within:border-blue-500 transition-all">
           <Search size={16} className="text-slate-400 shrink-0" />
           <input
             placeholder="Search..."
@@ -104,7 +103,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
 
         <button
           onClick={() => setMobileSearchOpen(true)}
-          className="flex min-[680px]:hidden items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+          className="flex sm:hidden items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
           aria-label="Search"
         >
           <Search size={18} />
@@ -126,7 +125,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
             <div className="w-7 h-7 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold shadow-xs">
               {userInitials}
             </div>
-            <span className="hidden min-[680px]:inline text-xs font-medium text-slate-700 ml-0.5">{userName}</span>
+            <span className="hidden sm:inline text-xs font-medium text-slate-700 ml-0.5">{userName}</span>
             <ChevronDown size={14} className="text-slate-400" />
           </button>
 

@@ -53,7 +53,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
         }}
-        className="max-[679px]:ml-0!"
+        className="max-sm:ml-0!"
       >
         <Header
           activePage={activePage}
