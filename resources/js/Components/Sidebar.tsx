@@ -1,5 +1,5 @@
 import { X, LayoutDashboard, Warehouse, Package, MapPin, TruckIcon, Eye, Target, FileText, Settings, Users, User, ChevronRight, Layers } from 'lucide-react'
-import { Link } from '@inertiajs/react'
+import { Link, usePage } from '@inertiajs/react'
 
 const navSections = [
   {
@@ -50,6 +50,10 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: SidebarProps) {
+  const { props } = usePage()
+  const authUser = (props.auth as any)?.user
+  const isAdmin = authUser?.role === 'admin'
+
   return (
     <>
       {}
@@ -101,33 +105,42 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
 
         {}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingTop: 8 }}>
-          {navSections.map(section => (
-            <div key={section.label} style={{ marginBottom: 12 }}>
-              {(!collapsed || mobileOpen) && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 2 }}>
-                  {section.label}
-                </div>
-              )}
-              {section.items.map(item => {
-                const Icon = item.icon
-                const isActive = activePage === item.id
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/${item.id}`}
-                    className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
-                    style={{ width: '100%', justifyContent: collapsed && !mobileOpen ? 'center' : 'flex-start', minHeight: 36 }}
-                    onClick={() => mobileOpen && onClose()}
-                    title={collapsed && !mobileOpen ? item.label : undefined}
-                  >
-                    <Icon size={18} style={{ flexShrink: 0 }} />
-                    {(!collapsed || mobileOpen) && <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>}
-                    {(!collapsed || mobileOpen) && isActive && <ChevronRight size={14} style={{ opacity: 0.6 }} />}
-                  </Link>
-                )
-              })}
-            </div>
-          ))}
+          {navSections.map(section => {
+            const filteredItems = section.items.filter(item => {
+              if (item.id === 'user-management' && !isAdmin) return false
+              return true
+            })
+            
+            if (filteredItems.length === 0) return null
+
+            return (
+              <div key={section.label} style={{ marginBottom: 12 }}>
+                {(!collapsed || mobileOpen) && (
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 2 }}>
+                    {section.label}
+                  </div>
+                )}
+                {filteredItems.map(item => {
+                  const Icon = item.icon
+                  const isActive = activePage === item.id
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/${item.id}`}
+                      className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      style={{ width: '100%', justifyContent: collapsed && !mobileOpen ? 'center' : 'flex-start', minHeight: 36 }}
+                      onClick={() => mobileOpen && onClose()}
+                      title={collapsed && !mobileOpen ? item.label : undefined}
+                    >
+                      <Icon size={18} style={{ flexShrink: 0 }} />
+                      {(!collapsed || mobileOpen) && <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>}
+                      {(!collapsed || mobileOpen) && isActive && <ChevronRight size={14} style={{ opacity: 0.6 }} />}
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          })}
         </nav>
 
         {}

@@ -30,6 +30,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/spk-po', [DesignUiController::class, 'spkPo']);
     Route::get('/reports', [DesignUiController::class, 'reports']);
     Route::get('/profile', [DesignUiController::class, 'profile']);
+    Route::put('/profile/update', [UserController::class, 'updateProfile']);
+    Route::put('/profile/password', [UserController::class, 'updatePassword']);
     Route::get('/notifications', [DesignUiController::class, 'notifications']);
 
     Route::get('/user-management', [UserController::class, 'index']);
