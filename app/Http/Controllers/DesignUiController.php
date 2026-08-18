@@ -25,7 +25,10 @@ class DesignUiController extends Controller
         return Inertia::render('SlotStatus', ['locations' => $locations]);
     }
 
-    public function incomingRoll() { return Inertia::render('IncomingRoll'); }
+    public function incomingRoll() { 
+        $jops = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])->latest()->get();
+        return Inertia::render('IncomingRoll', ['jopList' => $jops]); 
+    }
     public function ocrMonitoring() { return Inertia::render('OcrMonitoring'); }
     public function targetOrder() { 
         $orders = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])->latest()->get();

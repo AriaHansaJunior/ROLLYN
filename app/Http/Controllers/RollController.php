@@ -132,6 +132,14 @@ class RollController extends Controller
             return redirect()->back()->with('error', 'Roll record not found.');
         }
 
+        // Fill missing required attributes from existing roll record
+        $request->merge([
+            'no_roll' => $request->input('no_roll', $roll->no_roll),
+            'shifts_id' => $request->input('shifts_id', $roll->shifts_id),
+            'entry_date' => $request->input('entry_date', $roll->entry_date ? \Carbon\Carbon::parse($roll->entry_date)->format('Y-m-d') : now()->toDateString()),
+            'grades_id' => $request->input('grades_id', $roll->grades_id),
+        ]);
+
         $validated = $request->validate([
             'no_roll' => 'required|string|max:45|unique:rolls,no_roll,' . $roll->no . ',no',
             'form' => 'nullable|integer',
@@ -149,11 +157,13 @@ class RollController extends Controller
         try {
 
             // free old slot and lock new slot to prevent race condition
-            if (!empty($validated['locations_id']) && $validated['locations_id'] != $roll->locations_id) {
+            if (array_key_exists('locations_id', $validated) && $validated['locations_id'] != $roll->locations_id) {
                 if ($roll->locations_id) {
                     Location::where('id', $roll->locations_id)->update(['status' => 0]);
                 }
-                Location::where('id', $validated['locations_id'])->update(['status' => 1]);
+                if ($validated['locations_id']) {
+                    Location::where('id', $validated['locations_id'])->update(['status' => 1]);
+                }
             }
 
             $roll->update($validated);

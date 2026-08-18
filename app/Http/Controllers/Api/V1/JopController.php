@@ -47,6 +47,19 @@ class JopController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->filled('custom_customer')) {
+            $cust = \App\Models\Customer::firstOrCreate(['customer' => trim($request->custom_customer)]);
+            $request->merge(['customers_id' => $cust->id]);
+        }
+        if ($request->filled('custom_grade')) {
+            $gr = \App\Models\Grade::firstOrCreate(['grade' => trim($request->custom_grade)]);
+            $request->merge(['grades_id' => $gr->id]);
+        }
+        if ($request->filled('custom_gsm')) {
+            $gsm = \App\Models\Gsm::firstOrCreate(['gsm' => floatval($request->custom_gsm)]);
+            $request->merge(['gsms_id' => $gsm->id]);
+        }
+
         $validator = Validator::make($request->all(), [
             'spk' => 'required|string|max:45|unique:jops,spk',
             'jop' => 'required|string|max:45|unique:jops,jop',

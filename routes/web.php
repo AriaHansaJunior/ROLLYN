@@ -27,6 +27,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/ocr-monitoring', [DesignUiController::class, 'ocrMonitoring']);
     Route::get('/target-order', [DesignUiController::class, 'targetOrder']);
     Route::get('/jop', [DesignUiController::class, 'jop']);
+    Route::post('/jop', [\App\Http\Controllers\JopController::class, 'store']);
+    Route::get('/jop-master-data', [\App\Http\Controllers\JopController::class, 'masterData']);
     Route::get('/spk-po', [DesignUiController::class, 'spkPo']);
     Route::get('/reports', [DesignUiController::class, 'reports']);
     Route::get('/profile', [DesignUiController::class, 'profile']);

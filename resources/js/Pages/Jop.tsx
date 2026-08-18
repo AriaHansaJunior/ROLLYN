@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Search, Filter, Plus, X } from 'lucide-react'
 import { usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
@@ -17,6 +17,7 @@ export default function Jop() {
   const [gradesList, setGradesList] = useState<GradeItem[]>([])
   const [gsmsList, setGsmsList] = useState<GsmItem[]>([])
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
   const [form, setForm] = useState({
     spk: '',
     jop: '',
@@ -24,7 +25,13 @@ export default function Jop() {
     customers_id: '',
     grades_id: '',
     gsms_id: '',
+    quantity: '1',
   })
+
+  // Custom manual input states
+  const [customCustomer, setCustomCustomer] = useState('')
+  const [customGrade, setCustomGrade] = useState('')
+  const [customGsm, setCustomGsm] = useState('')
 
   const processedJop = jopData.map((r: any) => {
     const target = r.quantity || 1
@@ -65,22 +72,21 @@ export default function Jop() {
   })
 
   function openAddModal() {
-    setForm({ spk: '', jop: '', po: '', customers_id: '', grades_id: '', gsms_id: '' })
+    setForm({ spk: '', jop: '', po: '', customers_id: '', grades_id: '', gsms_id: '', quantity: '1' })
+    setCustomCustomer('')
+    setCustomGrade('')
+    setCustomGsm('')
     setFormErrors({})
 
-    // Fetch dropdown data from existing API endpoints
-    axios.get('/api/v1/customers').then(res => {
-      const data = res.data?.data?.data || res.data?.data || res.data || []
-      setCustomers(Array.isArray(data) ? data : [])
-    }).catch(() => {})
-    axios.get('/api/v1/grades').then(res => {
-      const data = res.data?.data?.data || res.data?.data || res.data || []
-      setGradesList(Array.isArray(data) ? data : [])
-    }).catch(() => {})
-    axios.get('/api/v1/gsms').then(res => {
-      const data = res.data?.data?.data || res.data?.data || res.data || []
-      setGsmsList(Array.isArray(data) ? data : [])
-    }).catch(() => {})
+    axios.get('/jop-master-data').then(res => {
+      if (res.data?.customers) setCustomers(res.data.customers)
+      if (res.data?.grades) setGradesList(res.data.grades)
+      if (res.data?.gsms) setGsmsList(res.data.gsms)
+    }).catch(() => {
+      axios.get('/api/v1/customers').then(res => setCustomers(res.data?.data || [])).catch(() => {})
+      axios.get('/api/v1/grades').then(res => setGradesList(res.data?.data || [])).catch(() => {})
+      axios.get('/api/v1/gsms').then(res => setGsmsList(res.data?.data || [])).catch(() => {})
+    })
 
     setShowModal(true)
   }
@@ -90,23 +96,60 @@ export default function Jop() {
     if (!form.spk.trim()) errs.spk = 'SPK is required.'
     if (!form.jop.trim()) errs.jop = 'JOP number is required.'
     if (!form.po.trim()) errs.po = 'PO is required.'
-    if (!form.customers_id) errs.customers_id = 'Customer is required.'
-    if (!form.grades_id) errs.grades_id = 'Grade is required.'
-    if (!form.gsms_id) errs.gsms_id = 'GSM is required.'
+
+    if (!form.customers_id) {
+      errs.customers_id = 'Customer is required.'
+    } else if (form.customers_id === 'NEW_CUSTOM' && !customCustomer.trim()) {
+      errs.customers_id = 'Please enter new customer name.'
+    }
+
+    if (!form.grades_id) {
+      errs.grades_id = 'Grade is required.'
+    } else if (form.grades_id === 'NEW_CUSTOM' && !customGrade.trim()) {
+      errs.grades_id = 'Please enter new grade name.'
+    }
+
+    if (!form.gsms_id) {
+      errs.gsms_id = 'GSM is required.'
+    } else if (form.gsms_id === 'NEW_CUSTOM' && !customGsm.trim()) {
+      errs.gsms_id = 'Please enter new GSM value.'
+    }
+
+    if (!form.quantity || Number(form.quantity) < 1) {
+      errs.quantity = 'Target rolls must be at least 1.'
+    }
+
     setFormErrors(errs)
     if (Object.keys(errs).length > 0) return
 
-    axios.post('/api/v1/jops', {
+    const payload: any = {
       spk: form.spk,
       jop: form.jop,
       po: form.po,
-      customers_id: Number(form.customers_id),
-      grades_id: Number(form.grades_id),
-      gsms_id: Number(form.gsms_id),
-    }).then(() => {
+      quantity: Number(form.quantity) || 1,
+    }
+
+    if (form.customers_id === 'NEW_CUSTOM') {
+      payload.custom_customer = customCustomer.trim()
+    } else {
+      payload.customers_id = Number(form.customers_id)
+    }
+
+    if (form.grades_id === 'NEW_CUSTOM') {
+      payload.custom_grade = customGrade.trim()
+    } else {
+      payload.grades_id = Number(form.grades_id)
+    }
+
+    if (form.gsms_id === 'NEW_CUSTOM') {
+      payload.custom_gsm = customGsm.trim()
+    } else {
+      payload.gsms_id = Number(form.gsms_id)
+    }
+
+    axios.post('/jop', payload).then(() => {
       SystemUI.toast({ message: 'JOP created successfully.', type: 'success' })
       setShowModal(false)
-      // Reload page to reflect new data
       window.location.reload()
     }).catch((err) => {
       if (err.response?.status === 422) {
@@ -117,7 +160,8 @@ export default function Jop() {
         })
         setFormErrors(mapped)
       } else {
-        SystemUI.toast({ message: 'Failed to create JOP.', type: 'error' })
+        const msg = err.response?.data?.message || 'Failed to create JOP.'
+        SystemUI.toast({ message: msg, type: 'error' })
       }
     })
   }
@@ -266,6 +310,7 @@ export default function Jop() {
                 {formErrors.po && <p className="text-red-600 text-[11px] mt-1">{formErrors.po}</p>}
               </div>
 
+              {/* Customer Dropdown + Custom Manual Input Option */}
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Customer <span className="text-red-500">*</span></label>
                 <select
@@ -277,10 +322,21 @@ export default function Jop() {
                   {customers.map(c => (
                     <option key={c.id} value={c.id}>{c.customer}</option>
                   ))}
+                  <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Input Manual...</option>
                 </select>
+                {form.customers_id === 'NEW_CUSTOM' && (
+                  <input
+                    type="text"
+                    value={customCustomer}
+                    onChange={e => { setCustomCustomer(e.target.value); if (formErrors.customers_id) setFormErrors(err => ({ ...err, customers_id: '' })) }}
+                    className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                    placeholder="Type new customer name (e.g. PT Surya Indah)..."
+                  />
+                )}
                 {formErrors.customers_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.customers_id}</p>}
               </div>
 
+              {/* Grade Dropdown + Custom Manual Input Option */}
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Grade <span className="text-red-500">*</span></label>
                 <select
@@ -292,10 +348,21 @@ export default function Jop() {
                   {gradesList.map(g => (
                     <option key={g.id} value={g.id}>{g.grade}</option>
                   ))}
+                  <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Input Manual...</option>
                 </select>
+                {form.grades_id === 'NEW_CUSTOM' && (
+                  <input
+                    type="text"
+                    value={customGrade}
+                    onChange={e => { setCustomGrade(e.target.value); if (formErrors.grades_id) setFormErrors(err => ({ ...err, grades_id: '' })) }}
+                    className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                    placeholder="Type new grade name (e.g. SPECTA - TK5)..."
+                  />
+                )}
                 {formErrors.grades_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.grades_id}</p>}
               </div>
 
+              {/* GSM Dropdown + Custom Manual Input Option */}
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">GSM <span className="text-red-500">*</span></label>
                 <select
@@ -307,8 +374,32 @@ export default function Jop() {
                   {gsmsList.map(g => (
                     <option key={g.id} value={g.id}>{g.gsm} g/m²</option>
                   ))}
+                  <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Input Manual...</option>
                 </select>
+                {form.gsms_id === 'NEW_CUSTOM' && (
+                  <input
+                    type="number"
+                    value={customGsm}
+                    onChange={e => { setCustomGsm(e.target.value); if (formErrors.gsms_id) setFormErrors(err => ({ ...err, gsms_id: '' })) }}
+                    className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                    placeholder="Type new GSM value (e.g. 180)..."
+                  />
+                )}
                 {formErrors.gsms_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.gsms_id}</p>}
+              </div>
+
+              {/* Target Rolls Input */}
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Target Rolls <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.quantity}
+                  onChange={e => { setForm(f => ({ ...f, quantity: e.target.value })); if (formErrors.quantity) setFormErrors(err => ({ ...err, quantity: '' })) }}
+                  className={`form-input w-full ${formErrors.quantity ? 'border-red-500 focus:ring-red-200' : ''}`}
+                  placeholder="e.g. 10"
+                />
+                {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
               </div>
             </div>
 

@@ -1,7 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Jop;
+use App\Models\Customer;
+use App\Models\Grade;
+use App\Models\Gsm;
 use Illuminate\Http\Request;
 
 class JopController extends Controller
@@ -12,12 +16,35 @@ class JopController extends Controller
         return response()->json($jops);
     }
 
+    public function masterData()
+    {
+        return response()->json([
+            'customers' => Customer::select('id', 'customer')->orderBy('customer')->get(),
+            'grades'    => Grade::select('id', 'grade')->orderBy('grade')->get(),
+            'gsms'      => Gsm::select('id', 'gsm')->orderBy('gsm')->get(),
+        ]);
+    }
+
     public function store(Request $request)
     {
+        // 1. Resolve custom manual input strings if user selected "+ Add New / Input Manual..."
+        if ($request->filled('custom_customer')) {
+            $cust = Customer::firstOrCreate(['customer' => trim($request->custom_customer)]);
+            $request->merge(['customers_id' => $cust->id]);
+        }
+        if ($request->filled('custom_grade')) {
+            $gr = Grade::firstOrCreate(['grade' => trim($request->custom_grade)]);
+            $request->merge(['grades_id' => $gr->id]);
+        }
+        if ($request->filled('custom_gsm')) {
+            $gsm = Gsm::firstOrCreate(['gsm' => floatval($request->custom_gsm)]);
+            $request->merge(['gsms_id' => $gsm->id]);
+        }
+
         $validated = $request->validate([
-            'spk' => 'required',
-            'jop' => 'required',
-            'po' => 'required',
+            'spk' => 'required|string|max:45|unique:jops,spk',
+            'jop' => 'required|string|max:45|unique:jops,jop',
+            'po' => 'required|string|max:45',
             'customers_id' => 'required|exists:customers,id',
             'grades_id' => 'required|exists:grades,id',
             'gsms_id' => 'required|exists:gsms,id',
@@ -29,17 +56,36 @@ class JopController extends Controller
         ]);
 
         $jop = Jop::create($validated);
-        return response()->json(['message' => 'JOP created successfully', 'data' => $jop]);
+        $jop->load(['customer', 'grade', 'gsm']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'JOP created successfully',
+            'data' => $jop
+        ], 201);
     }
 
     public function update(Request $request, $id)
     {
         $jop = Jop::findOrFail($id);
 
+        if ($request->filled('custom_customer')) {
+            $cust = Customer::firstOrCreate(['customer' => trim($request->custom_customer)]);
+            $request->merge(['customers_id' => $cust->id]);
+        }
+        if ($request->filled('custom_grade')) {
+            $gr = Grade::firstOrCreate(['grade' => trim($request->custom_grade)]);
+            $request->merge(['grades_id' => $gr->id]);
+        }
+        if ($request->filled('custom_gsm')) {
+            $gsm = Gsm::firstOrCreate(['gsm' => floatval($request->custom_gsm)]);
+            $request->merge(['gsms_id' => $gsm->id]);
+        }
+
         $validated = $request->validate([
-            'spk' => 'required',
-            'jop' => 'required',
-            'po' => 'required',
+            'spk' => 'required|string|max:45|unique:jops,spk,' . $id,
+            'jop' => 'required|string|max:45|unique:jops,jop,' . $id,
+            'po' => 'required|string|max:45',
             'customers_id' => 'required|exists:customers,id',
             'grades_id' => 'required|exists:grades,id',
             'gsms_id' => 'required|exists:gsms,id',

@@ -104,6 +104,9 @@ export default function SpectrumWeightDetectionEngine({
                 await videoRef.current.play();
             }
             setEngineState("camera_active");
+            try {
+                localStorage.setItem("rollyn_camera_permission", "granted");
+            } catch (e) {}
             SystemUI.toast({
                 message: "Camera active. Point at display to capture weight.",
                 type: "info",
@@ -112,30 +115,58 @@ export default function SpectrumWeightDetectionEngine({
         } catch (err) {
             console.error("[OCR] Camera access denied:", err);
             setEngineState("camera_denied");
-            SystemUI.alert({
-                title: "Camera Access Denied",
-                message: "Please allow camera access in browser settings.",
-            });
+            try {
+                localStorage.removeItem("rollyn_camera_permission");
+            } catch (e) {}
         }
     }, []);
 
     useEffect(() => {
         initOCRWorker();
 
-        if (engineState === "permission_modal") {
-            SystemUI.confirm({
-                title: "Camera Access Required",
-                message:
-                    "Rollyn needs camera access to read the weighing scale display automatically. After clicking Allow, your browser will ask for permission.",
-                confirmText: "Allow Camera Access",
-                cancelText: "Cancel",
-                onConfirm: (confirmed) => {
-                    if (confirmed) startCamera();
-                },
-                onCancel: () => setEngineState("camera_denied"),
-            });
-        }
-    }, []);
+        const checkAndStartCamera = async () => {
+            let alreadyGranted = false;
+
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    const status = await navigator.permissions.query({ name: "camera" as PermissionName });
+                    if (status.state === "granted") {
+                        alreadyGranted = true;
+                    } else if (status.state === "denied") {
+                        setEngineState("camera_denied");
+                        return;
+                    }
+                }
+            } catch (e) {}
+
+            if (!alreadyGranted) {
+                try {
+                    if (localStorage.getItem("rollyn_camera_permission") === "granted") {
+                        alreadyGranted = true;
+                    }
+                } catch (e) {}
+            }
+
+            if (alreadyGranted) {
+                startCamera();
+            } else {
+                SystemUI.confirm({
+                    title: "Camera Access Required",
+                    message:
+                        "Rollyn needs camera access to read the weighing scale display automatically. After clicking Allow, your browser will ask for permission.",
+                    confirmText: "Allow Camera Access",
+                    cancelText: "Cancel",
+                    onConfirm: (confirmed) => {
+                        if (confirmed) startCamera();
+                        else setEngineState("camera_denied");
+                    },
+                    onCancel: () => setEngineState("camera_denied"),
+                });
+            }
+        };
+
+        checkAndStartCamera();
+    }, [startCamera]);
 
     useEffect(() => {
         return () => {
