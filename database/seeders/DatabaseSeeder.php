@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             RollDatabaseSeeder::class,
             LocationSeeder::class,
             RealDataSeeder::class,
+            TargetOrderSeeder::class,
         ]);
     }
 }

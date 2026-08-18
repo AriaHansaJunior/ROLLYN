@@ -7,11 +7,29 @@ export default function Jop() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
 
-  const processedJop = jopData.map(r => {
-    const status = r.progress >= 100 ? 'Complete' : r.progress > 0 ? 'In Progress' : 'Pending'
-    const colorClass = r.progress >= 100 ? 'bg-green-500 text-green-700' : r.progress >= 60 ? 'bg-blue-600 text-blue-700' : 'bg-amber-500 text-amber-700'
-    const barBg = r.progress >= 100 ? 'bg-green-500' : r.progress >= 60 ? 'bg-blue-600' : 'bg-amber-500'
-    return { ...r, status, colorClass, barBg }
+  const processedJop = jopData.map((r: any) => {
+    const target = r.quantity || 1 // Avoid divide by zero
+    const completed = r.rolls ? r.rolls.length : 0
+    const progress = Math.round((completed / target) * 100)
+    
+    const status = progress >= 100 ? 'Complete' : progress > 0 ? 'In Progress' : 'Pending'
+    const colorClass = progress >= 100 ? 'bg-green-500 text-green-700' : progress >= 60 ? 'bg-blue-600 text-blue-700' : 'bg-amber-500 text-amber-700'
+    const barBg = progress >= 100 ? 'bg-green-500' : progress >= 60 ? 'bg-blue-600' : 'bg-amber-500'
+    
+    return { 
+      id: r.id,
+      jop: r.jop || '-',
+      spk: r.spk || '-',
+      po: r.po || '-',
+      customer: r.customer?.customer || '-',
+      grade: r.grade?.grade || '-',
+      target: target,
+      rolls: completed,
+      progress,
+      status, 
+      colorClass, 
+      barBg 
+    }
   })
 
   const filtered = processedJop.filter(r => {
@@ -88,8 +106,8 @@ export default function Jop() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(r => (
-              <tr key={r.jop}>
+            {filtered.length > 0 ? filtered.map((r: any) => (
+              <tr key={r.id || r.jop} className="hover:bg-slate-50 transition-colors">
                 <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.jop}</td>
                 <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.spk}</td>
                 <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.po}</td>
@@ -106,7 +124,13 @@ export default function Jop() {
                   </div>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                  No JOP records found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

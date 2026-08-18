@@ -7,7 +7,11 @@ export default function TargetOrder() {
   const [search, setSearch] = useState('')
   const filtered = targetOrders.filter(r => {
     const q = search.toLowerCase()
-    return !q || r.spk.toLowerCase().includes(q) || r.customer.toLowerCase().includes(q) || r.jop.toLowerCase().includes(q) || r.grade.toLowerCase().includes(q)
+    const spk = r.spk?.toLowerCase() || ''
+    const customer = (r.customer?.customer || '').toLowerCase()
+    const jop = r.jop?.toLowerCase() || ''
+    const grade = (r.grade?.grade || '').toLowerCase()
+    return !q || spk.includes(q) || customer.includes(q) || jop.includes(q) || grade.includes(q)
   })
 
   return (
@@ -63,21 +67,27 @@ export default function TargetOrder() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(r => (
-              <tr key={r.spk}>
-                <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.spk}</td>
+            {filtered.length > 0 ? filtered.map((r: any) => (
+              <tr key={r.id || r.spk} className="hover:bg-slate-50 transition-colors">
+                <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.spk || '-'}</td>
                 <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.jop}</td>
-                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.po}</td>
-                <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{r.customer}</td>
-                <td style={{ textAlign: 'center' }}>{r.grade}</td>
-                <td style={{ textAlign: 'center' }}>{r.gsm}</td>
-                <td style={{ textAlign: 'center' }}>{r.rw.toLocaleString()}</td>
-                <td className="font-bold" style={{ textAlign: 'center' }}>{r.qtyRoll}</td>
-                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.weight.toLocaleString()}</td>
-                <td style={{ textAlign: 'center' }}>{r.container}</td>
-                <td className={`text-xs ${r.noted ? 'text-slate-700' : 'text-slate-400'}`} style={{ textAlign: 'center' }}>{r.noted || '—'}</td>
+                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.po || '-'}</td>
+                <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{r.customer?.customer || '-'}</td>
+                <td style={{ textAlign: 'center' }}>{r.grade?.grade || '-'}</td>
+                <td style={{ textAlign: 'center' }}>{r.gsm?.gsm || '-'}</td>
+                <td style={{ textAlign: 'center' }}>{r.rolls_width?.width || r.rollsWidth?.width || '-'}</td>
+                <td className="font-bold" style={{ textAlign: 'center' }}>{r.quantity || 0}</td>
+                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{(r.weight || 0).toLocaleString('id-ID')}</td>
+                <td style={{ textAlign: 'center' }}>{r.container || '-'}</td>
+                <td className={`text-xs ${r.noted_order ? 'text-slate-700' : 'text-slate-400 italic'}`} style={{ textAlign: 'center' }}>{r.noted_order || 'No notes'}</td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={11} className="px-4 py-8 text-center text-slate-500">
+                  No target orders found in the database.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

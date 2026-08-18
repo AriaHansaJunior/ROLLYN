@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, Package, MoveRight, Layers, ArrowRight, Eye } from 'lucide-react'
 import { Link } from '@inertiajs/react'
 
-type SlotStatus = 'free' | 'slotted'
+type SlotStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 interface LocationItem {
   id: number
@@ -23,9 +23,14 @@ interface Props {
   locations?: LocationItem[]
 }
 
-const statusConfig: Record<SlotStatus, { label: string; bgClass: string; dot: string }> = {
-  free: { label: 'Empty Space (0)', bgClass: 'bg-green-500 hover:bg-green-600 border-green-700', dot: '#22c55e' },
-  slotted: { label: 'Occupied (1)', bgClass: 'bg-red-500 hover:bg-red-600 border-red-700', dot: '#ef4444' },
+const statusConfig: Record<number, { label: string; bgClass: string; dot: string }> = {
+  0: { label: 'Free Space', bgClass: 'bg-white border-2 border-gray-300 text-gray-800', dot: '#ffffff' },
+  1: { label: 'Slot Planning', bgClass: 'bg-gray-200 border-2 border-gray-300 text-gray-800', dot: '#e5e7eb' },
+  2: { label: 'Slotted', bgClass: 'bg-gray-500 border-2 border-gray-600 text-white', dot: '#6b7280' },
+  3: { label: 'Shipment Plan', bgClass: 'bg-green-600 border-2 border-green-700 text-white', dot: '#16a34a' },
+  4: { label: 'Non PO', bgClass: 'bg-red-600 border-2 border-red-700 text-white', dot: '#dc2626' },
+  5: { label: 'Pindah Gudang B/C', bgClass: 'bg-yellow-400 border-2 border-yellow-500 text-gray-900', dot: '#facc15' },
+  6: { label: 'HOLD', bgClass: 'bg-blue-500 border-2 border-blue-600 text-white', dot: '#3b82f6' },
 }
 
 export default function WarehouseMap({ locations = [] }: Props) {
@@ -34,14 +39,14 @@ export default function WarehouseMap({ locations = [] }: Props) {
   const slotList: Slot[] = locations.length > 0 ? locations.map(loc => ({
     id: loc.id,
     code: loc.location,
-    status: loc.status === 1 ? 'slotted' : 'free',
+    status: (loc.status >= 0 && loc.status <= 6 ? loc.status : 0) as SlotStatus,
     rollId: loc.rolls && loc.rolls.length > 0 ? loc.rolls[0].no : undefined,
     rollNumber: loc.rolls && loc.rolls.length > 0 ? loc.rolls[0].no_roll : undefined,
   })) : Array.from({ length: 12 }, (_, colIdx) =>
     Array.from({ length: 4 }, (_, tierIdx) => ({
       id: colIdx * 4 + tierIdx + 1,
       code: `E17-${String(colIdx + 1).padStart(2, '0')}-${tierIdx + 1}`,
-      status: 'free' as SlotStatus
+      status: 0 as SlotStatus
     }))
   ).flat()
 
@@ -101,7 +106,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
                       const slot = slotList.find(s => s.code === code) || {
                         id: 0,
                         code,
-                        status: 'free' as SlotStatus
+                        status: 0 as SlotStatus
                       };
                       const cfg = statusConfig[slot.status];
                       const isSelected = selectedSlot?.code === code;
@@ -110,12 +115,10 @@ export default function WarehouseMap({ locations = [] }: Props) {
                         <div key={code} className="relative group aspect-square snap-center">
                           <button
                             onClick={() => setSelectedSlot(isSelected ? null : slot)}
-                            className={`flex items-center justify-center w-full h-full min-h-[3rem] whitespace-nowrap rounded-md border text-[10px] tracking-tighter leading-none font-bold text-center break-words acos-smooth-hover cursor-pointer shadow-sm ${
+                            className={`flex items-center justify-center w-full h-full min-h-[3rem] whitespace-nowrap rounded-md text-[10px] tracking-tighter leading-none font-bold text-center break-words acos-smooth-hover cursor-pointer shadow-sm ${
                               isSelected
-                                ? slot.status === 'free'
-                                  ? 'bg-yellow-400 text-yellow-900 border-yellow-500 ring-4 ring-yellow-300 scale-105 z-10'
-                                  : 'bg-red-500 text-white border-red-700 ring-4 ring-offset-2 ring-red-300 scale-105 z-10'
-                                : `${cfg.bgClass} text-white`
+                                ? `${cfg.bgClass} ring-4 ring-offset-2 ring-indigo-500 scale-105 z-10 transition-transform`
+                                : `${cfg.bgClass}`
                             }`}
                           >
                             {code}
@@ -124,7 +127,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
                           <div className={`hidden md:block absolute bottom-full mb-2 w-max px-3 py-1.5 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl whitespace-nowrap ${
                             col === 1 ? 'left-0' : col === 12 ? 'right-0' : 'left-1/2 -translate-x-1/2'
                           }`}>
-                            Lokasi: <span className="font-bold text-blue-300">{code}</span> | Status: {slot.status === 'slotted' ? 'Occupied' : 'Empty'}
+                            Lokasi: <span className="font-bold text-blue-300">{code}</span> | Status: {cfg.label}
                             <div className={`absolute top-full border-4 border-transparent border-t-slate-900 ${
                               col === 1 ? 'left-4' : col === 12 ? 'right-4' : 'left-1/2 -translate-x-1/2'
                             }`}></div>
@@ -191,11 +194,11 @@ export default function WarehouseMap({ locations = [] }: Props) {
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Status</span>
-                <span className={`font-bold ${selectedSlot?.status === 'slotted' ? 'text-blue-600' : 'text-slate-600'}`}>
-                  {selectedSlot?.status === 'slotted' ? 'Occupied (Status 1)' : 'Empty (Status 0)'}
+                <span className="font-bold text-slate-800">
+                  {selectedSlot ? statusConfig[selectedSlot.status].label : ''}
                 </span>
               </div>
-              {selectedSlot?.status === 'slotted' && selectedSlot?.rollNumber && (
+              {selectedSlot?.status !== 0 && selectedSlot?.rollNumber && (
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Roll Number</span>
                   <span className="font-bold text-slate-900">{selectedSlot.rollNumber}</span>
@@ -203,7 +206,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
               )}
             </div>
 
-            {selectedSlot?.status === 'slotted' && selectedSlot?.rollNumber && (
+            {selectedSlot?.status !== 0 && selectedSlot?.rollNumber && (
               <div className="mt-5 flex justify-end">
                 <Link
                   href={`/roll-detail/${selectedSlot.rollNumber}`}

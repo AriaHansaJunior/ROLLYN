@@ -3,19 +3,32 @@ import { Search, Filter } from 'lucide-react'
 import { usePage } from '@inertiajs/react'
 
 export default function SpkPo() {
-  const { targetOrders = [], rollInventory = [] } = usePage<any>().props;
+  const { spkPoData = [] } = usePage<any>().props;
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
 
-  const processedOrders = targetOrders.map(o => {
-    const relatedRolls = rollInventory.filter(r => r.jop === o.jop).length
-    const status = relatedRolls >= o.qtyRoll ? 'Complete' : relatedRolls > 0 ? 'In Progress' : 'Pending'
+  const processedOrders = spkPoData.map((o: any) => {
+    const relatedRolls = o.rolls ? o.rolls.length : 0
+    const target = o.quantity || 1
+    const status = relatedRolls >= target ? 'Complete' : relatedRolls > 0 ? 'In Progress' : 'Pending'
     const sc = status === 'Complete'
       ? 'bg-green-50 text-green-700 border-green-200'
       : status === 'In Progress'
       ? 'bg-blue-50 text-blue-700 border-blue-200'
       : 'bg-amber-50 text-amber-700 border-amber-200'
-    return { ...o, relatedRolls, status, sc }
+      
+    return { 
+      id: o.id,
+      spk: o.spk || '-',
+      jop: o.jop || '-',
+      po: o.po || '-',
+      customer: o.customer?.customer || '-',
+      grade: o.grade?.grade || '-',
+      qtyRoll: target,
+      relatedRolls, 
+      status, 
+      sc 
+    }
   })
 
   const filtered = processedOrders.filter(o => {
@@ -92,8 +105,8 @@ export default function SpkPo() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(o => (
-              <tr key={o.spk}>
+            {filtered.length > 0 ? filtered.map((o: any) => (
+              <tr key={o.id || o.spk} className="hover:bg-slate-50 transition-colors">
                 <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{o.spk}</td>
                 <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{o.jop}</td>
                 <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{o.po}</td>
@@ -107,7 +120,13 @@ export default function SpkPo() {
                   </div>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                  No SPK/PO records found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
