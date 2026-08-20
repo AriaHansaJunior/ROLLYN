@@ -10,14 +10,22 @@ import {
     Layers,
     Clock,
     Lock,
+    Printer,
+    RefreshCw,
 } from "lucide-react";
 import WeightDetectionEngine from "../SPECTRUM/SpectrumWeightDetectionEngine";
+import QRCodeSVG from "@/Components/QRCodeSVG";
 import { SystemUI } from "@/Utils/SystemUI";
 import { router, usePage } from "@inertiajs/react";
 import axios from "axios";
 
 const SCALE_ROI = { x: 0, y: 0, width: 1, height: 1 };
-const steps = ["Camera & Weight Detection", "Roll Data Entry", "Review & Save"];
+const steps = [
+    "Scanner & OCR Detection",
+    "Fill Form Data",
+    "Preview Data",
+    "Print Label",
+];
 
 interface WeightState {
     value: number;
@@ -252,53 +260,33 @@ export default function IncomingRoll() {
             exMaterial: form.exMaterial,
             visual: form.visual,
             pic: form.pic,
-            weight: weight.value || (weight.display ? parseFloat(weight.display.replace(/,/g, "")) : 0),
+            weight:
+                weight.value ||
+                (weight.display
+                    ? parseFloat(weight.display.replace(/,/g, ""))
+                    : 0),
         };
 
         try {
-            SystemUI.toast({ message: "Saving roll data to database…", type: "info" });
+            SystemUI.toast({
+                message: "Saving roll data to database…",
+                type: "info",
+            });
             const res = await axios.post("/incoming-roll", payload);
 
             SystemUI.toast({
-                message: res.data?.message || `Roll ${form.rollNumber} saved successfully!`,
+                message:
+                    res.data?.message ||
+                    `Roll ${form.rollNumber || "data"} saved successfully!`,
                 type: "success",
             });
 
-            const confirmed = await SystemUI.confirm({
-                title: "Roll Saved Successfully",
-                message: `Roll ${form.rollNumber} has been saved to database. Would you like to view the Roll Inventory now?`,
-                confirmText: "Go to Inventory",
-                cancelText: "Register Another Roll",
-            });
-
-            if (confirmed) {
-                router.visit("/roll-inventory");
-            } else {
-                setStep(0);
-                setWeight({ value: 0, display: "", source: "none" });
-                setForm({
-                    jop: "",
-                    grade: "",
-                    gsm: "",
-                    visual: "OK",
-                    rollNumber: "",
-                    formNumber: "",
-                    plybond: "",
-                    diameter: "",
-                    width: "",
-                    thickness: "",
-                    bulk: "",
-                    core: "76",
-                    exMaterial: "OCC",
-                    cobb: "",
-                    shift: "Shift A",
-                    pic: "",
-                });
-                setErrors({});
-            }
+            setStep(3);
         } catch (err: any) {
             console.error("[Roll Save Error]:", err);
-            const errorMsg = err.response?.data?.message || "Failed to save roll data to database.";
+            const errorMsg =
+                err.response?.data?.message ||
+                "Failed to save roll data to database.";
             SystemUI.toast({ message: errorMsg, type: "error" });
         }
     }
@@ -1030,7 +1018,341 @@ export default function IncomingRoll() {
                                 className="btn btn-primary text-xs sm:text-sm px-4 py-2 lg:px-6 lg:py-2.5"
                                 onClick={handleSave}
                             >
-                                <Save size={16} /> <span>Save Roll</span>
+                                <Save size={16} />{" "}
+                                <span>Save & Generate QR Label</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 3: Print Label & Dynamic QR Generation */}
+            {step === 3 && (
+                <div className="w-full 2xl:max-w-4xl space-y-4">
+                    <style>{`
+                        @media print {
+                            @page {
+                                size: landscape;
+                                margin: 15mm; /* Mengandalkan margin kertas dari printer */
+                            }
+                            
+                            /* Reset struktur halaman agar tidak ada scroll berlebih yang menggeser layout */
+                            html, body {
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                min-height: 100% !important;
+                                overflow: hidden !important; /* Kunci scroll saat print */
+                            }
+
+                            /* Sembunyikan SEMUA elemen background/layout bawaan */
+                            body * {
+                                visibility: hidden !important;
+                            }
+
+                            /* Tampilkan kembali HANYA bagian label dan anak-anaknya */
+                            #printable-roll-label, #printable-roll-label * {
+                                visibility: visible !important;
+                            }
+                            
+                            /* Posisikan label dari titik nol (kiri atas) */
+                            #printable-roll-label {
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                transform: none !important; /* Hapus transform yang bikin kepotong */
+                                
+                                width: 100% !important; /* Penuhi lebar kertas yang sudah dikurangi margin 15mm */
+                                box-sizing: border-box !important;
+                                
+                                border: 3px solid #0f172a !important;
+                                border-radius: 12px !important;
+                                background: white !important;
+                                padding: 30px 40px !important;
+                                margin: 0 !important;
+                                font-family: Arial, sans-serif !important;
+                            }
+
+                            /* --- STYLING HEADER --- */
+                            #printable-roll-label #label-header {
+                                display: flex !important;
+                                justify-content: space-between !important;
+                                align-items: center !important;
+                                border-bottom: 3px solid #0f172a !important;
+                                padding-bottom: 12px !important;
+                                margin-bottom: 20px !important;
+                            }
+                            #printable-roll-label #label-header .logo-area {
+                                display: flex !important;
+                                align-items: center !important;
+                                gap: 10px !important;
+                            }
+                            #printable-roll-label #label-header .logo-box {
+                                width: 36px !important;
+                                height: 36px !important;
+                                background: #1d4ed8 !important;
+                                color: white !important;
+                                font-weight: 900 !important;
+                                font-size: 18px !important;
+                                display: flex !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                border-radius: 8px !important;
+                            }
+                            #printable-roll-label #label-header .logo-text {
+                                font-size: 22px !important;
+                                font-weight: 900 !important;
+                                color: #0f172a !important;
+                                letter-spacing: 1px !important;
+                            }
+                            #printable-roll-label #label-header .label-title {
+                                font-size: 15px !important;
+                                font-weight: 800 !important;
+                                color: #0f172a !important;
+                                letter-spacing: 0.5px !important;
+                                text-transform: uppercase !important;
+                            }
+
+                            /* --- STYLING BODY --- */
+                            #printable-roll-label #label-body {
+                                display: flex !important;
+                                flex-direction: row !important;
+                                gap: 30px !important;
+                                align-items: flex-start !important;
+                            }
+                            #printable-roll-label #label-specs {
+                                flex: 1 !important;
+                                display: flex !important;
+                                flex-direction: column !important;
+                                gap: 10px !important; 
+                            }
+                            #printable-roll-label .spec-row {
+                                display: flex !important;
+                                flex-direction: row !important;
+                                align-items: baseline !important;
+                                gap: 0 !important;
+                            }
+                            #printable-roll-label .spec-label {
+                                font-size: 14px !important;
+                                font-weight: 700 !important;
+                                color: #64748b !important;
+                                width: 130px !important; 
+                                flex-shrink: 0 !important;
+                            }
+                            #printable-roll-label .spec-value {
+                                font-size: 15px !important;
+                                font-weight: 700 !important;
+                                color: #0f172a !important;
+                            }
+                            #printable-roll-label .spec-value.highlight {
+                                font-size: 18px !important;
+                                font-weight: 900 !important;
+                                color: #1e3a8a !important;
+                            }
+
+                            /* --- STYLING QR CODE --- */
+                            #printable-roll-label #label-qr {
+                                display: flex !important;
+                                flex-direction: column !important;
+                                align-items: center !important;
+                                gap: 8px !important;
+                                flex-shrink: 0 !important;
+                                width: 200px !important;
+                                border: 2px solid #e2e8f0 !important;
+                                padding: 15px !important;
+                                border-radius: 12px !important;
+                            }
+                            #printable-roll-label #label-qr svg {
+                                width: 170px !important;
+                                height: 170px !important;
+                            }
+                            #printable-roll-label #label-qr .qr-caption {
+                                font-size: 11px !important;
+                                font-weight: 800 !important;
+                                color: #64748b !important;
+                                text-transform: uppercase !important;
+                                letter-spacing: 1px !important;
+                                text-align: center !important;
+                                margin-top: 5px !important;
+                            }
+                        }
+                    `}</style>
+                    <div className="card p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
+                        {/* Printable Roll Identification Label */}
+                        <div
+                            id="printable-roll-label"
+                            className="w-full max-w-3xl bg-white border-2 border-slate-900 rounded-2xl p-6 sm:p-8 shadow-lg text-slate-900 font-sans"
+                        >
+                            {/* Label Header */}
+                            <div
+                                id="label-header"
+                                className="flex items-center justify-between border-b-2 border-slate-900 pb-4 mb-5"
+                            >
+                                <div className="logo-area flex items-center gap-2.5">
+                                    <div className="logo-box w-9 h-9 rounded-lg bg-blue-700 text-white font-black text-sm flex items-center justify-center">
+                                        R
+                                    </div>
+                                    <span className="logo-text font-extrabold text-xl tracking-wider text-slate-900">
+                                        ROLLYN
+                                    </span>
+                                </div>
+                                <span className="label-title font-extrabold text-sm tracking-wider text-slate-900 uppercase">
+                                    PRODUCTION IDENTIFICATION LABEL
+                                </span>
+                            </div>
+
+                            {/* Label Body: Specs + QR Side by Side */}
+                            <div
+                                id="label-body"
+                                className="flex flex-row gap-6 items-start"
+                            >
+                                {/* Specifications list */}
+                                <div
+                                    id="label-specs"
+                                    className="flex-1 flex flex-col gap-2.5 text-sm"
+                                >
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            ROLL ID:
+                                        </span>{" "}
+                                        <span className="spec-value font-extrabold text-slate-900 font-mono text-base">
+                                            {form.rollNumber || "104"}
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Grade:
+                                        </span>{" "}
+                                        <span className="spec-value font-bold text-slate-900">
+                                            {form.grade || "SPECTA - TK4"}
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Job Order:
+                                        </span>{" "}
+                                        <span className="spec-value font-bold text-slate-900 font-mono">
+                                            {form.jop || "JOP-0726-00028"}
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Thickness:
+                                        </span>{" "}
+                                        <span className="spec-value font-semibold text-slate-900">
+                                            {form.thickness
+                                                ? `${form.thickness} mm`
+                                                : "155 mm"}
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Roll Width:
+                                        </span>{" "}
+                                        <span className="spec-value font-semibold text-slate-900">
+                                            {form.width
+                                                ? `${form.width} mm`
+                                                : "1650 mm"}
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Weight:
+                                        </span>{" "}
+                                        <span className="spec-value highlight font-extrabold text-blue-900 font-mono text-base">
+                                            {weight.display || "1,044"} kg
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Core Size:
+                                        </span>{" "}
+                                        <span className="spec-value font-semibold text-slate-900">
+                                            {form.core || "76"} mm
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Visual Status:
+                                        </span>{" "}
+                                        <span className="spec-value font-bold text-slate-900">
+                                            {form.visual || "OK"}
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            PIC:
+                                        </span>{" "}
+                                        <span className="spec-value font-semibold text-slate-900 uppercase">
+                                            {form.pic || "Budi"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Dynamic QR Code */}
+                                <div
+                                    id="label-qr"
+                                    className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200 shrink-0"
+                                >
+                                    <QRCodeSVG
+                                        value={JSON.stringify({
+                                            roll: form.rollNumber || "104",
+                                            grade: form.grade || "SPECTA-TK4",
+                                            jop: form.jop || "JOP-0726-00028",
+                                            weight: weight.display || "1044",
+                                            width: form.width || "1650",
+                                            thickness: form.thickness || "155",
+                                            core: form.core || "76",
+                                            pic: form.pic || "Budi",
+                                        })}
+                                        size={180}
+                                    />
+                                    <span className="qr-caption text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-3 text-center">
+                                        ATTACH TO ROLL CORE
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap gap-3 justify-center pt-2">
+                            <button
+                                className="btn btn-primary btn-md flex items-center gap-2 px-6 py-2.5 font-bold cursor-pointer"
+                                onClick={() => window.print()}
+                            >
+                                <Printer size={16} /> <span>Print Label</span>
+                            </button>
+                            <button
+                                className="btn btn-secondary btn-md flex items-center gap-2 px-6 py-2.5 font-semibold cursor-pointer"
+                                onClick={() => {
+                                    setStep(0);
+                                    setWeight({
+                                        value: 0,
+                                        display: "",
+                                        source: "none",
+                                    });
+                                    setForm({
+                                        jop: "",
+                                        grade: "",
+                                        gsm: "",
+                                        visual: "OK",
+                                        rollNumber: "",
+                                        formNumber: "",
+                                        plybond: "",
+                                        diameter: "",
+                                        width: "",
+                                        thickness: "",
+                                        bulk: "",
+                                        core: "76",
+                                        exMaterial: "OCC",
+                                        cobb: "",
+                                        shift: "Shift A",
+                                        pic: "",
+                                    });
+                                    setErrors({});
+                                }}
+                            >
+                                <RefreshCw size={16} />{" "}
+                                <span>Register New Roll</span>
                             </button>
                         </div>
                     </div>

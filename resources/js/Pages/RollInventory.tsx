@@ -67,6 +67,10 @@ export default function RollInventory({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
 
+  const [viewMode, setViewMode] = useState<'inventory' | 'shipments'>('inventory')
+  const [checkedRollIds, setCheckedRollIds] = useState<string[]>([])
+  const [removedShipmentIds, setRemovedShipmentIds] = useState<string[]>([])
+
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingRoll, setEditingRoll] = useState<RollItem | null>(null)
   const [editForm, setEditForm] = useState({
@@ -92,6 +96,32 @@ export default function RollInventory({
   const lastNotifyRef = useRef<number>(0)
 
   const statuses = ['All', 'Slotted', 'Shipment Plan', 'Incoming', 'Hold']
+
+  function toggleRollChecked(id: string) {
+    setCheckedRollIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    )
+    setRemovedShipmentIds(prev => prev.filter(item => item !== id))
+  }
+
+  function handleRemoveFromShipments(id: string) {
+    setCheckedRollIds(prev => prev.filter(item => item !== id))
+    setRemovedShipmentIds(prev => (prev.includes(id) ? prev : [...prev, id]))
+
+    const now = Date.now()
+    if (now - lastNotifyRef.current > 3000) {
+      lastNotifyRef.current = now
+      SystemUI.toast({ message: 'Roll removed from shipments list.', type: 'info' })
+    }
+  }
+
+  function handleConfirmShipments() {
+    const now = Date.now()
+    if (now - lastNotifyRef.current > 3000) {
+      lastNotifyRef.current = now
+      SystemUI.toast({ message: 'Shipments confirmed successfully!', type: 'success' })
+    }
+  }
 
   // Build 12x4 slots for Warehouse E17
   const fullMapSlots = Array.from({ length: 12 }, (_, colIdx) =>
@@ -127,14 +157,25 @@ export default function RollInventory({
   })
 
   const filtered = rolls.filter(r => {
+    if (viewMode === 'shipments') {
+      const isRemoved = removedShipmentIds.includes(r.id) || removedShipmentIds.includes(String(r.raw_id))
+      if (isRemoved) return false
+
+      const isChecked = checkedRollIds.includes(r.id) || checkedRollIds.includes(String(r.raw_id))
+      const matchShipment = isChecked
+      const q = search.toLowerCase()
+      const matchSearch = !q || r.id.toLowerCase().includes(q) || r.grade.toLowerCase().includes(q) || r.jop.toLowerCase().includes(q) || r.location.toLowerCase().includes(q)
+      return matchShipment && matchSearch
+    }
+
     const q = search.toLowerCase()
     const matchSearch = !q || r.id.toLowerCase().includes(q) || r.grade.toLowerCase().includes(q) || r.jop.toLowerCase().includes(q) || r.location.toLowerCase().includes(q)
     const matchStatus = statusFilter === 'All' || r.status === statusFilter
     return matchSearch && matchStatus
   }).sort((a, b) => {
-    const va = (a as Record<string, unknown>)[sortKey]
-    const vb = (b as Record<string, unknown>)[sortKey]
-    if (va === undefined || vb === undefined) return 0
+    const key = sortKey as keyof RollItem
+    const va = a[key] ?? ''
+    const vb = b[key] ?? ''
     const cmp = String(va).localeCompare(String(vb), undefined, { numeric: true })
     return sortDir === 'asc' ? cmp : -cmp
   })
@@ -253,18 +294,16 @@ export default function RollInventory({
   }
 
   const cols: { key: string; label: string }[] = [
-    { key: 'id', label: 'Roll No.' },
-    { key: 'form', label: 'Form No.' },
-    { key: 'shift', label: 'Shift' },
-    { key: 'date', label: 'Entry Date' },
-    { key: 'grade', label: 'Grade' },
+    { key: 'shift', label: 'SHIFT' },
+    { key: 'date', label: 'ENTRY DATE' },
+    { key: 'grade', label: 'GRADE' },
     { key: 'gsm', label: 'GSM' },
-    { key: 'weight', label: 'Weight (kg)' },
-    { key: 'width', label: 'Width (mm)' },
-    { key: 'location', label: 'Location' },
+    { key: 'weight', label: 'WEIGHT (KG)' },
+    { key: 'width', label: 'WIDTH (MM)' },
+    { key: 'location', label: 'LOCATION' },
     { key: 'jop', label: 'JOP' },
     { key: 'pic', label: 'PIC' },
-    { key: 'status', label: 'Status' },
+    { key: 'status', label: 'STATUS' },
   ]
 
   return (
@@ -275,6 +314,27 @@ export default function RollInventory({
           <p className="text-xs text-slate-500 mt-0.5">Comprehensive catalog of physical rolls across all warehouses</p>
         </div>
         <div className="flex gap-2">
+          {viewMode === 'inventory' ? (
+            <button
+              className="btn btn-primary btn-sm cursor-pointer"
+              onClick={() => {
+                setViewMode('shipments')
+                setPage(1)
+              }}
+            >
+              Shipments
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary btn-sm cursor-pointer"
+              onClick={() => {
+                setViewMode('inventory')
+                setPage(1)
+              }}
+            >
+              Storage
+            </button>
+          )}
           <button className="btn btn-secondary btn-sm cursor-pointer" onClick={handleExport}>
             <Download size={13} /> <span>Export</span>
           </button>
@@ -313,107 +373,126 @@ export default function RollInventory({
 
       {/* Table Card */}
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1380px] table-fixed border-collapse text-xs">
+        <table className="data-table w-full min-w-[1200px] table-fixed border-collapse text-xs">
           <colgroup>
-            <col className="w-[120px]" /> {/* Roll No */}
-            <col className="w-[75px]" />  {/* Form No */}
-            <col className="w-[65px]" />  {/* Shift */}
-            <col className="w-[95px]" />  {/* Entry Date */}
-            <col className="w-[110px]" /> {/* Grade */}
-            <col className="w-[60px]" />  {/* GSM */}
-            <col className="w-[90px]" />  {/* Weight */}
-            <col className="w-[85px]" />  {/* Width */}
-            <col className="w-[100px]" /> {/* Location */}
-            <col className="w-[110px]" /> {/* JOP */}
-            <col className="w-[85px]" />  {/* PIC */}
-            <col className="w-[120px]" /> {/* Status */}
-            <col className="w-[140px]" /> {/* Actions */}
+            <col className="w-[85px]" />  {/* SHIFT */}
+            <col className="w-[105px]" /> {/* ENTRY DATE */}
+            <col className="w-[140px]" /> {/* GRADE */}
+            <col className="w-[70px]" />  {/* GSM */}
+            <col className="w-[110px]" /> {/* WEIGHT (KG) */}
+            <col className="w-[100px]" /> {/* WIDTH (MM) */}
+            <col className="w-[110px]" /> {/* LOCATION */}
+            <col className="w-[130px]" /> {/* JOP */}
+            <col className="w-[95px]" />  {/* PIC */}
+            <col className="w-[110px]" /> {/* STATUS */}
+            <col className="w-[140px]" /> {/* ACTIONS */}
           </colgroup>
           <thead>
             <tr>
-              {cols.map(col => {
-                const isCenter = col.key !== 'id';
-                return (
-                  <th
-                    key={col.key}
-                    onClick={() => sort(col.key)}
-                    className="cursor-pointer select-none"
-                    style={{ textAlign: isCenter ? 'center' : 'left' }}
-                  >
-                    {col.label}
-                    <span className="inline-block align-middle ml-1"><SortIcon k={col.key} /></span>
-                  </th>
-                );
-              })}
-              <th style={{ textAlign: 'center' }}>Actions</th>
+              {cols.map(col => (
+                <th
+                  key={col.key}
+                  onClick={() => sort(col.key)}
+                  className="cursor-pointer select-none tracking-wider text-[11px] font-bold text-slate-700"
+                  style={{ textAlign: 'center' }}
+                >
+                  {col.label}
+                  <span className="inline-block align-middle ml-1"><SortIcon k={col.key} /></span>
+                </th>
+              ))}
+              <th style={{ textAlign: 'center' }} className="tracking-wider text-[11px] font-bold text-slate-700">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             {paged.length === 0 ? (
-              <tr><td colSpan={cols.length + 1} className="text-center py-8 text-slate-400">No rolls found in database.</td></tr>
+              <tr><td colSpan={cols.length + 1} className="text-center py-8 text-slate-400">{viewMode === 'shipments' ? 'No rolls selected for shipment.' : 'No rolls found in database.'}</td></tr>
             ) : paged.map(r => {
               const sc = statusColors[r.status] || { bg: '#EEEEEE', color: '#333' }
               const isSlotted = Boolean(r.locations_id) || (Boolean(r.location) && r.location !== 'No Slot' && r.location !== 'Unallocated' && r.location !== '—')
 
+              const shiftNum = r.shift ? r.shift.replace(/Shift\s*/i, '') : '1'
+
               return (
-                <tr key={r.raw_id || r.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td style={{ textAlign: 'left' }}><span className="font-bold text-blue-700 font-mono text-xs">{r.id}</span></td>
-                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.form}</td>
-                  <td style={{ textAlign: 'center' }}><span className="badge bg-slate-100 text-slate-700 border-slate-200">{r.shift}</span></td>
-                  <td style={{ textAlign: 'center' }} className="text-xs">{r.date}</td>
-                  <td style={{ textAlign: 'center' }}><span className="font-semibold text-slate-800">{r.grade}</span></td>
-                  <td style={{ textAlign: 'center' }}>{r.gsm}</td>
-                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">{r.weight ? r.weight.toLocaleString() : 0}</td>
-                  <td style={{ textAlign: 'center' }}>{r.width}</td>
-                  <td style={{ textAlign: 'center' }} className="font-mono text-xs">
+                <tr key={r.raw_id || r.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                  <td style={{ textAlign: 'center' }}>
+                    <span className="inline-flex flex-col items-center justify-center bg-slate-100/90 text-slate-700 px-2.5 py-0.5 rounded border border-slate-200">
+                      <span className="text-[10px] text-slate-500 font-semibold leading-none">Shift</span>
+                      <span className="font-bold text-slate-800 text-xs leading-tight">{shiftNum}</span>
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.date}</td>
+                  <td style={{ textAlign: 'center' }}><span className="font-bold text-slate-800 text-xs">{r.grade}</span></td>
+                  <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.gsm}</td>
+                  <td style={{ textAlign: 'center' }} className="text-xs text-slate-700 font-medium">{r.weight ? r.weight.toLocaleString('id-ID') : 0}</td>
+                  <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.width}</td>
+                  <td style={{ textAlign: 'center' }}>
                     {r.location ? (
-                      <span className="font-semibold text-blue-900 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{r.location}</span>
+                      <span className="inline-block font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 text-xs font-mono">
+                        {r.location}
+                      </span>
                     ) : (
-                      <span className="text-red-600 font-semibold">No Slot</span>
+                      <span className="text-red-600 font-semibold text-xs">No Slot</span>
                     )}
                   </td>
-                  <td style={{ textAlign: 'center' }} className="text-xs font-mono">{r.jop}</td>
-                  <td style={{ textAlign: 'center' }} className="text-xs">{r.pic}</td>
+                  <td style={{ textAlign: 'center' }} className="text-xs text-slate-600 font-mono">{r.jop}</td>
+                  <td style={{ textAlign: 'center' }} className="text-xs text-slate-700 uppercase font-medium">{r.pic}</td>
                   <td style={{ textAlign: 'center' }} className="whitespace-nowrap px-2 py-2">
                     <div className="flex w-full justify-center">
-                      <span className="badge inline-flex justify-center px-2.5 py-1 text-xs font-semibold whitespace-nowrap" style={{ backgroundColor: sc.bg, color: sc.color }}>
-                        {r.status}
+                      <span
+                        className="badge inline-flex justify-center px-2.5 py-1 text-xs font-semibold whitespace-nowrap rounded-md"
+                        style={viewMode === 'shipments' ? { backgroundColor: '#d0e8f5', color: '#286090' } : { backgroundColor: sc.bg, color: sc.color }}
+                      >
+                        {viewMode === 'shipments' ? 'Checked' : r.status}
                       </span>
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }} className="whitespace-nowrap px-2 py-2">
                     <div className="flex gap-1.5 justify-center items-center">
+                      {viewMode === 'inventory' && (
+                        <>
+                          <button
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                            onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
+                            title="View Roll Detail"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                            onClick={() => openEdit(r)}
+                            title="Edit Roll Data"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                            onClick={() => handleAssignClick(r, isSlotted ? 'move' : 'assign')}
+                            title={isSlotted ? `Move Roll Location (Current: ${r.location})` : 'Assign Location Slot'}
+                          >
+                            <MapPin size={14} />
+                          </button>
+                          <label className="inline-flex items-center justify-center p-1 cursor-pointer" title="Direct roll to shipments">
+                            <input
+                              type="checkbox"
+                              checked={checkedRollIds.includes(r.id)}
+                              onChange={() => toggleRollChecked(r.id)}
+                              className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
+                            />
+                          </label>
+                        </>
+                      )}
                       <button
-                        className="btn btn-secondary btn-sm p-1.5 cursor-pointer"
-                        onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
-                        title="View Roll Detail"
+                        className="p-1.5 rounded bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer shadow-xs"
+                        onClick={() => {
+                          if (viewMode === 'shipments') {
+                            handleRemoveFromShipments(r.id)
+                          } else {
+                            handleDelete(r)
+                          }
+                        }}
+                        title={viewMode === 'shipments' ? 'Remove from Shipments' : 'Delete Roll'}
                       >
-                        <Eye size={13} />
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm p-1.5 cursor-pointer text-blue-600 hover:text-blue-800"
-                        onClick={() => openEdit(r)}
-                        title="Edit Roll Data"
-                      >
-                        <Edit size={13} />
-                      </button>
-                      <button
-                        className={`btn btn-sm p-1.5 cursor-pointer transition-colors ${
-                          isSlotted
-                            ? 'btn-secondary text-blue-600 hover:text-blue-800 hover:bg-blue-50'
-                            : 'btn-secondary text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50'
-                        }`}
-                        onClick={() => handleAssignClick(r, isSlotted ? 'move' : 'assign')}
-                        title={isSlotted ? `Move Roll Location (Current: ${r.location})` : 'Assign Location Slot'}
-                      >
-                        {isSlotted ? <MapPin size={13} /> : <Package size={13} />}
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm p-1.5 cursor-pointer"
-                        onClick={() => handleDelete(r)}
-                        title="Delete Roll"
-                      >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </td>
@@ -427,7 +506,7 @@ export default function RollInventory({
       {/* Pagination */}
       <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
         <span className="text-xs text-slate-500">
-          Showing {Math.min((page - 1) * PER_PAGE + 1, filtered.length)}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
+          Showing {filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
         </span>
         <div className="flex gap-1">
           <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
@@ -437,6 +516,17 @@ export default function RollInventory({
           <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
         </div>
       </div>
+
+      {viewMode === 'shipments' && (
+        <div className="flex justify-end pt-2">
+          <button
+            className="btn btn-primary btn-md bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg shadow-sm cursor-pointer transition-colors"
+            onClick={handleConfirmShipments}
+          >
+            Confirm Shipments
+          </button>
+        </div>
+      )}
 
       {/* Edit Roll Modal */}
       {showEditModal && (
