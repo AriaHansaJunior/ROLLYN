@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Edit, Trash2, X, Search, Filter } from 'lucide-react'
-import { router } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 
 interface UserItem {
@@ -18,7 +18,21 @@ interface Props {
   users?: UserItem[]
 }
 
+const ROLE_OPTIONS = ['Admin', 'Production', 'QC', 'PPIC']
+
+const roleBadgeStyles: Record<string, string> = {
+  admin: 'bg-blue-50 text-blue-700 border-blue-200',
+  production: 'bg-amber-50 text-amber-700 border-amber-200',
+  qc: 'bg-purple-50 text-purple-700 border-purple-200',
+  ppic: 'bg-teal-50 text-teal-700 border-teal-200',
+}
+
 export default function UserManagement({ users = [] }: Props) {
+  const { props } = usePage()
+  const authUser = (props.auth as any)?.user
+  const currentUserRole = (authUser?.role ?? 'admin').toLowerCase()
+  const canDelete = currentUserRole === 'admin'
+
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [showModal, setShowModal] = useState(false)
@@ -79,7 +93,7 @@ export default function UserManagement({ users = [] }: Props) {
 
     if (!editUser) {
       if (!form.password) {
-        errs.password = 'Password is required for new administrator.'
+        errs.password = 'Password is required for new user.'
       } else if (form.password.length < 6) {
         errs.password = 'Password must be at least 6 characters.'
       }
@@ -105,7 +119,7 @@ export default function UserManagement({ users = [] }: Props) {
     if (editUser) {
       router.put(`/user-management/${editUser.id}`, form, {
         onSuccess: () => {
-          SystemUI.toast({ message: 'Administrator record updated successfully.', type: 'success' })
+          SystemUI.toast({ message: 'User record updated successfully.', type: 'success' })
           setShowModal(false)
         },
         onError: (errs) => {
@@ -115,7 +129,7 @@ export default function UserManagement({ users = [] }: Props) {
     } else {
       router.post('/user-management', form, {
         onSuccess: () => {
-          SystemUI.toast({ message: 'New administrator created successfully.', type: 'success' })
+          SystemUI.toast({ message: 'New user created successfully.', type: 'success' })
           setShowModal(false)
         },
         onError: (errs) => {
@@ -127,8 +141,8 @@ export default function UserManagement({ users = [] }: Props) {
 
   async function handleDelete(user: UserItem) {
     const confirmed = await SystemUI.confirm({
-      title: 'Delete Administrator',
-      message: `Are you sure you want to delete the administrator "${user.name}"? This action cannot be undone.`,
+      title: 'Delete User',
+      message: `Are you sure you want to delete the user "${user.name}"? This action cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel'
     })
@@ -136,7 +150,7 @@ export default function UserManagement({ users = [] }: Props) {
     if (confirmed) {
       router.delete(`/user-management/${user.id}`, {
         onSuccess: () => {
-          SystemUI.toast({ message: 'Administrator deleted successfully.', type: 'success' })
+          SystemUI.toast({ message: 'User deleted successfully.', type: 'success' })
         }
       })
     }
@@ -147,10 +161,10 @@ export default function UserManagement({ users = [] }: Props) {
       <div className="flex justify-between items-center gap-2">
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">User Management</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Manage system administrator accounts</p>
+          <p className="text-xs text-slate-500 mt-0.5">Manage system user accounts and roles</p>
         </div>
         <button className="btn btn-primary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0" onClick={openAdd}>
-          <Plus size={13} className="sm:w-3.5 sm:h-3.5" /> <span>Add Admin</span>
+          <Plus size={13} className="sm:w-3.5 sm:h-3.5" /> <span>Add User</span>
         </button>
       </div>
 
@@ -184,19 +198,21 @@ export default function UserManagement({ users = [] }: Props) {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="data-table w-full min-w-[1050px] lg:min-w-[820px] table-fixed border-collapse">
+        <table className="data-table w-full min-w-[1100px] lg:min-w-[900px] table-fixed border-collapse">
           <colgroup>
-            <col className="w-[180px] lg:w-[150px]" />
-            <col className="w-[280px] lg:w-[200px]" />
-            <col className="w-[120px] lg:w-[100px]" />
-            <col className="w-[160px] lg:w-[120px]" />
-            <col className="w-[190px] lg:w-[150px]" />
-            <col className="w-[120px] lg:w-[100px]" />
+            <col className="w-[160px] lg:w-[130px]" />
+            <col className="w-[240px] lg:w-[180px]" />
+            <col className="w-[100px] lg:w-[90px]" />
+            <col className="w-[100px] lg:w-[80px]" />
+            <col className="w-[130px] lg:w-[100px]" />
+            <col className="w-[170px] lg:w-[130px]" />
+            <col className={canDelete ? "w-[120px] lg:w-[100px]" : "w-[80px] lg:w-[70px]"} />
           </colgroup>
           <thead>
             <tr>
               <th style={{ textAlign: 'left' }}>Name</th>
               <th style={{ textAlign: 'center' }}>Email</th>
+              <th style={{ textAlign: 'center' }}>Role</th>
               <th style={{ textAlign: 'center' }}>Status</th>
               <th style={{ textAlign: 'center' }}>Created</th>
               <th style={{ textAlign: 'center' }}>Last Activity</th>
@@ -206,7 +222,7 @@ export default function UserManagement({ users = [] }: Props) {
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-8 text-slate-400">
+                <td colSpan={7} className="text-center py-8 text-slate-400">
                   No users found in database.
                 </td>
               </tr>
@@ -217,7 +233,14 @@ export default function UserManagement({ users = [] }: Props) {
                   <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{user.email}</td>
                   <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
-                      <span className={`badge inline-flex min-w-[86px] justify-center ${user.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                      <span className={`badge inline-flex min-w-[70px] justify-center text-[11px] font-semibold ${roleBadgeStyles[user.role.toLowerCase()] ?? 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                        {user.role}
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="flex w-full justify-center">
+                      <span className={`badge inline-flex min-w-[70px] justify-center ${user.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                         {user.status}
                       </span>
                     </div>
@@ -229,9 +252,11 @@ export default function UserManagement({ users = [] }: Props) {
                       <button className="btn btn-secondary btn-sm p-1.5 cursor-pointer" onClick={() => openEdit(user)} title="Edit">
                         <Edit size={13} />
                       </button>
-                      <button className="btn btn-danger btn-sm p-1.5 cursor-pointer" onClick={() => handleDelete(user)} title="Delete">
-                        <Trash2 size={13} />
-                      </button>
+                      {canDelete && (
+                        <button className="btn btn-danger btn-sm p-1.5 cursor-pointer" onClick={() => handleDelete(user)} title="Delete">
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -245,7 +270,7 @@ export default function UserManagement({ users = [] }: Props) {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-md p-5 bg-white rounded-2xl shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">{editUser ? 'Edit Administrator' : 'Add Administrator'}</h3>
+              <h3 className="text-base font-bold text-slate-900">{editUser ? 'Edit User' : 'Add User'}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
                 <X size={18} />
               </button>
@@ -279,6 +304,21 @@ export default function UserManagement({ users = [] }: Props) {
                   type="email"
                 />
                 {errors.email && <p className="text-red-600 text-[11px] mt-1">{errors.email}</p>}
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
+                  Role <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={form.role}
+                  onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                  className="form-input w-full"
+                >
+                  {ROLE_OPTIONS.map(r => (
+                    <option key={r} value={r.toLowerCase()}>{r}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -333,7 +373,7 @@ export default function UserManagement({ users = [] }: Props) {
                 Cancel
               </button>
               <button className="btn btn-primary text-xs px-3 py-1.5" onClick={save}>
-                Save Administrator
+                Save User
               </button>
             </div>
           </div>

@@ -51,7 +51,21 @@ interface SidebarProps {
 export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: SidebarProps) {
   const { props } = usePage()
   const authUser = (props.auth as any)?.user
-  const isAdmin = authUser?.role === 'admin'
+  const userRole = (authUser?.role ?? 'admin').toLowerCase()
+
+  // Role-Based UI Visibility — frontend-only, not backend authorization
+  // Admin: full access
+  // Production: OCR only (incoming-roll)
+  // QC: scan & check outgoing/reject (roll-inventory, reports)
+  // PPIC: operational minus OCR (incoming-roll, ocr-monitoring) — can see user-management but delete restricted in UserManagement.tsx
+  const roleAllowedItems: Record<string, string[] | null> = {
+    admin: null, // null = all items visible
+    production: ['incoming-roll'],
+    qc: ['roll-inventory', 'reports'],
+    ppic: ['dashboard', 'warehouse-map', 'roll-inventory', 'slot-status', 'target-order', 'jop', 'reports', 'user-management', 'profile'],
+  }
+
+  const allowedItems = roleAllowedItems[userRole] ?? null
 
   return (
     <>
@@ -106,8 +120,8 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px', paddingTop: 8 }}>
           {navSections.map(section => {
             const filteredItems = section.items.filter(item => {
-              if (item.id === 'user-management' && !isAdmin) return false
-              return true
+              if (allowedItems === null) return true // Admin: all visible
+              return allowedItems.includes(item.id)
             })
             
             if (filteredItems.length === 0) return null

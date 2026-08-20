@@ -212,7 +212,7 @@ async function getEngWorker(): Promise<any> {
     const worker = await createWorker('eng', OEM.LSTM_ONLY, buildLocalOptions());
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_LINE,
-      tessedit_char_whitelist: '0123456789.,OoIlSBZ',
+      tessedit_char_whitelist: '0123456789.,',
     });
     engWorker.instance = worker;
     engWorker.ready = true;
@@ -480,6 +480,21 @@ export async function recogniseWeight(
     weightCounts.set(key, (weightCounts.get(key) ?? 0) + 1);
   }
 
+  // Compute mode digit count across all candidates for consensus
+  const digitCountMap = new Map<number, number>();
+  for (const c of allCandidates) {
+    const dc = digitCount(c.weight);
+    digitCountMap.set(dc, (digitCountMap.get(dc) ?? 0) + 1);
+  }
+  let modeDigitCount = 0;
+  let modeDigitFreq = 0;
+  for (const [dc, freq] of digitCountMap) {
+    if (freq > modeDigitFreq) {
+      modeDigitCount = dc;
+      modeDigitFreq = freq;
+    }
+  }
+
   const scored = allCandidates.map(c => {
     const digits = digitCount(c.weight);
     const isSegmentMatcher = (c.variantLabel.startsWith('[SEGMENT-MATCHER]') || c.variantLabel.startsWith('[TEMPLATE-CLASSIFIER]')) ? 1 : 0;
@@ -488,11 +503,15 @@ export async function recogniseWeight(
 
     const segmentBonus = (isSegmentMatcher && c.confidence >= 80) ? 300 : 0;
 
+    // Penalize candidates whose digit count differs from the mode (prevents false digit insertion like 123 → 1143)
+    const digitCountPenalty = (digits !== modeDigitCount) ? -2000 : 0;
+
     const score =
       (digits * 1000) +
-      (consistency * 800) +
+      (consistency * 1200) +  // Increased from 800 — consensus is more important than raw confidence
       (isDigital * 300) +
       segmentBonus +
+      digitCountPenalty +
       c.confidence;
 
     return { ...c, score };
@@ -508,6 +527,21 @@ export async function recogniseWeight(
   })));
 
   const winner = scored[0];
+
+  // Minimum consistency check: require at least 2 candidates to agree on the same weight
+  // to prevent accepting a single spurious result
+  const winnerConsistency = weightCounts.get(Math.round(winner.weight)) ?? 0;
+  if (winnerConsistency < 2 && allCandidates.length >= 3) {
+    console.warn('[OCR] No consensus reached among candidates — recognition unreliable');
+    return {
+      error: {
+        title: 'Recognition Failed',
+        message:
+          'Multiple OCR passes returned inconsistent results. ' +
+          'Ensure the weighing display is steady, clearly visible, and well-lit, then try again.',
+      },
+    };
+  }
 
   return {
     result: {

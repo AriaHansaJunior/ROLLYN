@@ -1032,42 +1032,43 @@ export default function IncomingRoll() {
                     <style>{`
                         @media print {
                             @page {
-                                size: landscape;
-                                margin: 15mm; /* Mengandalkan margin kertas dari printer */
+                                size: auto;
+                                margin: 8mm;
                             }
                             
-                            /* Reset struktur halaman agar tidak ada scroll berlebih yang menggeser layout */
+                            /* Reset page structure */
                             html, body {
                                 margin: 0 !important;
                                 padding: 0 !important;
                                 min-height: 100% !important;
-                                overflow: hidden !important; /* Kunci scroll saat print */
+                                overflow: hidden !important;
                             }
 
-                            /* Sembunyikan SEMUA elemen background/layout bawaan */
+                            /* Hide ALL background/layout elements */
                             body * {
                                 visibility: hidden !important;
                             }
 
-                            /* Tampilkan kembali HANYA bagian label dan anak-anaknya */
+                            /* Show ONLY the label and its children */
                             #printable-roll-label, #printable-roll-label * {
                                 visibility: visible !important;
                             }
                             
-                            /* Posisikan label dari titik nol (kiri atas) */
+                            /* Position label at top-left, width fits content */
                             #printable-roll-label {
                                 position: absolute !important;
                                 left: 0 !important;
                                 top: 0 !important;
-                                transform: none !important; /* Hapus transform yang bikin kepotong */
+                                transform: none !important;
                                 
-                                width: 100% !important; /* Penuhi lebar kertas yang sudah dikurangi margin 15mm */
+                                width: auto !important;
+                                max-width: 100% !important;
                                 box-sizing: border-box !important;
                                 
                                 border: 3px solid #0f172a !important;
                                 border-radius: 12px !important;
                                 background: white !important;
-                                padding: 30px 40px !important;
+                                padding: 16px 24px !important;
                                 margin: 0 !important;
                                 font-family: Arial, sans-serif !important;
                             }

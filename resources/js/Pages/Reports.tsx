@@ -1,5 +1,19 @@
+import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts'
 import { usePage } from '@inertiajs/react'
+import { Search, Filter, Package } from 'lucide-react'
+
+interface OutgoingRoll {
+  id: number
+  no_roll: string
+  jop: string
+  customer: string
+  grade: string
+  gsm: number | string
+  weight: number
+  entry_date: string
+  status: string
+}
 
 export default function Reports() {
   const {
@@ -7,8 +21,23 @@ export default function Reports() {
     demandForecast = [],
     statusDistribution = [],
     ocrActivity = [],
-    kpis = []
+    kpis = [],
+    outgoingRolls = []
   } = usePage<any>().props;
+
+  const [outgoingSearch, setOutgoingSearch] = useState('')
+
+  const filteredOutgoing = (outgoingRolls as OutgoingRoll[]).filter(r => {
+    if (!outgoingSearch) return true
+    const q = outgoingSearch.toLowerCase()
+    return (
+      r.no_roll.toLowerCase().includes(q) ||
+      r.jop.toLowerCase().includes(q) ||
+      r.customer.toLowerCase().includes(q) ||
+      r.grade.toLowerCase().includes(q)
+    )
+  })
+
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
       <div>
@@ -94,6 +123,89 @@ export default function Reports() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      {/* Outgoing Shipment Section */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center text-green-600">
+              <Package size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Outgoing Shipment</h3>
+              <p className="text-[11px] text-slate-500">Rolls with Shipment Plan status — linked to JOP orders, not yet assigned to warehouse slots</p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-slate-500">{filteredOutgoing.length} rolls</span>
+        </div>
+
+        {/* Search */}
+        <div className="card p-3 sm:p-4">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:max-w-md">
+            <Search size={16} className="text-slate-400 shrink-0" />
+            <input
+              value={outgoingSearch}
+              onChange={e => setOutgoingSearch(e.target.value)}
+              placeholder="Search roll, JOP, customer, grade..."
+              className="w-full min-w-0 bg-transparent border-none outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            />
+          </div>
+        </div>
+
+        {/* Outgoing Table */}
+        <div className="card overflow-x-auto">
+          <table className="data-table w-full min-w-[900px] table-fixed border-collapse text-xs">
+            <colgroup>
+              <col className="w-[130px]" />
+              <col className="w-[140px]" />
+              <col className="w-[160px]" />
+              <col className="w-[120px]" />
+              <col className="w-[70px]" />
+              <col className="w-[100px]" />
+              <col className="w-[110px]" />
+              <col className="w-[110px]" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left' }}>Roll Number</th>
+                <th style={{ textAlign: 'center' }}>JOP</th>
+                <th style={{ textAlign: 'center' }}>Customer</th>
+                <th style={{ textAlign: 'center' }}>Grade</th>
+                <th style={{ textAlign: 'center' }}>GSM</th>
+                <th style={{ textAlign: 'center' }}>Weight (kg)</th>
+                <th style={{ textAlign: 'center' }}>Entry Date</th>
+                <th style={{ textAlign: 'center' }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOutgoing.length > 0 ? filteredOutgoing.map((r: OutgoingRoll) => (
+                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.no_roll}</td>
+                  <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.jop}</td>
+                  <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{r.customer}</td>
+                  <td className="font-semibold text-slate-800" style={{ textAlign: 'center' }}>{r.grade}</td>
+                  <td style={{ textAlign: 'center' }}>{r.gsm}</td>
+                  <td className="font-medium" style={{ textAlign: 'center' }}>{typeof r.weight === 'number' ? r.weight.toLocaleString('id-ID') : r.weight}</td>
+                  <td className="text-slate-600" style={{ textAlign: 'center' }}>{r.entry_date}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <div className="flex w-full justify-center">
+                      <span className="badge inline-flex justify-center px-2.5 py-1 text-xs font-semibold whitespace-nowrap rounded-md" style={{ backgroundColor: '#d4edda', color: '#3C763D' }}>
+                        {r.status}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                    No outgoing shipment records found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

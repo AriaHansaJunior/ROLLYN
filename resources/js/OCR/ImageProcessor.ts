@@ -389,6 +389,79 @@ export async function preprocessImage(
     return canvas;
   }
 
+  // Adaptive local threshold (Sauvola-inspired) for varying illumination
+  function adaptiveThresholdLocal(canvas: HTMLCanvasElement, blockSize = 15, k = 0.2): HTMLCanvasElement {
+    const ctx = canvas.getContext('2d')!;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const { width, height, data } = imageData;
+    const output = ctx.createImageData(width, height);
+    const half = Math.floor(blockSize / 2);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0, sumSq = 0, count = 0;
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              const v = data[(ny * width + nx) * 4];
+              sum += v;
+              sumSq += v * v;
+              count++;
+            }
+          }
+        }
+        const mean = sum / count;
+        const variance = (sumSq / count) - (mean * mean);
+        const stdDev = Math.sqrt(Math.max(0, variance));
+        const thresh = mean * (1 + k * (stdDev / 128 - 1));
+        const idx = (y * width + x) * 4;
+        const v = data[idx] >= thresh ? 255 : 0;
+        output.data[idx] = v;
+        output.data[idx + 1] = v;
+        output.data[idx + 2] = v;
+        output.data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(output, 0, 0);
+    return canvas;
+  }
+
+  // Morphological noise reduction (erosion then dilation) to clean stray pixels
+  function morphClean(canvas: HTMLCanvasElement): HTMLCanvasElement {
+    const ctx = canvas.getContext('2d')!;
+    const { width, height } = canvas;
+
+    function erodeOrDilate(src: ImageData, isDilate: boolean): ImageData {
+      const out = ctx.createImageData(width, height);
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const neighbors = [
+            src.data[((y - 1) * width + x) * 4],
+            src.data[((y + 1) * width + x) * 4],
+            src.data[(y * width + x - 1) * 4],
+            src.data[(y * width + x + 1) * 4],
+            src.data[(y * width + x) * 4],
+          ];
+          const v = isDilate ? Math.min(...neighbors) : Math.max(...neighbors);
+          const idx = (y * width + x) * 4;
+          out.data[idx] = v;
+          out.data[idx + 1] = v;
+          out.data[idx + 2] = v;
+          out.data[idx + 3] = 255;
+        }
+      }
+      return out;
+    }
+
+    const src = ctx.getImageData(0, 0, width, height);
+    // Erode (remove stray white noise in dark areas), then dilate (restore)
+    const eroded = erodeOrDilate(src, false);
+    const opened = erodeOrDilate(eroded, true);
+    ctx.putImageData(opened, 0, 0);
+    return canvas;
+  }
+
   function makeLedVariant(blurPx: number, contrast: number): HTMLCanvasElement {
     const [bc, bctx] = makeCanvas(baseCanvas.width, baseCanvas.height);
     if (blurPx > 0) {
@@ -423,6 +496,7 @@ export async function preprocessImage(
     ctx2.putImageData(img, 0, 0);
 
     c = cleanLedCanvas(c);
+    c = morphClean(c);  // Morphological noise reduction for LED digits
     return c;
   }
 
@@ -457,6 +531,16 @@ export async function preprocessImage(
     { label: 'L: LED Medium Blur (6px)',         dataUrl: padCanvas(varL).toDataURL('image/png'), digital: true,  canvas: padCanvas(varL) },
     { label: 'M: LED Heavy Blur (10px)',         dataUrl: padCanvas(varM).toDataURL('image/png'), digital: true,  canvas: padCanvas(varM) },
   ];
+
+  // Variant N: Adaptive local threshold (handles varying illumination)
+  let varN = toGrayscale(cloneCanvas(baseCanvas));
+  varN = adaptiveThresholdLocal(varN, 15, 0.2);
+  variants.push({ label: 'N: Adaptive local threshold', dataUrl: padCanvas(varN).toDataURL('image/png'), digital: false, canvas: padCanvas(varN) });
+
+  // Variant O: Morphological cleaned LED (clean stray pixels from LED display)
+  let varO = makeLedVariant(2, 0.65);
+  varO = morphClean(varO);
+  variants.push({ label: 'O: LED morph-cleaned (2px)', dataUrl: padCanvas(varO).toDataURL('image/png'), digital: true, canvas: padCanvas(varO) });
 
   return { variants, rawCanvas };
 }
