@@ -313,28 +313,34 @@ export default function RollInventory({
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Roll Inventory</h2>
           <p className="text-xs text-slate-500 mt-0.5">Comprehensive catalog of physical rolls across all warehouses</p>
         </div>
-        <div className="flex gap-2">
-          {viewMode === 'inventory' ? (
-            <button
-              className="btn btn-primary btn-sm cursor-pointer"
-              onClick={() => {
-                setViewMode('shipments')
-                setPage(1)
+        <div className="flex gap-2 items-center">
+          {/* Pill Toggle Switch: Storage ↔ Shipments */}
+          <div className="relative flex items-center bg-slate-100 border border-slate-200 rounded-full p-1 shadow-inner gap-0">
+            {/* Animated background pill */}
+            <span
+              className="absolute top-1 bottom-1 rounded-full bg-blue-600 shadow transition-all duration-300 ease-in-out"
+              style={{
+                width: 'calc(50% - 4px)',
+                left: viewMode === 'inventory' ? '4px' : 'calc(50%)',
               }}
-            >
-              Shipments
-            </button>
-          ) : (
+            />
             <button
-              className="btn btn-primary btn-sm cursor-pointer"
-              onClick={() => {
-                setViewMode('inventory')
-                setPage(1)
-              }}
+              className={`relative z-10 px-4 py-1.5 rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer whitespace-nowrap ${
+                viewMode === 'inventory' ? 'text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+              onClick={() => { setViewMode('inventory'); setPage(1) }}
             >
               Storage
             </button>
-          )}
+            <button
+              className={`relative z-10 px-4 py-1.5 rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer whitespace-nowrap ${
+                viewMode === 'shipments' ? 'text-white' : 'text-slate-500 hover:text-slate-700'
+              }`}
+              onClick={() => { setViewMode('shipments'); setPage(1) }}
+            >
+              Shipments
+            </button>
+          </div>
           <button className="btn btn-secondary btn-sm cursor-pointer" onClick={handleExport}>
             <Download size={13} /> <span>Export</span>
           </button>
