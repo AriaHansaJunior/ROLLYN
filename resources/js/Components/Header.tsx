@@ -98,13 +98,16 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        <button
-          onClick={() => router.visit('/notifications')}
-          className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
-        >
-          <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
-        </button>
+        {((userRole || '').toLowerCase() === 'admin' || (userRole || '').toLowerCase() === 'ppic' || (userRole || '').toLowerCase() === 'administrator') && (
+          <button
+            onClick={() => router.visit('/notifications')}
+            className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
+          >
+            <Bell size={18} />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+          </button>
+        )}
+
 
         <div className="relative" ref={profileRef}>
           <button

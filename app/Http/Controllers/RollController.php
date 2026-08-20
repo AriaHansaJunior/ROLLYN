@@ -203,4 +203,48 @@ class RollController extends Controller
             return redirect()->back()->with('error', 'Failed to delete roll: ' . $e->getMessage());
         }
     }
+
+    public function confirmShipments(Request $request)
+    {
+        $request->validate([
+            'roll_ids' => 'required|array',
+            'roll_ids.*' => 'required|string'
+        ]);
+
+        $rolls = Roll::whereIn('no_roll', $request->roll_ids)
+                    ->orWhereIn('no', $request->roll_ids)
+                    ->get();
+
+        if ($rolls->isEmpty()) {
+            return redirect()->back()->with('error', 'No valid rolls found for shipment.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $totalWeight = 0;
+            $count = 0;
+
+            foreach ($rolls as $roll) {
+                if ($roll->locations_id) {
+                    Location::where('id', $roll->locations_id)->update(['status' => 0]);
+                }
+                $totalWeight += ($roll->weight ?? 0);
+                $count++;
+                $roll->delete(); // For this system, shipped rolls are removed from active inventory
+            }
+
+            \App\Models\SystemNotification::create([
+                'type' => 'shipment',
+                'title' => 'Outgoing Shipment',
+                'message' => "Successfully shipped {$count} rolls totaling " . number_format($totalWeight, 0) . " kg.",
+                'is_unread' => true,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Shipment confirmed successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Failed to confirm shipments: ' . $e->getMessage());
+        }
+    }
 }

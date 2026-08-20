@@ -52,8 +52,6 @@ const statusColors: Record<string, { bg: string; color: string }> = {
   'Incoming': { bg: '#fff3cd', color: '#8A6D3B' },
 }
 
-const PER_PAGE = 8
-
 export default function RollInventory({
   rolls = [],
   shifts = [],
@@ -66,6 +64,7 @@ export default function RollInventory({
   const [sortKey, setSortKey] = useState<string>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
 
   const [viewMode, setViewMode] = useState<'inventory' | 'shipments'>('inventory')
   const [checkedRollIds, setCheckedRollIds] = useState<string[]>([])
@@ -116,11 +115,21 @@ export default function RollInventory({
   }
 
   function handleConfirmShipments() {
-    const now = Date.now()
-    if (now - lastNotifyRef.current > 3000) {
-      lastNotifyRef.current = now
-      SystemUI.toast({ message: 'Shipments confirmed successfully!', type: 'success' })
+    if (checkedRollIds.length === 0) {
+      SystemUI.toast({ message: 'No rolls selected for shipment.', type: 'warning' })
+      return
     }
+
+    router.post('/rolls/ship', { roll_ids: checkedRollIds }, {
+      onSuccess: () => {
+        SystemUI.toast({ message: 'Shipments confirmed successfully!', type: 'success' })
+        setCheckedRollIds([])
+        setRemovedShipmentIds([])
+      },
+      onError: () => {
+        SystemUI.toast({ message: 'Failed to process shipment.', type: 'error' })
+      }
+    })
   }
 
   // Build 12x4 slots for Warehouse E17
@@ -180,8 +189,8 @@ export default function RollInventory({
     return sortDir === 'asc' ? cmp : -cmp
   })
 
-  const totalPages = Math.ceil(filtered.length / PER_PAGE)
-  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+  const totalPages = Math.ceil(filtered.length / perPage)
+  const paged = filtered.slice((page - 1) * perPage, page * perPage)
 
   function sort(key: string) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -511,9 +520,23 @@ export default function RollInventory({
 
       {/* Pagination */}
       <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
-        <span className="text-xs text-slate-500">
-          Showing {filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">
+            Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={perPage}
+              onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
+              className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+            >
+              {[5, 10, 20, 50].map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="flex gap-1">
           <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (

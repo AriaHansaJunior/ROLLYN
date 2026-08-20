@@ -35,12 +35,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/update', [UserController::class, 'updateProfile']);
     Route::put('/profile/password', [UserController::class, 'updatePassword']);
     Route::get('/notifications', [DesignUiController::class, 'notifications']);
+    Route::post('/notifications/read-all', [DesignUiController::class, 'readAllNotifications']);
 
     Route::get('/user-management', [UserController::class, 'index']);
     Route::post('/user-management', [UserController::class, 'store']);
     Route::put('/user-management/{user}', [UserController::class, 'update']);
     Route::delete('/user-management/{user}', [UserController::class, 'destroy']);
 
+    Route::post('/rolls/ship', [RollController::class, 'confirmShipments']);
     Route::get('/roll-inventory', [RollController::class, 'index']);
     Route::get('/roll-detail/{id?}', [RollController::class, 'show']);
     Route::put('/rolls/{id}', [RollController::class, 'update']);

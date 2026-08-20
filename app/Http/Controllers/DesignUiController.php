@@ -124,5 +124,25 @@ class DesignUiController extends Controller
         ]);
     }
     public function profile() { return Inertia::render('Profile'); }
-    public function notifications() { return Inertia::render('Notifications'); }
+    public function notifications()
+    {
+        $notifications = \App\Models\SystemNotification::orderBy('created_at', 'desc')->get()->map(function ($notif) {
+            return [
+                'id' => $notif->id,
+                'type' => $notif->type,
+                'title' => $notif->title,
+                'message' => $notif->message,
+                'time' => $notif->created_at->diffForHumans(),
+                'unread' => $notif->is_unread,
+            ];
+        });
+
+        return Inertia::render('Notifications', ['notifications' => $notifications]);
+    }
+
+    public function readAllNotifications()
+    {
+        \App\Models\SystemNotification::where('is_unread', true)->update(['is_unread' => false]);
+        return redirect()->back()->with('success', 'All notifications marked as read.');
+    }
 }

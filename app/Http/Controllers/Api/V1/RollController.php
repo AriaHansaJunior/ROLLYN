@@ -100,6 +100,13 @@ class RollController extends Controller
 
             $roll = Roll::create($data);
 
+            \App\Models\SystemNotification::create([
+                'type' => 'incoming',
+                'title' => 'Incoming Roll',
+                'message' => "Roll {$roll->no_roll} ({$roll->weight} kg) has been successfully recorded.",
+                'is_unread' => true,
+            ]);
+
             DB::commit();
 
             $roll->load(['shift', 'grade', 'jop']);

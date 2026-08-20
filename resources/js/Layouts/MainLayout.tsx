@@ -8,7 +8,9 @@ interface MainLayoutProps {
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebarCollapsed') === 'true'
+  })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const { url, props } = usePage()
@@ -20,6 +22,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const activePage = url === '/' ? 'dashboard' : url.split('/')[1] || 'dashboard'
 
   const sidebarWidth = hideSidebar ? 0 : (sidebarCollapsed ? 56 : 280)
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString())
+  }, [sidebarCollapsed])
 
   useEffect(() => {
     const handleResize = () => {

@@ -35,6 +35,8 @@ export default function UserManagement({ users = [] }: Props) {
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
   const [showModal, setShowModal] = useState(false)
   const [editUser, setEditUser] = useState<UserItem | null>(null)
   const [form, setForm] = useState({
@@ -58,6 +60,9 @@ export default function UserManagement({ users = [] }: Props) {
     const matchStatus = statusFilter === 'All' || user.status === statusFilter
     return matchSearch && matchStatus
   })
+
+  const totalPages = Math.ceil(filteredUsers.length / perPage)
+  const pagedUsers = filteredUsers.slice((page - 1) * perPage, page * perPage)
 
   function openAdd() {
     setEditUser(null)
@@ -173,7 +178,7 @@ export default function UserManagement({ users = [] }: Props) {
           <Search size={16} className="text-slate-400 shrink-0" />
           <input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
             placeholder="Search name or email..."
             className="w-full min-w-0 bg-transparent border-none outline-none text-sm sm:text-base text-slate-800 placeholder:text-slate-400"
           />
@@ -183,7 +188,7 @@ export default function UserManagement({ users = [] }: Props) {
             <Filter size={13} className="text-slate-500 shrink-0" />
             <select
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
               className="form-input text-xs py-1.5 min-w-[130px] w-auto"
             >
               <option value="All">All Statuses</option>
@@ -220,14 +225,14 @@ export default function UserManagement({ users = [] }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.length === 0 ? (
+            {pagedUsers.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-8 text-slate-400">
                   No users found in database.
                 </td>
               </tr>
             ) : (
-              filteredUsers.map(user => (
+              pagedUsers.map(user => (
                 <tr key={user.id}>
                   <td className="font-semibold text-slate-900" style={{ textAlign: 'left' }}>{user.name}</td>
                   <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{user.email}</td>
@@ -264,6 +269,34 @@ export default function UserManagement({ users = [] }: Props) {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">
+            Showing {filteredUsers.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filteredUsers.length)} of {filteredUsers.length}
+          </span>
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+            <span className="text-xs text-slate-500">Rows per page:</span>
+            <select
+              value={perPage}
+              onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
+              className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+            >
+              {[5, 10, 20, 50].map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+            <button key={p} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-secondary'} min-w-[30px] justify-center`} onClick={() => setPage(p)}>{p}</button>
+          ))}
+          <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
+        </div>
       </div>
 
       {showModal && (

@@ -1,88 +1,96 @@
-import { ArrowLeft, Bell, CheckCircle2, AlertTriangle, Info, Clock } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, Bell, CheckCircle2, AlertTriangle, Info, Clock, CheckCheck, Package, Download } from 'lucide-react'
+import { router } from '@inertiajs/react'
 
-const dummyNotifications = [
-  {
-    id: 1,
-    type: 'success',
-    title: 'OCR Recognition Successful',
-    message: 'Roll R-2026-0813-001 has been successfully identified with weight 1,025 kg.',
-    time: '2 minutes ago',
-    unread: true
-  },
-  {
-    id: 2,
-    type: 'warning',
-    title: 'Warehouse Near Capacity',
-    message: 'Warehouse Sector B is currently at 92% occupancy. Consider allocating upcoming rolls to Sector C.',
-    time: '1 hour ago',
-    unread: true
-  },
-  {
-    id: 3,
-    type: 'info',
-    title: 'System Update Completed',
-    message: 'ROLLYN system has been updated to version 1.0.0. All services are running normally.',
-    time: '3 hours ago',
-    unread: false
-  },
-  {
-    id: 4,
-    type: 'error',
-    title: 'OCR Camera Disconnected',
-    message: 'Camera feed from Scale Station 2 was lost. Administrator intervention required.',
-    time: 'Yesterday at 14:30',
-    unread: false
-  },
-  {
-    id: 5,
-    type: 'success',
-    title: 'JOP Target Reached',
-    message: 'Job Order JOP-08-26-004 has reached its target of 120 rolls.',
-    time: 'Aug 11, 2026',
-    unread: false
-  }
-]
+interface NotificationItem {
+  id: number
+  type: string
+  title: string
+  message: string
+  time: string
+  unread: boolean
+}
 
-export default function Notifications() {
+interface Props {
+  notifications: NotificationItem[]
+}
+
+export default function Notifications({ notifications = [] }: Props) {
+  const [filter, setFilter] = useState('all')
+
   function getIcon(type: string) {
-    switch(type) {
-      case 'success': return <CheckCircle2 size={18} className="text-green-600" />
+    switch(type.toLowerCase()) {
+      case 'incoming': return <Package size={18} className="text-green-600" />
+      case 'shipment': return <CheckCircle2 size={18} className="text-blue-600" />
       case 'warning': return <AlertTriangle size={18} className="text-amber-500" />
       case 'error': return <AlertTriangle size={18} className="text-red-600" />
-      case 'info': default: return <Info size={18} className="text-blue-600" />
+      default: return <Info size={18} className="text-blue-600" />
     }
+  }
+
+  const filteredNotifications = notifications.filter(notif => {
+    if (filter === 'all') return true
+    return notif.type.toLowerCase() === filter.toLowerCase()
+  })
+
+  function markAllRead() {
+    router.post('/notifications/read-all')
   }
 
   return (
     <div className="py-4 px-2.5 sm:px-6 max-w-3xl mx-auto space-y-4 min-h-[80vh]">
-      {}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => window.history.back()}
-          className="p-2 rounded-lg hover:bg-slate-200 bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-          title="Go back"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <Bell size={22} className="text-blue-700" />
-            System Notifications
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">Alerts, updates, and operational messages</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.history.back()}
+            className="p-2 rounded-lg hover:bg-slate-200 bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+            title="Go back"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              <Bell size={22} className="text-blue-700" />
+              System Notifications
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">Alerts, updates, and operational messages</p>
+          </div>
         </div>
+        
+        <button
+          onClick={markAllRead}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
+        >
+          <CheckCheck size={14} />
+          Mark all as read
+        </button>
       </div>
 
-      {}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {['All', 'Incoming', 'Shipment', 'Warning'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setFilter(tab.toLowerCase())}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+              filter === tab.toLowerCase()
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-        {dummyNotifications.length === 0 ? (
+        {filteredNotifications.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
             <Bell size={32} className="mx-auto text-slate-300 mb-3" />
             <p className="text-sm font-medium">No notifications right now.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {dummyNotifications.map(notif => (
+            {filteredNotifications.map(notif => (
               <div
                 key={notif.id}
                 className={`p-4 sm:p-5 flex gap-3.5 transition-colors hover:bg-slate-50 ${notif.unread ? 'bg-blue-50/30' : ''}`}

@@ -26,6 +26,8 @@ export default function Reports() {
   } = usePage<any>().props;
 
   const [outgoingSearch, setOutgoingSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
 
   const filteredOutgoing = (outgoingRolls as OutgoingRoll[]).filter(r => {
     if (!outgoingSearch) return true
@@ -37,6 +39,9 @@ export default function Reports() {
       r.grade.toLowerCase().includes(q)
     )
   })
+
+  const totalPages = Math.ceil(filteredOutgoing.length / perPage)
+  const pagedOutgoing = filteredOutgoing.slice((page - 1) * perPage, page * perPage)
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
@@ -147,7 +152,7 @@ export default function Reports() {
             <Search size={16} className="text-slate-400 shrink-0" />
             <input
               value={outgoingSearch}
-              onChange={e => setOutgoingSearch(e.target.value)}
+              onChange={e => { setOutgoingSearch(e.target.value); setPage(1) }}
               placeholder="Search roll, JOP, customer, grade..."
               className="w-full min-w-0 bg-transparent border-none outline-none text-sm text-slate-800 placeholder:text-slate-400"
             />
@@ -180,7 +185,7 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody>
-              {filteredOutgoing.length > 0 ? filteredOutgoing.map((r: OutgoingRoll) => (
+              {pagedOutgoing.length > 0 ? pagedOutgoing.map((r: OutgoingRoll) => (
                 <tr key={r.id} className="hover:bg-slate-50 transition-colors">
                   <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.no_roll}</td>
                   <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.jop}</td>
@@ -207,6 +212,35 @@ export default function Reports() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500">
+              Showing {filteredOutgoing.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filteredOutgoing.length)} of {filteredOutgoing.length}
+            </span>
+            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+              <span className="text-xs text-slate-500">Rows per page:</span>
+              <select
+                value={perPage}
+                onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
+                className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              >
+                {[5, 10, 20, 50].map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-1">
+            <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-secondary'} min-w-[30px] justify-center`} onClick={() => setPage(p)}>{p}</button>
+            ))}
+            <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
+          </div>
+        </div>
+
       </div>
     </div>
   )
