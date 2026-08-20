@@ -23,9 +23,10 @@ interface HeaderProps {
   onMenuClick: () => void
   onToggleSidebar: () => void
   sidebarCollapsed: boolean
+  hideSidebar?: boolean
 }
 
-export default function Header({ activePage, onMenuClick, onToggleSidebar, sidebarCollapsed }: HeaderProps) {
+export default function Header({ activePage, onMenuClick, onToggleSidebar, sidebarCollapsed, hideSidebar = false }: HeaderProps) {
   const { props } = usePage()
   const authUser = (props.auth as any)?.user
 
@@ -53,13 +54,15 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
   return (
     <header className="h-14 bg-white border-b border-slate-200 sticky top-0 z-20 px-3 sm:px-5 flex items-center justify-between gap-2 shadow-xs select-none">
       <div className="flex sm:hidden items-center gap-2.5 min-w-0 flex-1">
-        <button
-          onClick={onMenuClick}
-          className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-100 active:bg-slate-200 text-slate-700 transition-colors shrink-0"
-          aria-label="Open mobile navigation"
-        >
-          <Menu size={20} />
-        </button>
+        {!hideSidebar && (
+          <button
+            onClick={onMenuClick}
+            className="flex items-center justify-center w-9 h-9 rounded-lg bg-slate-100 active:bg-slate-200 text-slate-700 transition-colors shrink-0"
+            aria-label="Open mobile navigation"
+          >
+            <Menu size={20} />
+          </button>
+        )}
 
         <div className="flex items-center gap-2 min-w-0 shrink-0">
           <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center font-extrabold text-white text-xs shadow-xs">
@@ -73,13 +76,15 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         </div>
       </div>
 
-      <button
-        onClick={onToggleSidebar}
-        className="hidden sm:flex items-center justify-center p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        <PanelLeftClose size={18} className={sidebarCollapsed ? "rotate-180 transition-transform" : "transition-transform"} />
-      </button>
+      {!hideSidebar && (
+        <button
+          onClick={onToggleSidebar}
+          className="hidden sm:flex items-center justify-center p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <PanelLeftClose size={18} className={sidebarCollapsed ? "rotate-180 transition-transform" : "transition-transform"} />
+        </button>
+      )}
 
       <div className="hidden sm:flex items-center gap-1.5 text-sm sm:text-base flex-1 min-w-0 ml-2">
         {crumbs.map((c, i) => (
@@ -93,22 +98,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        <div className="hidden sm:flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 w-48 focus-within:w-64 focus-within:bg-white focus-within:border-blue-500 transition-all">
-          <Search size={16} className="text-slate-400 shrink-0" />
-          <input
-            placeholder="Search..."
-            className="bg-transparent border-none outline-none text-sm text-slate-800 w-full placeholder:text-slate-400"
-          />
-        </div>
-
-        <button
-          onClick={() => setMobileSearchOpen(true)}
-          className="flex sm:hidden items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
-          aria-label="Search"
-        >
-          <Search size={18} />
-        </button>
-
         <button
           onClick={() => router.visit('/notifications')}
           className="relative flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
@@ -158,24 +147,6 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         </div>
       </div>
 
-      {mobileSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs p-3 flex flex-col">
-          <div className="bg-white rounded-xl shadow-2xl p-2.5 flex items-center gap-2">
-            <Search size={18} className="text-slate-400 ml-1 shrink-0" />
-            <input
-              autoFocus
-              placeholder="Search warehouse, rolls, orders..."
-              className="flex-1 bg-transparent border-none outline-none text-base text-slate-900 py-2"
-            />
-            <button
-              onClick={() => setMobileSearchOpen(false)}
-              className="p-1 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-      )}
     </header>
   )
 }

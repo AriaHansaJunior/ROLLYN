@@ -55,14 +55,14 @@ export default function Sidebar({ activePage, collapsed, mobileOpen, onClose }: 
 
   // Role-Based UI Visibility — frontend-only, not backend authorization
   // Admin: full access
-  // Production: OCR only (incoming-roll)
-  // QC: scan & check outgoing/reject (roll-inventory, reports)
-  // PPIC: operational minus OCR (incoming-roll, ocr-monitoring) — can see user-management but delete restricted in UserManagement.tsx
+  // Production: OCR only (incoming-roll) -> Sidebar is hidden entirely in MainLayout
+  // QC: scan & check outgoing/reject (roll-inventory) -> Sidebar is hidden entirely in MainLayout
+  // PPIC: operational minus OCR & User Management (dashboard, warehouse-map, roll-inventory, slot-status, target-order, jop, reports, profile)
   const roleAllowedItems: Record<string, string[] | null> = {
     admin: null, // null = all items visible
     production: ['incoming-roll'],
-    qc: ['roll-inventory', 'reports'],
-    ppic: ['dashboard', 'warehouse-map', 'roll-inventory', 'slot-status', 'target-order', 'jop', 'reports', 'user-management', 'profile'],
+    qc: ['roll-inventory'], // Removed 'reports'
+    ppic: ['dashboard', 'warehouse-map', 'roll-inventory', 'slot-status', 'target-order', 'jop', 'reports', 'profile'], // Removed 'user-management'
   }
 
   const allowedItems = roleAllowedItems[userRole] ?? null

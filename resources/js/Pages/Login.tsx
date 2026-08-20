@@ -1,8 +1,16 @@
-import { type FormEvent } from 'react'
-import { useForm, router } from '@inertiajs/react'
+import { type FormEvent, useEffect } from 'react'
+import { useForm, router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 
 export default function Login() {
+  const { flash } = usePage<any>().props
+
+  useEffect(() => {
+    if (flash?.success) {
+      SystemUI.toast({ message: flash.success, type: 'success' })
+    }
+  }, [flash?.success])
+
   const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
     email: 'admin@spectacore.id',
     password: 'password',
@@ -29,8 +37,10 @@ export default function Login() {
 
     if (!hasError) {
       post('/login', {
-        onSuccess: () => {
-          SystemUI.toast({ message: 'Welcome back!', type: 'success' })
+        onSuccess: (page) => {
+          const user = (page.props.auth as any)?.user;
+          const userName = user?.name || user?.username || '';
+          SystemUI.toast({ message: `Welcome back${userName ? ', ' + userName : ''}!`, type: 'success' })
         },
       })
     }

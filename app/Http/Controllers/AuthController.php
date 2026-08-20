@@ -25,7 +25,17 @@ class AuthController extends Controller
             $user->update(['last_login_at' => now()]);
 
             $request->session()->regenerate();
-            return redirect()->intended('/dashboard');
+            
+            $role = strtolower($user->role ?? 'admin');
+            $redirectPath = '/dashboard';
+            
+            if ($role === 'production') {
+                $redirectPath = '/incoming-roll';
+            } elseif ($role === 'qc') {
+                $redirectPath = '/roll-inventory';
+            }
+            
+            return redirect()->intended($redirectPath);
         }
 
         return back()->withErrors([
@@ -38,6 +48,6 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect('/login');
+        return redirect('/login')->with('success', 'Logout successful!');
     }
 }

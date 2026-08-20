@@ -11,11 +11,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const { url } = usePage()
+  const { url, props } = usePage()
+
+  const authUser = (props.auth as any)?.user
+  const userRole = (authUser?.role ?? 'admin').toLowerCase()
+  const hideSidebar = userRole === 'production' || userRole === 'qc'
 
   const activePage = url === '/' ? 'dashboard' : url.split('/')[1] || 'dashboard'
 
-  const sidebarWidth = sidebarCollapsed ? 56 : 280
+  const sidebarWidth = hideSidebar ? 0 : (sidebarCollapsed ? 56 : 280)
 
   useEffect(() => {
     const handleResize = () => {
@@ -33,12 +37,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F5F5', width: '100vw', maxWidth: '100vw' }}>
-      <Sidebar
-        activePage={activePage}
-        collapsed={sidebarCollapsed}
-        mobileOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
+      {!hideSidebar && (
+        <Sidebar
+          activePage={activePage}
+          collapsed={sidebarCollapsed}
+          mobileOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+        />
+      )}
 
       {}
       <div
@@ -49,17 +55,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
           minWidth: 0,
           width: '100%',
           maxWidth: '100%',
-          marginLeft: isMobile ? 0 : sidebarWidth,
+          marginLeft: isMobile || hideSidebar ? 0 : sidebarWidth,
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
         }}
-        className="max-sm:ml-0!"
+        className={!hideSidebar ? "max-sm:ml-0!" : ""}
       >
         <Header
           activePage={activePage}
           onMenuClick={() => setMobileMenuOpen(prev => !prev)}
           onToggleSidebar={() => setSidebarCollapsed(c => !c)}
           sidebarCollapsed={sidebarCollapsed}
+          hideSidebar={hideSidebar}
         />
         <main style={{ flex: 1, overflowY: 'auto', position: 'relative', display: 'flex', justifyContent: 'center' }}>
           <div
