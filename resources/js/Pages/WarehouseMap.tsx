@@ -394,11 +394,12 @@ export default function WarehouseMap({ locations = [] }: Props) {
                   if (!assignForm.rollNumber.trim()) {
                     return
                   }
-                  if (assignRollId) {
+                    if (assignRollId) {
                     router.put(`/rolls/${assignRollId}`, {
                       locations_id: String(assignSlot.id),
                       no_roll: assignForm.rollNumber,
                       entry_date: assignForm.entryDate,
+                      action_type: 'ASSIGN',
                     }, {
                       onSuccess: () => {
                         setShowAssignPopup(false)

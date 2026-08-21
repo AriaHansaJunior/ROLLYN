@@ -1,4 +1,4 @@
-import { X, LayoutDashboard, Warehouse, Package, MapPin, TruckIcon, Eye, Target, FileText, Settings, Users, User, ChevronRight, Layers } from 'lucide-react'
+import { X, LayoutDashboard, Warehouse, Package, MapPin, TruckIcon, Eye, Target, FileText, Settings, Users, User, ChevronRight, Layers, Sparkles } from 'lucide-react'
 import { Link, usePage } from '@inertiajs/react'
 
 const navSections = [
@@ -36,6 +36,7 @@ const navSections = [
     label: 'Administration',
     items: [
       { id: 'user-management', label: 'User Management', icon: Users },
+      { id: 'recommendation-logs', label: 'Recommendation Logs', icon: Sparkles },
       { id: 'profile', label: 'Profile', icon: User },
     ]
   },

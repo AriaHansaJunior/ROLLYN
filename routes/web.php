@@ -42,6 +42,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/user-management/{user}', [UserController::class, 'update']);
     Route::delete('/user-management/{user}', [UserController::class, 'destroy']);
 
+    Route::get('/recommendation-logs', [\App\Http\Controllers\RecommendationLogController::class, 'index']);
+
     Route::post('/rolls/ship', [RollController::class, 'confirmShipments']);
     Route::get('/roll-inventory', [RollController::class, 'index']);
     Route::get('/roll-detail/{id?}', [RollController::class, 'show']);

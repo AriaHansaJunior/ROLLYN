@@ -241,7 +241,9 @@ export default function RollDetail({
     const actionText = modalMode === 'move' ? 'moved' : 'assigned'
 
     router.put(`/rolls/${currentRoll.raw_id}`, {
-      locations_id: selectedLocationId
+      locations_id: selectedLocationId,
+      recommended_locations_id: recommendedSlot ? String(recommendedSlot.id) : null,
+      action_type: modalMode === 'move' ? 'MOVE' : 'ASSIGN'
     }, {
       onSuccess: () => {
         SystemUI.toast({

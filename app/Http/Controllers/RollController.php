@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\Shift;
 use App\Models\Grade;
 use App\Models\Jop;
+use App\Models\LocationRecommendationLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -158,11 +159,37 @@ class RollController extends Controller
 
             // free old slot and lock new slot to prevent race condition
             if (array_key_exists('locations_id', $validated) && $validated['locations_id'] != $roll->locations_id) {
-                if ($roll->locations_id) {
-                    Location::where('id', $roll->locations_id)->update(['status' => 0]);
+                $oldLocationId = $roll->locations_id;
+                $newLocationId = $validated['locations_id'];
+
+                if ($oldLocationId) {
+                    Location::where('id', $oldLocationId)->update(['status' => 0]);
                 }
-                if ($validated['locations_id']) {
-                    Location::where('id', $validated['locations_id'])->update(['status' => 1]);
+                if ($newLocationId) {
+                    Location::where('id', $newLocationId)->update(['status' => 1]);
+                }
+
+                // Log evaluation for recommendation system if assigning or moving location
+                if ($newLocationId) {
+                    $recommendedLocationId = $request->input('recommended_locations_id');
+                    $actionTypeInput = $request->input('action_type');
+                    $actionType = in_array(strtoupper($actionTypeInput ?? ''), ['ASSIGN', 'MOVE'])
+                        ? strtoupper($actionTypeInput)
+                        : ($oldLocationId ? 'MOVE' : 'ASSIGN');
+
+                    $isMatch = ($recommendedLocationId && (int)$newLocationId === (int)$recommendedLocationId) ? 1 : 0;
+
+                    LocationRecommendationLog::create([
+                        'rolls_no' => $roll->no,
+                        'no_roll' => $validated['no_roll'] ?? $roll->no_roll,
+                        'users_id' => auth()->id() ?? $roll->users_id,
+                        'action_type' => $actionType,
+                        'previous_locations_id' => $oldLocationId,
+                        'recommended_locations_id' => $recommendedLocationId ? (int)$recommendedLocationId : null,
+                        'selected_locations_id' => (int)$newLocationId,
+                        'is_match' => $isMatch,
+                        'notes' => $request->input('notes'),
+                    ]);
                 }
             }
 

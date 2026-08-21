@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Roll;
+use App\Models\Location;
+use App\Models\LocationRecommendationLog;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Validator;
@@ -165,7 +167,43 @@ class RollController extends Controller
         try {
             DB::beginTransaction();
 
-            $roll->update($validator->validated());
+            $validated = $validator->validated();
+
+            if (array_key_exists('locations_id', $validated) && $validated['locations_id'] != $roll->locations_id) {
+                $oldLocationId = $roll->locations_id;
+                $newLocationId = $validated['locations_id'];
+
+                if ($oldLocationId) {
+                    Location::where('id', $oldLocationId)->update(['status' => 0]);
+                }
+                if ($newLocationId) {
+                    Location::where('id', $newLocationId)->update(['status' => 1]);
+                }
+
+                if ($newLocationId) {
+                    $recommendedLocationId = $request->input('recommended_locations_id');
+                    $actionTypeInput = $request->input('action_type');
+                    $actionType = in_array(strtoupper($actionTypeInput ?? ''), ['ASSIGN', 'MOVE'])
+                        ? strtoupper($actionTypeInput)
+                        : ($oldLocationId ? 'MOVE' : 'ASSIGN');
+
+                    $isMatch = ($recommendedLocationId && (int)$newLocationId === (int)$recommendedLocationId) ? 1 : 0;
+
+                    LocationRecommendationLog::create([
+                        'rolls_no' => $roll->no,
+                        'no_roll' => $validated['no_roll'] ?? $roll->no_roll,
+                        'users_id' => auth()->id() ?? $roll->users_id,
+                        'action_type' => $actionType,
+                        'previous_locations_id' => $oldLocationId,
+                        'recommended_locations_id' => $recommendedLocationId ? (int)$recommendedLocationId : null,
+                        'selected_locations_id' => (int)$newLocationId,
+                        'is_match' => $isMatch,
+                        'notes' => $request->input('notes'),
+                    ]);
+                }
+            }
+
+            $roll->update($validated);
 
             DB::commit();
 

@@ -55,4 +55,9 @@ class Roll extends Model
     {
         return $this->belongsTo(Jop::class, 'jops_id');
     }
+
+    public function locationRecommendationLogs()
+    {
+        return $this->hasMany(LocationRecommendationLog::class, 'rolls_no', 'no');
+    }
 }
