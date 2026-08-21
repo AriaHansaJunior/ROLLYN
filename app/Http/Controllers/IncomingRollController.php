@@ -58,9 +58,11 @@ class IncomingRollController extends Controller
             // 1. Roll Number & Primary Key
             $rollNumber = trim($request->rollNumber);
             
+            $isUpdate = $request->boolean('is_update');
+            
             // Check if roll already exists
             $existingRoll = Roll::where('no_roll', $rollNumber)->first();
-            if ($existingRoll) {
+            if ($existingRoll && !$isUpdate) {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
@@ -178,26 +180,46 @@ class IncomingRollController extends Controller
             // Weight
             $weightVal = $request->weight ? intval($request->weight) : 0;
 
-            // 3. Create Roll
-            $roll = Roll::create([
-                'no'                 => $newNo,
-                'no_roll'            => $rollNumber,
-                'form'               => $formNum,
-                'shifts_id'          => $shift->id,
-                'entry_date'         => now()->toDateString(),
-                'grades_id'          => $grade->id,
-                'plybonds_id'        => $plybondId,
-                'thicknesses_id'     => $thicknessId,
-                'bulk'               => $bulkVal,
-                'rolls_diameters_id' => $diameterId,
-                'weight'             => $weightVal,
-                'cores_id'           => $coreId,
-                'cobbs_id'           => $cobbId,
-                'exmaterial'         => $exMat,
-                'visual'             => $request->visual ?? 'OK',
-                'users_id'           => $userId,
-                'jops_id'            => $jopId,
-            ]);
+            // 3. Create or Update Roll
+            if ($existingRoll && $isUpdate) {
+                $existingRoll->update([
+                    'form'               => $formNum,
+                    'shifts_id'          => $shift->id,
+                    'grades_id'          => $grade->id,
+                    'plybonds_id'        => $plybondId,
+                    'thicknesses_id'     => $thicknessId,
+                    'bulk'               => $bulkVal,
+                    'rolls_diameters_id' => $diameterId,
+                    'weight'             => $weightVal,
+                    'cores_id'           => $coreId,
+                    'cobbs_id'           => $cobbId,
+                    'exmaterial'         => $exMat,
+                    'visual'             => $request->visual ?? 'OK',
+                    'users_id'           => $userId,
+                    'jops_id'            => $jopId,
+                ]);
+                $roll = $existingRoll;
+            } else {
+                $roll = Roll::create([
+                    'no'                 => $newNo,
+                    'no_roll'            => $rollNumber,
+                    'form'               => $formNum,
+                    'shifts_id'          => $shift->id,
+                    'entry_date'         => now()->toDateString(),
+                    'grades_id'          => $grade->id,
+                    'plybonds_id'        => $plybondId,
+                    'thicknesses_id'     => $thicknessId,
+                    'bulk'               => $bulkVal,
+                    'rolls_diameters_id' => $diameterId,
+                    'weight'             => $weightVal,
+                    'cores_id'           => $coreId,
+                    'cobbs_id'           => $cobbId,
+                    'exmaterial'         => $exMat,
+                    'visual'             => $request->visual ?? 'OK',
+                    'users_id'           => $userId,
+                    'jops_id'            => $jopId,
+                ]);
+            }
 
             DB::commit();
             session()->forget('incoming_roll_weight');

@@ -44,32 +44,65 @@ interface JopOption {
 
 export default function IncomingRoll() {
     const { jopList = [] } = usePage<any>().props;
-    const [step, setStep] = useState(0);
-    const [weight, setWeight] = useState<WeightState>({
-        value: 0,
-        display: "",
-        source: "none",
+    const [step, setStep] = useState(() => {
+        const saved = sessionStorage.getItem("incomingRoll_step");
+        return saved ? JSON.parse(saved) : 0;
+    });
+    const [weight, setWeight] = useState<WeightState>(() => {
+        const saved = sessionStorage.getItem("incomingRoll_weight");
+        return saved ? JSON.parse(saved) : {
+            value: 0,
+            display: "",
+            source: "none",
+        };
     });
     const [jops, setJops] = useState<JopOption[]>([]);
-
-    const [form, setForm] = useState({
-        jop: "",
-        grade: "",
-        gsm: "",
-        visual: "OK",
-        rollNumber: "",
-        formNumber: "",
-        plybond: "",
-        diameter: "",
-        width: "",
-        thickness: "",
-        bulk: "",
-        core: "76",
-        exMaterial: "OCC",
-        cobb: "",
-        shift: "Shift A",
-        pic: "",
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [savedRollNumber, setSavedRollNumber] = useState(() => {
+        return sessionStorage.getItem("incomingRoll_savedId") || "";
     });
+
+    const [form, setForm] = useState(() => {
+        const saved = sessionStorage.getItem("incomingRoll_form");
+        return saved ? JSON.parse(saved) : {
+            jop: "",
+            grade: "",
+            gsm: "",
+            visual: "OK",
+            rollNumber: "",
+            formNumber: "",
+            plybond: "",
+            diameter: "",
+            width: "",
+            thickness: "",
+            bulk: "",
+            core: "76",
+            exMaterial: "OCC",
+            cobb: "",
+            shift: "Shift A",
+            pic: "",
+        };
+    });
+
+    useEffect(() => {
+        sessionStorage.setItem("incomingRoll_step", JSON.stringify(step));
+    }, [step]);
+
+    useEffect(() => {
+        sessionStorage.setItem("incomingRoll_weight", JSON.stringify(weight));
+    }, [weight]);
+
+    useEffect(() => {
+        sessionStorage.setItem("incomingRoll_form", JSON.stringify(form));
+    }, [form]);
+
+    useEffect(() => {
+        if (savedRollNumber) {
+            sessionStorage.setItem("incomingRoll_savedId", savedRollNumber);
+        } else {
+            sessionStorage.removeItem("incomingRoll_savedId");
+        }
+    }, [savedRollNumber]);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -228,7 +261,7 @@ export default function IncomingRoll() {
 
         if (Object.keys(errs).length > 0) {
             SystemUI.toast({
-                message: "Harap isi semua kolom bertanda bintang (*)!",
+                message: "Please fill in all required fields!",
                 type: "error",
             });
             return false;
@@ -265,6 +298,7 @@ export default function IncomingRoll() {
                 (weight.display
                     ? parseFloat(weight.display.replace(/,/g, ""))
                     : 0),
+            is_update: form.rollNumber === savedRollNumber,
         };
 
         try {
@@ -281,6 +315,7 @@ export default function IncomingRoll() {
                 type: "success",
             });
 
+            setSavedRollNumber(form.rollNumber);
             setStep(3);
         } catch (err: any) {
             console.error("[Roll Save Error]:", err);
@@ -1016,7 +1051,7 @@ export default function IncomingRoll() {
                             </button>
                             <button
                                 className="btn btn-primary text-xs sm:text-sm px-4 py-2 lg:px-6 lg:py-2.5"
-                                onClick={handleSave}
+                                onClick={() => setShowConfirmModal(true)}
                             >
                                 <Save size={16} />{" "}
                                 <span>Save & Generate QR Label</span>
@@ -1033,14 +1068,15 @@ export default function IncomingRoll() {
                         @media print {
                             @page {
                                 size: auto;
-                                margin: 8mm;
+                                margin: 5mm;
                             }
                             
                             /* Reset page structure */
                             html, body {
                                 margin: 0 !important;
                                 padding: 0 !important;
-                                min-height: 100% !important;
+                                width: 100% !important;
+                                height: 100% !important;
                                 overflow: hidden !important;
                             }
 
@@ -1054,22 +1090,18 @@ export default function IncomingRoll() {
                                 visibility: visible !important;
                             }
                             
-                            /* Position label at top-left, width fits content */
+                            /* Label fills paper width, starts from top */
                             #printable-roll-label {
                                 position: absolute !important;
                                 left: 0 !important;
                                 top: 0 !important;
-                                transform: none !important;
-                                
-                                width: auto !important;
-                                max-width: 100% !important;
+                                width: 100% !important;
                                 box-sizing: border-box !important;
                                 
-                                border: 3px solid #0f172a !important;
-                                border-radius: 12px !important;
+                                border: 2px solid #0f172a !important;
+                                border-radius: 10px !important;
                                 background: white !important;
-                                padding: 16px 24px !important;
-                                margin: 0 !important;
+                                padding: 14px 20px !important;
                                 font-family: Arial, sans-serif !important;
                             }
 
@@ -1078,35 +1110,35 @@ export default function IncomingRoll() {
                                 display: flex !important;
                                 justify-content: space-between !important;
                                 align-items: center !important;
-                                border-bottom: 3px solid #0f172a !important;
-                                padding-bottom: 12px !important;
-                                margin-bottom: 20px !important;
+                                border-bottom: 2px solid #0f172a !important;
+                                padding-bottom: 8px !important;
+                                margin-bottom: 12px !important;
                             }
                             #printable-roll-label #label-header .logo-area {
                                 display: flex !important;
                                 align-items: center !important;
-                                gap: 10px !important;
+                                gap: 8px !important;
                             }
                             #printable-roll-label #label-header .logo-box {
-                                width: 36px !important;
-                                height: 36px !important;
+                                width: 28px !important;
+                                height: 28px !important;
                                 background: #1d4ed8 !important;
                                 color: white !important;
                                 font-weight: 900 !important;
-                                font-size: 18px !important;
+                                font-size: 14px !important;
                                 display: flex !important;
                                 align-items: center !important;
                                 justify-content: center !important;
-                                border-radius: 8px !important;
+                                border-radius: 6px !important;
                             }
                             #printable-roll-label #label-header .logo-text {
-                                font-size: 22px !important;
+                                font-size: 18px !important;
                                 font-weight: 900 !important;
                                 color: #0f172a !important;
                                 letter-spacing: 1px !important;
                             }
                             #printable-roll-label #label-header .label-title {
-                                font-size: 15px !important;
+                                font-size: 12px !important;
                                 font-weight: 800 !important;
                                 color: #0f172a !important;
                                 letter-spacing: 0.5px !important;
@@ -1117,14 +1149,14 @@ export default function IncomingRoll() {
                             #printable-roll-label #label-body {
                                 display: flex !important;
                                 flex-direction: row !important;
-                                gap: 30px !important;
+                                gap: 20px !important;
                                 align-items: flex-start !important;
                             }
                             #printable-roll-label #label-specs {
                                 flex: 1 !important;
                                 display: flex !important;
                                 flex-direction: column !important;
-                                gap: 10px !important; 
+                                gap: 5px !important; 
                             }
                             #printable-roll-label .spec-row {
                                 display: flex !important;
@@ -1133,19 +1165,19 @@ export default function IncomingRoll() {
                                 gap: 0 !important;
                             }
                             #printable-roll-label .spec-label {
-                                font-size: 14px !important;
+                                font-size: 11px !important;
                                 font-weight: 700 !important;
                                 color: #64748b !important;
-                                width: 130px !important; 
+                                width: 100px !important; 
                                 flex-shrink: 0 !important;
                             }
                             #printable-roll-label .spec-value {
-                                font-size: 15px !important;
+                                font-size: 12px !important;
                                 font-weight: 700 !important;
                                 color: #0f172a !important;
                             }
                             #printable-roll-label .spec-value.highlight {
-                                font-size: 18px !important;
+                                font-size: 14px !important;
                                 font-weight: 900 !important;
                                 color: #1e3a8a !important;
                             }
@@ -1155,25 +1187,25 @@ export default function IncomingRoll() {
                                 display: flex !important;
                                 flex-direction: column !important;
                                 align-items: center !important;
-                                gap: 8px !important;
+                                gap: 5px !important;
                                 flex-shrink: 0 !important;
-                                width: 200px !important;
+                                width: 150px !important;
                                 border: 2px solid #e2e8f0 !important;
-                                padding: 15px !important;
-                                border-radius: 12px !important;
+                                padding: 10px !important;
+                                border-radius: 10px !important;
                             }
                             #printable-roll-label #label-qr svg {
-                                width: 170px !important;
-                                height: 170px !important;
+                                width: 120px !important;
+                                height: 120px !important;
                             }
                             #printable-roll-label #label-qr .qr-caption {
-                                font-size: 11px !important;
+                                font-size: 9px !important;
                                 font-weight: 800 !important;
                                 color: #64748b !important;
                                 text-transform: uppercase !important;
-                                letter-spacing: 1px !important;
+                                letter-spacing: 0.5px !important;
                                 text-align: center !important;
-                                margin-top: 5px !important;
+                                margin-top: 3px !important;
                             }
                         }
                     `}</style>
@@ -1317,6 +1349,12 @@ export default function IncomingRoll() {
                         {/* Action buttons */}
                         <div className="flex flex-wrap gap-3 justify-center pt-2">
                             <button
+                                className="btn btn-secondary btn-md flex items-center gap-2 px-6 py-2.5 font-semibold cursor-pointer"
+                                onClick={() => setStep(1)}
+                            >
+                                <ArrowLeft size={16} /> <span>Edit Data</span>
+                            </button>
+                            <button
                                 className="btn btn-primary btn-md flex items-center gap-2 px-6 py-2.5 font-bold cursor-pointer"
                                 onClick={() => window.print()}
                             >
@@ -1325,6 +1363,11 @@ export default function IncomingRoll() {
                             <button
                                 className="btn btn-secondary btn-md flex items-center gap-2 px-6 py-2.5 font-semibold cursor-pointer"
                                 onClick={() => {
+                                    sessionStorage.removeItem("incomingRoll_step");
+                                    sessionStorage.removeItem("incomingRoll_weight");
+                                    sessionStorage.removeItem("incomingRoll_form");
+                                    sessionStorage.removeItem("incomingRoll_savedId");
+                                    setSavedRollNumber("");
                                     setStep(0);
                                     setWeight({
                                         value: 0,
@@ -1354,6 +1397,37 @@ export default function IncomingRoll() {
                             >
                                 <RefreshCw size={16} />{" "}
                                 <span>Register New Roll</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {showConfirmModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl animate-fade-in-up">
+                        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <Save size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 text-center mb-2">Confirm Data</h3>
+                        <p className="text-slate-500 text-center text-sm mb-6">
+                            Are you sure all filled data is correct? This process will save the data to the system and generate the QR Label.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                className="btn btn-secondary flex-1 flex justify-center"
+                                onClick={() => setShowConfirmModal(false)}
+                            >
+                                Review
+                            </button>
+                            <button
+                                className="btn btn-primary flex-1 flex justify-center"
+                                onClick={() => {
+                                    setShowConfirmModal(false);
+                                    handleSave();
+                                }}
+                            >
+                                Yes, Save
                             </button>
                         </div>
                     </div>
