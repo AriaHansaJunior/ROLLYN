@@ -1181,12 +1181,12 @@ export default function IncomingRoll() {
                         {/* Printable Roll Identification Label */}
                         <div
                             id="printable-roll-label"
-                            className="w-full max-w-3xl bg-white border-2 border-slate-900 rounded-2xl p-6 sm:p-8 shadow-lg text-slate-900 font-sans"
+                            className="w-full max-w-3xl bg-white border-2 border-slate-900 rounded-2xl p-4 sm:p-6 md:p-8 shadow-lg text-slate-900 font-sans"
                         >
                             {/* Label Header */}
                             <div
                                 id="label-header"
-                                className="flex items-center justify-between border-b-2 border-slate-900 pb-4 mb-5"
+                                className="flex flex-col lg:flex-row items-center justify-between border-b-2 border-slate-900 pb-4 mb-5 gap-3 lg:gap-0 text-center lg:text-left"
                             >
                                 <div className="logo-area flex items-center gap-2.5">
                                     <div className="logo-box w-9 h-9 rounded-lg bg-blue-700 text-white font-black text-sm flex items-center justify-center">
@@ -1204,12 +1204,12 @@ export default function IncomingRoll() {
                             {/* Label Body: Specs + QR Side by Side */}
                             <div
                                 id="label-body"
-                                className="flex flex-row gap-6 items-start"
+                                className="flex flex-col lg:flex-row gap-6 items-center lg:items-start w-full"
                             >
                                 {/* Specifications list */}
                                 <div
                                     id="label-specs"
-                                    className="flex-1 flex flex-col gap-2.5 text-sm"
+                                    className="w-full lg:flex-1 flex flex-col gap-2.5 text-sm"
                                 >
                                     <div className="spec-row flex gap-0">
                                         <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
@@ -1292,7 +1292,7 @@ export default function IncomingRoll() {
                                 {/* Dynamic QR Code */}
                                 <div
                                     id="label-qr"
-                                    className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200 shrink-0"
+                                    className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200 shrink-0 w-[200px]"
                                 >
                                     <QRCodeSVG
                                         value={JSON.stringify({
