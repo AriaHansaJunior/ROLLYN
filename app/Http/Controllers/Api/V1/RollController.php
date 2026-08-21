@@ -7,6 +7,7 @@ use App\Models\Roll;
 use App\Models\Location;
 use App\Models\LocationRecommendationLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -188,11 +189,12 @@ class RollController extends Controller
                         : ($oldLocationId ? 'MOVE' : 'ASSIGN');
 
                     $isMatch = ($recommendedLocationId && (int)$newLocationId === (int)$recommendedLocationId) ? 1 : 0;
+                    $userId = Auth::id() ?? ($roll->users_id ?? null);
 
                     LocationRecommendationLog::create([
                         'rolls_no' => $roll->no,
                         'no_roll' => $validated['no_roll'] ?? $roll->no_roll,
-                        'users_id' => auth()->id() ?? $roll->users_id,
+                        'users_id' => $userId,
                         'action_type' => $actionType,
                         'previous_locations_id' => $oldLocationId,
                         'recommended_locations_id' => $recommendedLocationId ? (int)$recommendedLocationId : null,

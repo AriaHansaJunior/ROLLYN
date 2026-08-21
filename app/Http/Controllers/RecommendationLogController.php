@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\LocationRecommendationLog;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class RecommendationLogController extends Controller
@@ -11,7 +13,9 @@ class RecommendationLogController extends Controller
     public function index(Request $request)
     {
         // Enforce admin-only access
-        if (strtolower(auth()->user()->role ?? '') !== 'admin') {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user() ?? $request->user();
+        if (!$currentUser || strtolower($currentUser->role ?? '') !== 'admin') {
             abort(403, 'Unauthorized access. Administrator role is required to view recommendation logs.');
         }
 
