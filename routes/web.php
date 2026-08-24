@@ -8,6 +8,7 @@ use App\Http\Controllers\RollController;
 use App\Http\Controllers\IncomingRollController;
 use App\Http\Controllers\DesignUiController;
 use App\Http\Controllers\SpectrumEngineController;
+use App\Http\Controllers\ShipmentController;
 
 Route::get('/', function () {
     return redirect('/dashboard');
@@ -49,6 +50,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/roll-detail/{id?}', [RollController::class, 'show']);
     Route::put('/rolls/{id}', [RollController::class, 'update']);
     Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
+
+    Route::get('/shipments', [ShipmentController::class, 'index']);
+    Route::post('/shipments', [ShipmentController::class, 'store']);
+    Route::post('/shipments/qc/scan', [ShipmentController::class, 'qcScan']);
+    Route::post('/shipments/qc/reject', [ShipmentController::class, 'qcReject']);
 
     Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
 });

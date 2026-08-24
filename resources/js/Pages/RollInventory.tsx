@@ -45,6 +45,8 @@ interface Props {
   grades?: OptionItem[]
   locations?: OptionItem[]
   jops?: OptionItem[]
+  customers?: { id: number, customer: string }[]
+  qcUsers?: { id: number, name: string }[]
 }
 
 const statusColors: Record<string, { bg: string; color: string }> = {
@@ -60,7 +62,9 @@ export default function RollInventory({
   shifts = [],
   grades = [],
   locations = [],
-  jops = []
+  jops = [],
+  customers = [],
+  qcUsers = []
 }: Props) {
   const { props } = usePage()
   const authUser = (props.auth as any)?.user
@@ -80,6 +84,15 @@ export default function RollInventory({
 
   const [lastScannedRoll, setLastScannedRoll] = useState<RollItem | null>(null)
   const [showQRScanner, setShowQRScanner] = useState(false)
+
+  // Shipment Creation State
+  const [showShipmentModal, setShowShipmentModal] = useState(false)
+  const [shipmentForm, setShipmentForm] = useState({
+    customers_id: '',
+    qc_users_id: '',
+    shipment_date: new Date().toISOString().slice(0, 10),
+  })
+  const [shipmentErrors, setShipmentErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (isQC) {
@@ -176,20 +189,40 @@ export default function RollInventory({
     }
   }
 
-  function handleConfirmShipments() {
+  function openShipmentModal() {
     if (checkedRollIds.length === 0) {
       SystemUI.toast({ message: 'No rolls selected for shipment.', type: 'warning' })
       return
     }
+    setShipmentErrors({})
+    setShowShipmentModal(true)
+  }
 
-    router.post('/rolls/ship', { roll_ids: checkedRollIds }, {
+  function handleConfirmShipments() {
+    if (!shipmentForm.customers_id || !shipmentForm.qc_users_id || !shipmentForm.shipment_date) {
+      setShipmentErrors({
+        customers_id: !shipmentForm.customers_id ? 'Customer is required' : '',
+        qc_users_id: !shipmentForm.qc_users_id ? 'QC Officer is required' : '',
+      })
+      return
+    }
+
+    router.post('/shipments', { 
+      rolls: checkedRollIds,
+      customers_id: shipmentForm.customers_id,
+      qc_users_id: shipmentForm.qc_users_id,
+      shipment_date: shipmentForm.shipment_date
+    }, {
       onSuccess: () => {
-        SystemUI.toast({ message: 'Shipments confirmed successfully!', type: 'success' })
+        SystemUI.toast({ message: 'Shipments created successfully!', type: 'success' })
         setCheckedRollIds([])
         setRemovedShipmentIds([])
+        setShowShipmentModal(false)
+        setViewMode('inventory')
       },
-      onError: () => {
-        SystemUI.toast({ message: 'Failed to process shipment.', type: 'error' })
+      onError: (errs) => {
+        setShipmentErrors(errs as any)
+        SystemUI.toast({ message: 'Failed to create shipment.', type: 'error' })
       }
     })
   }
@@ -622,13 +655,13 @@ export default function RollInventory({
         </div>
       </div>
 
-      {viewMode === 'shipments' && (
+      {checkedRollIds.length > 0 && !isQC && (
         <div className="flex justify-end pt-2">
           <button
             className="btn btn-primary btn-md bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg shadow-sm cursor-pointer transition-colors"
-            onClick={handleConfirmShipments}
+            onClick={openShipmentModal}
           >
-            Confirm Shipments
+            Create Shipment ({checkedRollIds.length})
           </button>
         </div>
       )}
@@ -792,6 +825,79 @@ export default function RollInventory({
         onClose={() => setShowQRScanner(false)}
         onScanSuccess={handleQRScanSuccess}
       />
+
+      {/* Create Shipment Modal */}
+      {showShipmentModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-md p-5 bg-white rounded-2xl shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Create New Shipment</h3>
+              <button onClick={() => setShowShipmentModal(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Select Customer <span className="text-red-500">*</span></label>
+                <select
+                  value={shipmentForm.customers_id}
+                  onChange={e => setShipmentForm(f => ({ ...f, customers_id: e.target.value }))}
+                  className="form-input w-full"
+                >
+                  <option value="">-- Choose Customer --</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{c.customer}</option>
+                  ))}
+                </select>
+                {shipmentErrors.customers_id && <p className="text-red-600 text-[11px] mt-0.5">{shipmentErrors.customers_id}</p>}
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Assign QC Officer <span className="text-red-500">*</span></label>
+                <select
+                  value={shipmentForm.qc_users_id}
+                  onChange={e => setShipmentForm(f => ({ ...f, qc_users_id: e.target.value }))}
+                  className="form-input w-full"
+                >
+                  <option value="">-- Choose QC Officer --</option>
+                  {qcUsers.map(qc => (
+                    <option key={qc.id} value={qc.id}>{qc.username || (qc as any).name}</option>
+                  ))}
+                </select>
+                {shipmentErrors.qc_users_id && <p className="text-red-600 text-[11px] mt-0.5">{shipmentErrors.qc_users_id}</p>}
+              </div>
+
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Shipment Date <span className="text-red-500">*</span></label>
+                <input
+                  type="date"
+                  value={shipmentForm.shipment_date}
+                  onChange={e => setShipmentForm(f => ({ ...f, shipment_date: e.target.value }))}
+                  className="form-input w-full"
+                />
+                {shipmentErrors.shipment_date && <p className="text-red-600 text-[11px] mt-0.5">{shipmentErrors.shipment_date}</p>}
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2">
+                <p className="text-xs text-blue-800">
+                  You are about to create a shipment with <strong>{checkedRollIds.length}</strong> rolls. 
+                  These rolls will be marked for QC checking.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
+              <button className="btn btn-secondary text-xs px-3 py-1.5" onClick={() => setShowShipmentModal(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary text-xs px-3 py-1.5" onClick={handleConfirmShipments}>
+                Create Shipment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
