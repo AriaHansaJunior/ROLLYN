@@ -320,6 +320,80 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
         </div>
       </div>
 
+      {/* SPECTRUM AI Recommendation Intelligence & Feature Breakdown */}
+      <div className="card p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-md border border-indigo-500/30">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-500/30 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-300 flex items-center justify-center border border-indigo-400/40">
+              <Sparkles size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                SPECTRUM Machine Learning Decision Factors
+                <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
+                  Adaptive Model
+                </span>
+              </h3>
+              <p className="text-xs text-slate-300">
+                Sistem secara cerdas menggabungkan atribut fisik roll dengan pola kebiasaan operator untuk menentukan slot optimal
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-3 text-xs">
+          <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-2.5">
+            <div className="flex justify-between items-center text-slate-400 text-[11px] font-bold">
+              <span>Grade Cluster</span>
+              <span className="text-indigo-400 font-extrabold">30%</span>
+            </div>
+            <p className="text-slate-300 text-[11px] mt-1 font-medium leading-tight">
+              Mengelompokkan roll sejenis dalam bay yang sama
+            </p>
+          </div>
+
+          <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-2.5">
+            <div className="flex justify-between items-center text-slate-400 text-[11px] font-bold">
+              <span>Weight & Tier Physics</span>
+              <span className="text-blue-400 font-extrabold">25%</span>
+            </div>
+            <p className="text-slate-300 text-[11px] mt-1 font-medium leading-tight">
+              Beban berat di Tier 1, tumpukan bertahap aman
+            </p>
+          </div>
+
+          <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-2.5">
+            <div className="flex justify-between items-center text-slate-400 text-[11px] font-bold">
+              <span>Operator Habit Learning</span>
+              <span className="text-emerald-400 font-extrabold">25%</span>
+            </div>
+            <p className="text-slate-300 text-[11px] mt-1 font-medium leading-tight">
+              Mempelajari kebiasaan penempatan oleh tiap PIC
+            </p>
+          </div>
+
+          <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-2.5">
+            <div className="flex justify-between items-center text-slate-400 text-[11px] font-bold">
+              <span>JOP Batching</span>
+              <span className="text-amber-400 font-extrabold">15%</span>
+            </div>
+            <p className="text-slate-300 text-[11px] mt-1 font-medium leading-tight">
+              Sinkronisasi pesanan untuk percepatan dispatching
+            </p>
+          </div>
+
+          <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-2.5 col-span-2 sm:col-span-1">
+            <div className="flex justify-between items-center text-slate-400 text-[11px] font-bold">
+              <span>Move Proximity</span>
+              <span className="text-purple-400 font-extrabold">20% (Move)</span>
+            </div>
+            <p className="text-slate-300 text-[11px] mt-1 font-medium leading-tight">
+              Optimasi jarak perpindahan & konsolidasi tumpukan
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Main Table Card */}
       <div className="card p-4 sm:p-5 bg-white border border-slate-200/80 rounded-2xl shadow-xs space-y-4">
         {/* Filters Toolbar */}

@@ -55,6 +55,8 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/api/spectrum/stats', [SpectrumEngineController::class, 'stats']);
 Route::get('/api/spectrum/retrain-status', [SpectrumEngineController::class, 'retrainStatus']);
+Route::get('/api/spectrum/insights', [SpectrumEngineController::class, 'modelInsights']);
+Route::post('/api/spectrum/recommend-location', [SpectrumEngineController::class, 'recommendLocation']);
 
 Route::withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->group(function () {

@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react'
-import { ArrowLeft, Package, CheckCircle, Trash2, Edit, X, MapPin } from 'lucide-react'
-import { router } from '@inertiajs/react'
+import { ArrowLeft, Edit, Trash2, MapPin, X, Check, Eye, AlertCircle, Sparkles, MoveRight } from 'lucide-react'
+import { Link, router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
+import SpectrumSlotSelectorModal from '@/Components/SpectrumSlotSelectorModal'
 
 interface RollDetailItem {
   id: string
@@ -208,8 +209,6 @@ export default function RollDetail({
     }
 
     setModalMode('assign')
-    setSelectedLocationId('')
-    setSelectedSlotCode('')
     setShowAssignModal(true)
   }
 
@@ -227,33 +226,26 @@ export default function RollDetail({
     }
 
     setModalMode('move')
-    setSelectedLocationId('')
-    setSelectedSlotCode('')
     setShowAssignModal(true)
   }
 
-  function confirmAssignLocation() {
-    if (!selectedLocationId) {
-      SystemUI.toast({ message: 'Please click on a valid available slot in the warehouse map grid.', type: 'error' })
-      return
-    }
-
-    const actionText = modalMode === 'move' ? 'moved' : 'assigned'
+  function handleConfirmSpectrumSlot(selectedId: string, recommendedId: string | null, actionType: 'ASSIGN' | 'MOVE') {
+    const actionText = actionType === 'MOVE' ? 'moved' : 'assigned'
 
     router.put(`/rolls/${currentRoll.raw_id}`, {
-      locations_id: selectedLocationId,
-      recommended_locations_id: recommendedSlot ? String(recommendedSlot.id) : null,
-      action_type: modalMode === 'move' ? 'MOVE' : 'ASSIGN'
+      locations_id: selectedId,
+      recommended_locations_id: recommendedId,
+      action_type: actionType
     }, {
       onSuccess: () => {
         SystemUI.toast({
-          message: `Roll ${currentRoll.id} successfully ${actionText} to slot ${selectedSlotCode}!`,
+          message: `Roll ${currentRoll.id} successfully ${actionText}!`,
           type: 'success'
         })
         setShowAssignModal(false)
       },
       onError: () => {
-        SystemUI.toast({ message: `Failed to ${modalMode} location slot.`, type: 'error' })
+        SystemUI.toast({ message: `Failed to ${actionType.toLowerCase()} location slot.`, type: 'error' })
       }
     })
   }
@@ -536,165 +528,17 @@ export default function RollDetail({
         </div>
       )}
 
-      {/* Interactive Warehouse Map Slot Selection Modal */}
-      {showAssignModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="card w-full max-w-4xl p-4 sm:p-6 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex justify-between items-start border-b border-slate-100 pb-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
-                    E17
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                      {modalMode === 'move' ? 'Move Roll Location (Relocate)' : 'Select Warehouse Location Slot'}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      {modalMode === 'move'
-                        ? `Current Slot: ${currentRoll.location} ➔ Select a new valid warehouse slot below`
-                        : 'Warehouse E17 Grid Layout — Click an available slot card to assign'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <button onClick={() => setShowAssignModal(false)} className="text-slate-400 hover:text-slate-700 p-1.5 cursor-pointer rounded-lg hover:bg-slate-100">
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Roll Info Banner */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-4">
-                <div>
-                  <span className="text-slate-400 font-medium">Roll Number: </span>
-                  <span className="font-bold text-blue-700 font-mono text-sm ml-1">{currentRoll.id}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 font-medium">Grade: </span>
-                  <span className="font-semibold text-slate-800 ml-1">{currentRoll.grade} ({currentRoll.gsm} g/m²)</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 font-medium">Weight: </span>
-                  <span className="font-mono text-slate-800 ml-1">{currentRoll.weight} kg</span>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500 font-medium">Selected Slot: </span>
-                  {selectedSlotCode ? (
-                    <span className="font-mono font-bold text-blue-700 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded text-xs">{selectedSlotCode}</span>
-                  ) : (
-                    <span className="italic text-slate-400">None Clicked</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500 font-medium">Recommendation Slot: </span>
-                  <span className="font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-xs">
-                    {recommendedSlot?.code || 'E17-04-1 (Auto)'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Interactive Warehouse Grid */}
-            <div className="card overflow-x-auto p-3 sm:p-4 bg-slate-50/50 border border-slate-200/80 rounded-xl">
-              <div className="flex flex-col gap-2.5 min-w-[760px]">
-                {/* Column Headers 01 - 12 */}
-                <div className="grid grid-cols-12 gap-2 text-center text-[11px] font-bold text-slate-400">
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(col => (
-                    <div key={col}>{String(col).padStart(2, '0')}</div>
-                  ))}
-                </div>
-
-                {/* Tier Rows 1 - 4 */}
-                {[1, 2, 3, 4].map(tier => (
-                  <div key={tier} className="grid grid-cols-12 gap-2">
-                    {Array.from({ length: 12 }, (_, colIdx) => {
-                      const col = colIdx + 1
-                      const code = `E17-${String(col).padStart(2, '0')}-${tier}`
-                      const slot = fullMapSlots.find(s => s.code === code) || { id: 0, code, status: 0 }
-                      const isSelected = String(selectedLocationId) === String(slot.id)
-                      const isOccupied = slot.status !== 0
-                      const isSelectable = !isOccupied && isTierSelectable(col, tier)
-
-                      return (
-                        <button
-                          key={code}
-                          type="button"
-                          disabled={!isSelectable}
-                          onClick={() => {
-                            if (!isSelectable && !isOccupied) {
-                              const belowCode = `E17-${String(col).padStart(2, '0')}-${tier - 1}`
-                              SystemUI.toast({
-                                message: `Cannot select ${code}. Slot ${belowCode} underneath must be filled first!`,
-                                type: 'warning',
-                                duration: 3500
-                              })
-                              return
-                            }
-                            setSelectedLocationId(String(slot.id))
-                            setSelectedSlotCode(code)
-                          }}
-                          className={`flex items-center justify-center py-2.5 px-0.5 min-h-[42px] rounded-xl text-[9px] sm:text-[10px] font-bold transition-all whitespace-nowrap leading-none ${
-                            isSelected
-                              ? 'bg-blue-600 border-2 border-blue-700 text-white ring-2 ring-blue-500 ring-offset-1 scale-105 z-10 shadow-md font-extrabold cursor-pointer'
-                              : isOccupied
-                              ? 'bg-slate-200 border border-slate-300 text-slate-400 cursor-not-allowed opacity-60'
-                              : !isSelectable
-                              ? 'bg-slate-100 border border-dashed border-slate-300 text-slate-400 cursor-not-allowed opacity-50'
-                              : 'bg-white border border-slate-300 text-slate-800 hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 hover:scale-105 cursor-pointer shadow-xs'
-                          }`}
-                          title={!isSelectable && !isOccupied ? `Fill E17-${String(col).padStart(2, '0')}-${tier - 1} below first` : code}
-                        >
-                          <span className="whitespace-nowrap tracking-tighter">{code}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Status Legend */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs">
-              <div className="flex flex-wrap gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded bg-white border border-slate-300" />
-                  <span className="text-slate-600 text-[11px]">Free Space (Available)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded bg-slate-100 border border-dashed border-slate-300" />
-                  <span className="text-slate-600 text-[11px]">Blocked (Fill Lower Tier First)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded bg-slate-300 border border-slate-400" />
-                  <span className="text-slate-600 text-[11px]">Occupied / Slotted</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded bg-blue-600 border border-blue-700" />
-                  <span className="text-slate-600 text-[11px] font-bold">Selected Slot</span>
-                </div>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex gap-2 justify-end">
-                <button className="btn btn-secondary text-xs px-4 py-2 cursor-pointer" onClick={() => setShowAssignModal(false)}>
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary text-xs px-4 py-2 cursor-pointer font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!selectedLocationId}
-                  onClick={confirmAssignLocation}
-                >
-                  {modalMode === 'move' ? 'Confirm Move Slot' : 'Confirm Assign Slot'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* SPECTRUM AI Slot Selector Modal */}
+      <SpectrumSlotSelectorModal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        onConfirm={handleConfirmSpectrumSlot}
+        roll={currentRoll}
+        locations={locations}
+        mode={modalMode}
+        currentLocationId={currentRoll?.locations_id}
+        currentLocationCode={currentRoll?.location}
+      />
     </div>
   )
 }
