@@ -53,7 +53,7 @@ interface RackConfig {
   specialRowSpan?: number
 }
 
-const RACK_CONFIGS: RackConfig[] = [
+const A_RACK_CONFIGS: RackConfig[] = [
   // A17: 4 × 6
   { rack: 'A17', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
   // A16: LOADING DOCK 1 — 4 × 6
@@ -90,7 +90,46 @@ const RACK_CONFIGS: RackConfig[] = [
   { rack: 'A1', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
 ];
 
+const E_RACK_CONFIGS: RackConfig[] = [
+  { rack: 'E17', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E16', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E15', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E14', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E13', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E12', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E11', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E10', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E9', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E8', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E7', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E6', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E5', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E4', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E3', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'E2', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+];
+
+const B_KANAN_RACK_CONFIGS: RackConfig[] = [
+  { rack: 'B35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+  { rack: 'B34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+  { rack: 'B33', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B32', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B31', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B30', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B29', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B28', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B27', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B26', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B25', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B24', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B23', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B22', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'B21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+];
+
 export default function WarehouseMap({ locations = [] }: Props) {
+  const [activeArea, setActiveArea] = useState<'A' | 'E' | 'B_KANAN'>('A')
+
   const [selectedSlotCodes, setSelectedSlotCodes] = useState<string[]>([])
   const [editStatus, setEditStatus] = useState<number>(0)
   const [editStackCount, setEditStackCount] = useState<string>('')
@@ -155,6 +194,17 @@ export default function WarehouseMap({ locations = [] }: Props) {
     return map
   }, [locations])
 
+  // Determine the active config list
+  const currentConfig = useMemo(() => {
+    if (activeArea === 'A') return A_RACK_CONFIGS
+    if (activeArea === 'E') return E_RACK_CONFIGS
+    return B_KANAN_RACK_CONFIGS
+  }, [activeArea])
+
+  const activeConfigRacks = useMemo(() => {
+    return new Set(currentConfig.map(c => c.rack))
+  }, [currentConfig])
+
   // Derived summaries
   const { totalRolls, totalWeight, specs, totalSlots } = useMemo(() => {
     let rollsCount = 0
@@ -165,8 +215,9 @@ export default function WarehouseMap({ locations = [] }: Props) {
     const rwSet = new Set<number>()
 
     slotMap.forEach(slot => {
-      // Only count slots that belong to Kolom A
-      if (slot.code.startsWith('A')) {
+      // Only count slots that belong to the active area
+      const rackPart = slot.code.split('-')[0]
+      if (activeConfigRacks.has(rackPart)) {
         slotsCount++
         if (slot.rollId) {
           rollsCount++
@@ -213,7 +264,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
           const col = parts[1]
           const row = parts[2]
           
-          const rackConfig = RACK_CONFIGS.find(r => r.rack === rack)
+          const rackConfig = currentConfig.find(r => r.rack === rack)
           if (rackConfig) {
             if (selectRowsOn) {
               const colConfig = rackConfig.cols.find(c => c.col.toString() === col)
@@ -465,14 +516,41 @@ export default function WarehouseMap({ locations = [] }: Props) {
         {/* Warehouse Grid Container */}
         <div className="flex-1 min-w-0 transition-all duration-500 ease-in-out transform-gpu bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 flex flex-col">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
-                A
-              </div>
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-slate-800">
+            <div className="flex items-center gap-4">
+              <div className="flex bg-slate-100 p-1 rounded-lg">
+                <button
+                  onClick={() => {
+                    setActiveArea('A')
+                    setSelectedSlotCodes([])
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                    activeArea === 'A' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
                   Kolom A
-                </h3>
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('E')
+                    setSelectedSlotCodes([])
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                    activeArea === 'E' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Kolom E
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('B_KANAN')
+                    setSelectedSlotCodes([])
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                    activeArea === 'B_KANAN' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Gudang B (KANAN)
+                </button>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -531,7 +609,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
           {/* Grid Area — Horizontal scroll with large boxes */}
           <div className="w-full overflow-x-auto pb-4 pt-2 px-2 snap-x">
             <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
-              {RACK_CONFIGS.map(config => renderRack(config))}
+              {currentConfig.map(config => renderRack(config))}
             </div>
           </div>
 
@@ -628,7 +706,9 @@ export default function WarehouseMap({ locations = [] }: Props) {
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-500">Warehouse Area</span>
-                    <span className="font-medium text-slate-800">Kolom A</span>
+                    <span className="font-medium text-slate-800">
+                      {activeArea === 'B_KANAN' ? 'Gudang B (KANAN)' : `Kolom ${activeArea}`}
+                    </span>
                   </div>
                 </div>
               ) : (
