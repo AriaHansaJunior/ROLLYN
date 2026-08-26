@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { ArrowLeft, Edit, Trash2, MapPin, X, Check, Eye, AlertCircle, Sparkles, MoveRight } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, MapPin, X, Check, Eye, AlertCircle, Sparkles, MoveRight, CheckCircle, Package } from 'lucide-react'
 import { Link, router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import SpectrumSlotSelectorModal from '@/Components/SpectrumSlotSelectorModal'
