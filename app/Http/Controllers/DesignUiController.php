@@ -14,7 +14,7 @@ class DesignUiController extends Controller
     public function warehouseMap()
     {
         $locations = Location::with(['rolls' => function($query) {
-            $query->latest('created_at');
+            $query->with(['grade', 'jop.gsm', 'jop.rollsWidth'])->latest('created_at');
         }])->get();
         return Inertia::render('WarehouseMap', ['locations' => $locations]);
     }

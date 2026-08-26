@@ -50,6 +50,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/roll-detail/{id?}', [RollController::class, 'show']);
     Route::put('/rolls/{id}', [RollController::class, 'update']);
     Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
+    Route::put('/locations/bulk-update', [\App\Http\Controllers\LocationController::class, 'bulkUpdate']);
+    Route::put('/locations/{id}', [\App\Http\Controllers\LocationController::class, 'update']);
 
     Route::get('/shipments', [ShipmentController::class, 'index']);
     Route::post('/shipments', [ShipmentController::class, 'store']);

@@ -87,7 +87,11 @@ export default function SystemUIContainer() {
                                 )}
                                 <button
                                     onClick={handleConfirm}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer"
+                                    className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer ${
+                                        modal.confirmText?.toLowerCase().includes('delete')
+                                            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                                            : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                                    }`}
                                 >
                                     {modal.confirmText || (modal.type === 'alert' ? 'OK' : 'Confirm')}
                                 </button>
