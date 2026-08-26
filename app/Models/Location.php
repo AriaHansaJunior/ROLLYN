@@ -21,7 +21,6 @@ class Location extends Model
         if ($count === 0) {
             $this->update([
                 'status' => 0, // 0 = Free Space (Kosong)
-                'stack_count' => null
             ]);
             return;
         }
@@ -40,7 +39,6 @@ class Location extends Model
 
         $this->update([
             'status' => $status,
-            'stack_count' => $stackLabel
         ]);
     }
 }

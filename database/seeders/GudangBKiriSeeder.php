@@ -39,7 +39,6 @@ class GudangBKiriSeeder extends Seeder
                     $locations[] = [
                         'location' => $locationCode,
                         'status' => 0, // 0 = Free Space
-                        'stack_count' => null,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];

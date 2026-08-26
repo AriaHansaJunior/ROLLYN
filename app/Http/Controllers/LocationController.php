@@ -17,7 +17,6 @@ class LocationController extends Controller
 
         $validated = $request->validate([
             'status' => 'nullable|integer',
-            'stack_count' => 'nullable|string|max:10',
         ]);
 
         $location->update($validated);
@@ -30,10 +29,9 @@ class LocationController extends Controller
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:locations,id',
             'status' => 'nullable|integer',
-            'stack_count' => 'nullable|string|max:10',
         ]);
 
-        $updateData = $request->only(['status', 'stack_count']);
+        $updateData = $request->only(['status']);
 
         if (!empty($updateData)) {
             Location::whereIn('id', $validated['ids'])->update($updateData);

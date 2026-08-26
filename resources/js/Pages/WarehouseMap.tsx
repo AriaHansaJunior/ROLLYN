@@ -9,7 +9,6 @@ interface LocationItem {
   id: number
   location: string
   status: number
-  stack_count?: string | null
   rolls?: { no: number; no_roll: string; weight?: number; grade?: any; jop?: any }[]
 }
 
@@ -36,7 +35,6 @@ interface Slot {
   id: number
   code: string
   status: SlotStatus
-  stackCount?: string | null
   rollId?: number
   rollNumber?: string
   weight?: number
@@ -130,6 +128,21 @@ const E_RACK_CONFIGS: RackConfig[] = [
   { rack: 'E2', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
 ];
 
+const G_RACK_CONFIGS: RackConfig[] = [
+  { rack: 'G12', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G11', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G10', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G9', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G8', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G7', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G6', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G5', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G4', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G3', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G2', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
+  { rack: 'G1', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }] },
+];
+
 const B_KANAN_RACK_CONFIGS: RackConfig[] = [
   { rack: 'B35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
   { rack: 'B34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
@@ -172,11 +185,64 @@ const B_KIRI_RACK_CONFIGS: RackConfig[] = [
   { rack: 'B21L', label: 'B21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
 ];
 
+const C_KANAN_RACK_CONFIGS: RackConfig[] = [
+  { rack: 'C35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+  { rack: 'C34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+  { rack: 'C33', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C32', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C31', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C30', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C29', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C28', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C27', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C26', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C25', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C24', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C23', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C22', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+];
+
+const C_KIRI_RACK_CONFIGS: RackConfig[] = [
+  { rack: 'C35L', label: 'C35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+  { rack: 'C34L', label: 'C34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+  { rack: 'C33L', label: 'C33', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C32L', label: 'C32', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C31L', label: 'C31', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C30L', label: 'C30', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C29L', label: 'C29', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C28L', label: 'C28', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C27L', label: 'C27', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C26L', label: 'C26', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C25L', label: 'C25', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C24L', label: 'C24', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C23L', label: 'C23', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C22L', label: 'C22', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
+  { rack: 'C21L', label: 'C21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
+];
+
+const H_RACK_CONFIGS: RackConfig[] = [
+  { rack: 'H8', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
+  { rack: 'H7', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
+  { rack: 'H6', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
+  { rack: 'H5', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
+  { rack: 'H4', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
+  { rack: 'H3', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
+  { rack: 'H2', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
+  { rack: 'H1', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
+];
+
 export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Props) {
-  const [activeArea, setActiveArea] = useState<'A' | 'E' | 'B_KANAN' | 'B_KIRI'>('A')
+  const [activeArea, setActiveArea] = useState<'A' | 'E' | 'G' | 'H' | 'B_KANAN' | 'B_KIRI' | 'C_KANAN' | 'C_KIRI'>(() => {
+    return (localStorage.getItem('rollyn_active_warehouse_area') as any) || 'A'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('rollyn_active_warehouse_area', activeArea)
+  }, [activeArea])
+
   const [selectedSlotCodes, setSelectedSlotCodes] = useState<string[]>([])
   const [editStatus, setEditStatus] = useState<number>(0)
-  const [editStackCount, setEditStackCount] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState(false)
   const [multiSelectMode, setMultiSelectMode] = useState(false)
 
@@ -235,7 +301,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         id: loc.id,
         code: loc.location,
         status: (loc.status >= 0 && loc.status <= 6 ? loc.status : 0) as SlotStatus,
-        stackCount: loc.stack_count || (rolls.length > 0 ? (rolls.length === 1 ? '✓' : String(rolls.length)) : null),
         rollId: primaryRoll?.no,
         rollNumber: primaryRoll?.no_roll,
         weight: primaryRoll?.weight,
@@ -257,8 +322,12 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
   // Determine the active config list
   const currentConfig = useMemo(() => {
     if (activeArea === 'E') return E_RACK_CONFIGS
+    if (activeArea === 'G') return G_RACK_CONFIGS
+    if (activeArea === 'H') return H_RACK_CONFIGS
     if (activeArea === 'B_KANAN') return B_KANAN_RACK_CONFIGS
     if (activeArea === 'B_KIRI') return B_KIRI_RACK_CONFIGS
+    if (activeArea === 'C_KANAN') return C_KANAN_RACK_CONFIGS
+    if (activeArea === 'C_KIRI') return C_KIRI_RACK_CONFIGS
     return A_RACK_CONFIGS
   }, [activeArea])
 
@@ -405,7 +474,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     router.put(`/locations/bulk-update`, {
       ids: selectedSlots.map(s => s.id).filter(id => id > 0),
       status: editStatus,
-      stack_count: editStackCount === '' ? null : editStackCount,
     }, {
       preserveScroll: true,
       onSuccess: () => {
@@ -438,8 +506,12 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
       action_type: 'ASSIGN',
     }, {
       preserveScroll: true,
-      onSuccess: () => {
+      onSuccess: (page: any) => {
         setIsAssigningFromSidebar(false)
+        if (page.props.flash?.error) {
+          SystemUI.toast({ message: page.props.flash.error, type: 'error' })
+          return
+        }
         setSelectedUnslottedRollId('')
         SystemUI.toast({
           message: `Roll berhasil ditempatkan di slot ${targetSlot.code} (Tumpukan ke-${targetSlot.rollsList.length + 1})!`,
@@ -459,7 +531,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
       const lastSlot = selectedSlots[selectedSlots.length - 1]
       if (lastSlot) {
         setEditStatus(lastSlot.status)
-        setEditStackCount(lastSlot.stackCount || '')
       }
     }
   }, [selectedSlotCodes])
@@ -528,10 +599,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 {rollsCount}/4
               </span>
             </div>
-          ) : slot.stackCount ? (
-            <span className="mt-1 text-[9px] font-black text-slate-800 bg-white/60 px-1 py-0.2 rounded shadow-sm leading-none">
-              {slot.stackCount}
-            </span>
           ) : null}
         </button>
 
@@ -569,10 +636,10 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     if (rackMaxRows === 0) return null
 
     return (
-      <div key={rack} className="flex-shrink-0 w-[220px]">
+      <div key={rack} className="flex-shrink-0 w-[228px] border border-slate-200 bg-slate-50/30 rounded-xl p-1.5 shadow-sm">
         {/* Rack Header */}
-        <div className="text-center font-bold text-slate-700 bg-slate-100 py-1.5 rounded-t-lg mb-1 text-sm border border-slate-200">
-          Rack {label || rack}
+        <div className="text-center font-bold text-slate-700 bg-slate-100 py-1.5 rounded-lg mb-1.5 text-sm border border-slate-200 uppercase">
+          {label || rack}
         </div>
         {/* Sub-column headers */}
         <div className="grid grid-cols-4 gap-1.5 mb-2">
@@ -636,7 +703,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Warehouse Map</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Denah tata letak gudang Kolom A — Kapasitas hingga 4 roll per slot</p>
+          <p className="text-xs text-slate-500 mt-0.5">Warehouse layout map Column A — Capacity up to 4 rolls per slot</p>
         </div>
       </div>
 
@@ -646,9 +713,9 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <MapPin size={18} className="text-blue-600 shrink-0" />
             <div className="min-w-0">
-              <div className="text-sm font-bold text-blue-900">Assign Roll Mode (Kapasitas maks 4 roll)</div>
+              <div className="text-sm font-bold text-blue-900">Assign Roll Mode (Max capacity 4 rolls)</div>
               <div className="text-xs text-blue-700 truncate">
-                Assigning roll <span className="font-bold font-mono">{assignRollNo}</span> — Pilih slot yang tersedia (&lt; 4 roll) di peta
+                Assigning roll <span className="font-bold font-mono">{assignRollNo}</span> — Select an available slot (&lt; 4 rolls) on the map
               </div>
             </div>
           </div>
@@ -656,7 +723,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
             className="btn btn-secondary text-xs px-3 py-1.5 shrink-0 cursor-pointer"
             onClick={cancelAssignMode}
           >
-            Batal Mode Assign
+            Cancel Assign Mode
           </button>
         </div>
       )}
@@ -670,13 +737,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
-                  {activeArea.includes('B_') ? 'B' : activeArea}
+                  {activeArea.includes('B_') ? 'B' : activeArea.includes('C_') ? 'C' : activeArea}
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-bold text-slate-800">
-                    {activeArea === 'B_KANAN' ? 'Gudang B (KANAN)' : activeArea === 'B_KIRI' ? 'Gudang B (KIRI)' : `Kolom ${activeArea}`}
+                    {activeArea === 'B_KANAN' ? 'Warehouse B (RIGHT)' : activeArea === 'B_KIRI' ? 'Warehouse B (LEFT)' : activeArea === 'C_KANAN' ? 'Warehouse C (RIGHT)' : activeArea === 'C_KIRI' ? 'Warehouse C (LEFT)' : activeArea === 'G' ? 'Warehouse G' : activeArea === 'H' ? 'Warehouse H' : `Column ${activeArea}`}
                   </h3>
-                  <span className="text-[11px] text-slate-500 font-medium">{totalSlots} Slots × Maks 4 Roll = {totalSlots * 4} Kapasitas Total</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{totalSlots} Slots × Max 4 Rolls = {totalSlots * 4} Total Capacity</span>
                 </div>
               </div>
               <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg self-start sm:self-auto gap-1">
@@ -689,7 +756,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     activeArea === 'A' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Kolom A
+                  Column A
                 </button>
                 <button
                   onClick={() => {
@@ -700,7 +767,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     activeArea === 'E' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Kolom E
+                  Column E
                 </button>
                 <button
                   onClick={() => {
@@ -711,7 +778,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     activeArea === 'B_KANAN' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Gudang B (KANAN)
+                  Warehouse B (RIGHT)
                 </button>
                 <button
                   onClick={() => {
@@ -722,7 +789,51 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     activeArea === 'B_KIRI' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Gudang B (KIRI)
+                  Warehouse B (LEFT)
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('C_KANAN')
+                    setSelectedSlotCodes([])
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                    activeArea === 'C_KANAN' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Warehouse C (RIGHT)
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('C_KIRI')
+                    setSelectedSlotCodes([])
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                    activeArea === 'C_KIRI' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Warehouse C (LEFT)
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('G')
+                    setSelectedSlotCodes([])
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                    activeArea === 'G' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Warehouse G
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('H')
+                    setSelectedSlotCodes([])
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
+                    activeArea === 'H' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Warehouse H
                 </button>
               </div>
             </div>
@@ -773,7 +884,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 <span className="sm:hidden">{multiSelectMode ? 'ON' : 'OFF'}</span>
               </button>
               <div className="hidden md:flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-                <span>Scroll kanan →</span>
+                <span>Scroll right →</span>
                 <MoveRight size={13} />
               </div>
             </div>
@@ -789,39 +900,28 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
           <div className="mt-auto">
             {/* Legend */}
             <div className="mt-5 pt-3 border-t border-slate-100">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Slot Capacity & Status Legend</div>
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Status Legend</div>
               <div className="flex flex-wrap gap-2 text-xs">
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-200 bg-white">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-slate-300" />
-                  <span className="text-[11px] font-medium text-slate-700">Kosong (0/4)</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-emerald-600 bg-emerald-600 text-white">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
-                  <span className="text-[11px] font-bold">Shipment Plan (Siap Kirim)</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-700 bg-slate-700 text-white">
-                  <span className="text-[9px] font-bold bg-emerald-400 text-slate-900 px-1 rounded">1-3/4</span>
-                  <span className="text-[11px] font-medium">Terisi Sebagian (Bisa Ditumpuk)</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-900 bg-slate-900 text-white">
-                  <span className="text-[9px] font-bold bg-rose-500 text-white px-1 rounded">4/4</span>
-                  <span className="text-[11px] font-medium">Penuh (Maks 4 Roll)</span>
-                </div>
+                {Object.entries(statusConfig).map(([val, cfg]) => (
+                  <div key={val} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg ${cfg.bgClass}`}>
+                    <span className="text-[11px] font-medium">{cfg.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Summary Data */}
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-blue-500 mb-1">Total Roll Tersimpan</div>
+                <div className="text-[10px] uppercase font-bold text-blue-500 mb-1">Total Stored Rolls</div>
                 <div className="text-lg font-black text-blue-900">{totalRolls}</div>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-emerald-600 mb-1">Total Berat (KGS)</div>
+                <div className="text-[10px] uppercase font-bold text-emerald-600 mb-1">Total Weight (KGS)</div>
                 <div className="text-lg font-black text-emerald-900">{totalWeight.toLocaleString('id-ID', {minimumFractionDigits: 2})}</div>
               </div>
               <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-indigo-500 mb-1">Total Slot Fisik</div>
+                <div className="text-[10px] uppercase font-bold text-indigo-500 mb-1">Total Physical Slots</div>
                 <div className="text-lg font-black text-indigo-900">{totalSlots} ({totalSlots * 4} max rolls)</div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-center">
@@ -851,10 +951,10 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">
-                      {selectedSlots.length === 1 ? 'Detail Slot & Tumpukan' : 'Multiple Locations'}
+                      {selectedSlots.length === 1 ? 'Slot & Stack Detail' : 'Multiple Locations'}
                     </h3>
                     <div className="text-[11px] font-mono text-slate-500">
-                      {selectedSlots.length === 1 ? `${selectedSlots[0].code} (ID: ${selectedSlots[0].id})` : `${selectedSlots.length} slots terpilih`}
+                      {selectedSlots.length === 1 ? `${selectedSlots[0].code} (ID: ${selectedSlots[0].id})` : `${selectedSlots.length} selected slots`}
                     </div>
                   </div>
                 </div>
@@ -876,11 +976,11 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   <div className="flex justify-between py-1 border-b border-slate-100">
                     <span className="text-slate-500">Warehouse Area</span>
                     <span className="font-medium text-slate-800">
-                      {activeArea === 'B_KANAN' ? 'Gudang B (KANAN)' : activeArea === 'B_KIRI' ? 'Gudang B (KIRI)' : `Kolom ${activeArea}`}
+                      {activeArea === 'B_KANAN' ? 'Warehouse B (RIGHT)' : activeArea === 'B_KIRI' ? 'Warehouse B (LEFT)' : activeArea === 'C_KANAN' ? 'Warehouse C (RIGHT)' : activeArea === 'C_KIRI' ? 'Warehouse C (LEFT)' : activeArea === 'G' ? 'Warehouse G' : activeArea === 'H' ? 'Warehouse H' : `Column ${activeArea}`}
                     </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Kapasitas Slot</span>
+                    <span className="text-slate-500">Slot Capacity</span>
                     <span className="font-bold text-slate-900">
                       <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${
                         selectedSlots[0].rollsList.length >= 4 
@@ -896,7 +996,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </div>
               ) : (
                 <div className="text-xs text-slate-500 py-2 border-b border-slate-100">
-                  Bulk update {selectedSlots.length} slots terpilih.
+                  Bulk updating {selectedSlots.length} selected slots.
                 </div>
               )}
 
@@ -905,14 +1005,14 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
                     <PlusCircle size={14} className="text-emerald-600" />
-                    <span>Tumpuk Roll ke Slot Ini (Sisa {4 - selectedSlots[0].rollsList.length})</span>
+                    <span>Stack Roll in This Slot ({4 - selectedSlots[0].rollsList.length} left)</span>
                   </div>
                   <select
                     value={selectedUnslottedRollId}
                     onChange={e => setSelectedUnslottedRollId(e.target.value)}
                     className="form-select text-xs w-full font-medium"
                   >
-                    <option value="">-- Pilih Roll Tersedia ({unslottedRolls.length}) --</option>
+                    <option value="">-- Select Available Roll ({unslottedRolls.length}) --</option>
                     {unslottedRolls.map(r => (
                       <option key={r.raw_id} value={r.raw_id}>
                         {r.no_roll} - {r.grade} ({r.weight} kg)
@@ -925,7 +1025,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     onClick={handleAssignFromSidebar}
                     className="btn btn-sm btn-primary w-full text-xs font-bold py-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    {isAssigningFromSidebar ? 'Menyimpan ke DB...' : `Tempatkan sebagai Roll ke-${selectedSlots[0].rollsList.length + 1}`}
+                    {isAssigningFromSidebar ? 'Saving to DB...' : `Assign as Roll #${selectedSlots[0].rollsList.length + 1}`}
                   </button>
                 </div>
               )}
@@ -934,8 +1034,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               {selectedSlots.length === 1 && selectedSlots[0].rollsList.length > 0 && (
                 <div className="pt-2 border-t border-slate-100">
                   <div className="text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
-                    <span>Rolls yang Bertumpuk di Slot Ini:</span>
-                    <span className="text-[10px] font-bold text-blue-600">{selectedSlots[0].rollsList.length} Roll</span>
+                    <span>Rolls Stacked in This Slot:</span>
+                    <span className="text-[10px] font-bold text-blue-600">{selectedSlots[0].rollsList.length} Rolls</span>
                   </div>
                   <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
                     {selectedSlots[0].rollsList.map((roll, idx) => (
@@ -965,10 +1065,10 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </div>
               )}
 
-              {/* Status & Stack Count Dropdowns */}
+              {/* Status Dropdowns */}
               <div className="space-y-3 pt-2 border-t border-slate-100">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Status Slot</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Slot Status</label>
                   <select
                     className="form-select w-full text-sm font-semibold text-slate-800"
                     value={editStatus}
@@ -980,26 +1080,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   </select>
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Stack Count Manual Override</label>
-                  <select
-                    className="form-select w-full text-sm font-semibold text-slate-800"
-                    value={editStackCount}
-                    onChange={e => setEditStackCount(e.target.value)}
-                  >
-                    <option value="">(None)</option>
-                    {stackCountOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt} ({opt === '✓' ? '1 roll' : `${opt} roll`})</option>
-                    ))}
-                  </select>
-                </div>
 
                 <button
                   onClick={handleUpdateLocation}
                   disabled={isUpdating}
                   className="btn btn-primary w-full text-sm py-2 cursor-pointer font-bold"
                 >
-                  {isUpdating ? 'Menyimpan...' : 'Simpan Perubahan Slot'}
+                  {isUpdating ? 'Saving...' : 'Save Slot Changes'}
                 </button>
               </div>
             </div>
