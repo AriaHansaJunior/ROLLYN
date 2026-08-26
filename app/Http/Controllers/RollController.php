@@ -18,11 +18,15 @@ class RollController extends Controller
 
     public function index()
     {
-        $rolls = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop'])
+        $rolls = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop', 'shipmentRolls.shipment'])
             ->orderBy('entry_date', 'desc')
             ->orderBy('no', 'desc')
             ->get()
             ->map(function ($roll) {
+                $activeShipmentRoll = $roll->shipmentRolls->first(function ($sr) {
+                    return $sr->shipment && $sr->shipment->status !== 'canceled';
+                });
+
                 return [
                     'id' => $roll->no_roll ?? ('R-' . $roll->no),
                     'raw_id' => $roll->no,
@@ -43,6 +47,10 @@ class RollController extends Controller
                     'jops_id' => $roll->jops_id,
                     'pic' => $roll->user->username ?? 'Operator',
                     'status' => $roll->locations_id ? 'Slotted' : ($roll->jops_id ? 'Shipment Plan' : 'Incoming'),
+                    'in_shipment_queue' => !is_null($activeShipmentRoll),
+                    'shipment_queue_number' => $activeShipmentRoll?->shipment?->shipment_number,
+                    'shipment_queue_status' => $activeShipmentRoll?->shipment?->status,
+                    'shipment_queue_qc_status' => $activeShipmentRoll?->qc_status,
                     'exMaterial' => $roll->exmaterial ?? 'IMPORT',
                     'visual' => $roll->visual ?? 'OK',
                     'plybond' => $roll->plybond->plybonds ?? 0,
@@ -61,6 +69,52 @@ class RollController extends Controller
         $customers = \App\Models\Customer::all();
         $qcUsers = \App\Models\User::where('role', 'qc')->get();
 
+        $user = Auth::user();
+        $userRole = strtolower($user->role ?? '');
+
+        $shipmentsQuery = \App\Models\Shipment::with([
+            'customer',
+            'admin',
+            'qc',
+            'shipmentRolls.roll.grade',
+            'shipmentRolls.roll.jop.gsm'
+        ])->latest('shipment_date')->latest('id');
+
+        if ($userRole === 'qc') {
+            $shipmentsQuery->where('qc_users_id', $user->id);
+        }
+
+        $shipments = $shipmentsQuery->get()->map(function ($shipment) {
+            return [
+                'id' => $shipment->id,
+                'shipment_number' => $shipment->shipment_number,
+                'customer' => $shipment->customer->customer ?? '—',
+                'admin' => $shipment->admin->username ?? '—',
+                'qc_officer' => $shipment->qc->username ?? '—',
+                'qc_users_id' => $shipment->qc_users_id,
+                'date' => $shipment->shipment_date,
+                'status' => $shipment->status,
+                'total_rolls' => $shipment->shipmentRolls->count(),
+                'checked_rolls' => $shipment->shipmentRolls->whereIn('qc_status', ['passed', 'rejected_replace'])->count(),
+                'passed_rolls' => $shipment->shipmentRolls->where('qc_status', 'passed')->count(),
+                'rejected_rolls' => $shipment->shipmentRolls->where('qc_status', 'rejected_replace')->count(),
+                'rolls' => $shipment->shipmentRolls->map(function ($sr) {
+                    return [
+                        'id' => $sr->id,
+                        'roll_no' => $sr->roll_no,
+                        'no_roll' => $sr->roll->no_roll ?? ('R-' . $sr->roll_no),
+                        'grade' => $sr->roll->grade->grade ?? '—',
+                        'gsm' => $sr->roll->jop->gsm->gsm ?? ($sr->roll->gsm ?? 0),
+                        'weight' => $sr->roll->weight ?? 0,
+                        'location' => $sr->roll->location->location ?? '—',
+                        'qc_status' => $sr->qc_status,
+                        'qc_notes' => $sr->qc_notes,
+                        'qc_checked_at' => $sr->qc_checked_at ? \Carbon\Carbon::parse($sr->qc_checked_at)->format('d/m/Y H:i') : null,
+                    ];
+                }),
+            ];
+        });
+
         return Inertia::render('RollInventory', [
             'rolls' => $rolls,
             'shifts' => $shifts,
@@ -69,6 +123,7 @@ class RollController extends Controller
             'jops' => $jops,
             'customers' => $customers,
             'qcUsers' => $qcUsers,
+            'shipments' => $shipments,
         ]);
     }
 
@@ -84,36 +139,36 @@ class RollController extends Controller
         }
 
         $formattedRoll = [
-            'id' => $roll->no_roll,
+            'id' => $roll->no_roll ?? ('R-' . $roll->no),
             'raw_id' => $roll->no,
-            'no_roll' => $roll->no_roll,
+            'no_roll' => $roll->no_roll ?? ('R-' . $roll->no),
             'form' => $roll->form ? ('F-' . $roll->form) : '—',
             'raw_form' => $roll->form,
-            'shift' => $roll->shift->shift ?? 'A',
+            'shift' => $roll->shift?->shift ?? 'A',
             'shifts_id' => $roll->shifts_id,
             'date' => $roll->entry_date ? \Carbon\Carbon::parse($roll->entry_date)->format('Y-m-d') : '—',
-            'grade' => $roll->grade->grade ?? 'N/A',
+            'grade' => $roll->grade?->grade ?? 'N/A',
             'grades_id' => $roll->grades_id,
-            'gsm' => 150,
-            'plybond' => $roll->plybond->plybonds ?? 1.8,
-            'thickness' => $roll->thickness->thickness ?? 0.22,
+            'gsm' => $roll->gsm ?? 150,
+            'plybond' => $roll->plybond?->plybonds ?? 1.8,
+            'thickness' => $roll->thickness?->thickness ?? 0.22,
             'bulk' => $roll->bulk ?? 1.47,
             'width' => 1650,
             'diameter' => 1120,
-            'core' => $roll->core->core ?? 76,
+            'core' => $roll->core?->core ?? 76,
             'weight' => $roll->weight ?? 0,
-            'cobb' => $roll->cobb->cobb ?? '68',
+            'cobb' => $roll->cobb?->cobb ?? '68',
             'exMaterial' => $roll->exmaterial ?? 'IMPORT',
             'visual' => $roll->visual ?? 'OK',
-            'location' => $roll->location->location ?? 'Unallocated',
+            'location' => $roll->location?->location ?? 'Unallocated',
             'locations_id' => $roll->locations_id,
-            'jop' => $roll->jop->jop ?? '—',
+            'jop' => $roll->jop?->jop ?? '—',
             'jops_id' => $roll->jops_id,
-            'pic' => $roll->user->username ?? 'Operator',
+            'pic' => $roll->user?->username ?? 'Operator',
             'status' => $roll->locations_id ? 'Slotted' : ($roll->jops_id ? 'Shipment Plan' : 'Incoming'),
-            'customer' => $roll->jop->customer->customer ?? 'PT Surya Makmur',
-            'po' => $roll->jop->po ?? 'PO-TYO-2407',
-            'spk' => $roll->jop->spk ?? 'SPK-240701',
+            'customer' => $roll->jop?->customer?->customer ?? '—',
+            'po' => $roll->jop?->po ?? '—',
+            'spk' => $roll->jop?->spk ?? '—',
             'orderStatus' => 'Ready to Ship',
             'ocrTimestamp' => $roll->created_at ? $roll->created_at->format('Y-m-d H:i:s') : '—',
             'ocrWeight' => $roll->weight ?? 0,

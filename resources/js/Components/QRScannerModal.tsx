@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Camera, X, RefreshCw, Upload, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
+import jsQR from 'jsqr'
 import { SystemUI } from '@/Utils/SystemUI'
 
 interface QRScannerModalProps {
@@ -20,6 +21,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }: QRSca
   const [manualCode, setManualCode] = useState('')
   const [scanMessage, setScanMessage] = useState<string | null>(null)
   const [lastScannedResult, setLastScannedResult] = useState<string | null>(null)
+  const lastScannedTimestampRef = useRef<number>(0)
 
   const scanIntervalRef = useRef<any>(null)
 
@@ -73,7 +75,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }: QRSca
     }
   }
 
-  // Realtime scan loop using BarcodeDetector or canvas analysis
+  // Realtime scan loop using BarcodeDetector + jsQR fallback
   const startScanningLoop = () => {
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current)
 
@@ -81,23 +83,56 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }: QRSca
       if (!videoRef.current || videoRef.current.readyState < 2) return
 
       const video = videoRef.current
+      if (video.videoWidth === 0 || video.videoHeight === 0) return
 
-      // Check if native BarcodeDetector API exists (Supported in Chrome, Edge, Android Chrome)
+      let detectedCode: string | null = null
+
+      // Check if native BarcodeDetector API exists
       if ('BarcodeDetector' in window) {
         try {
           const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
           const barcodes = await barcodeDetector.detect(video)
-          if (barcodes && barcodes.length > 0) {
-            const rawValue = barcodes[0].rawValue
-            if (rawValue && rawValue !== lastScannedResult) {
-              handleDetectedResult(rawValue)
-            }
+          if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+            detectedCode = barcodes[0].rawValue
           }
         } catch (e) {
           // Fallback if BarcodeDetector fails on some frame
         }
       }
-    }, 400)
+
+      // jsQR fallback on canvas
+      if (!detectedCode) {
+        try {
+          if (!canvasRef.current) {
+            canvasRef.current = document.createElement('canvas')
+          }
+          const canvas = canvasRef.current
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          const ctx = canvas.getContext('2d', { willReadFrequently: true })
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+            const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth'
+            })
+            if (qrResult && qrResult.data) {
+              detectedCode = qrResult.data
+            }
+          }
+        } catch (e) {
+          // Frame error
+        }
+      }
+
+      if (detectedCode) {
+        const now = Date.now()
+        if (detectedCode !== lastScannedResult || (now - lastScannedTimestampRef.current > 2500)) {
+          lastScannedTimestampRef.current = now
+          handleDetectedResult(detectedCode)
+        }
+      }
+    }, 250)
   }
 
   const handleDetectedResult = (data: string) => {
@@ -148,7 +183,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }: QRSca
           try {
             const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
             const barcodes = await detector.detect(img)
-            if (barcodes && barcodes.length > 0) {
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
               handleDetectedResult(barcodes[0].rawValue)
               return
             }
@@ -156,6 +191,27 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }: QRSca
             console.error('Barcode detection on image failed', err)
           }
         }
+
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(img, 0, 0)
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+            const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth'
+            })
+            if (qrResult && qrResult.data) {
+              handleDetectedResult(qrResult.data)
+              return
+            }
+          }
+        } catch (err) {
+          console.error('jsQR image upload decode failed', err)
+        }
+
         SystemUI.toast({ message: 'Could not detect QR code in uploaded image.', type: 'warning' })
       }
       img.src = evt.target?.result as string

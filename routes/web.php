@@ -55,6 +55,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/shipments', [ShipmentController::class, 'store']);
     Route::post('/shipments/qc/scan', [ShipmentController::class, 'qcScan']);
     Route::post('/shipments/qc/reject', [ShipmentController::class, 'qcReject']);
+    Route::delete('/shipments/{id}/roll/{rollNo}', [ShipmentController::class, 'cancelRoll']);
+    Route::delete('/shipments/{id}/cancel', [ShipmentController::class, 'cancelShipment']);
 
     Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
 });

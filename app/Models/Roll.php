@@ -60,4 +60,9 @@ class Roll extends Model
     {
         return $this->hasMany(LocationRecommendationLog::class, 'rolls_no', 'no');
     }
+
+    public function shipmentRolls()
+    {
+        return $this->hasMany(ShipmentRoll::class, 'roll_no', 'no');
+    }
 }
