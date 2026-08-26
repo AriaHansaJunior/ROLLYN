@@ -375,7 +375,67 @@ export default function RollInventory({
   }
 
   function handleExport() {
-    SystemUI.toast({ message: 'Roll inventory exported successfully.', type: 'success' })
+    const dataToExport = filtered && filtered.length > 0 ? filtered : rolls
+    if (!dataToExport || dataToExport.length === 0) {
+      SystemUI.toast({ message: 'No rolls available to export.', type: 'warning' })
+      return
+    }
+
+    const headers = [
+      'Roll Number',
+      'Form Code',
+      'Shift',
+      'Entry Date',
+      'Grade',
+      'GSM',
+      'Weight (kg)',
+      'Width (mm)',
+      'Warehouse Location',
+      'JOP Number',
+      'PIC / Operator',
+      'Status',
+      'Shipment Queued',
+      'Visual',
+      'Ex-Material'
+    ]
+
+    const csvRows = [
+      'sep=,',
+      headers.join(','),
+      ...dataToExport.map(r => [
+        `"${(r.no_roll || r.id || '').replace(/"/g, '""')}"`,
+        `"${(r.form || '').replace(/"/g, '""')}"`,
+        `"${(r.shift || '').replace(/"/g, '""')}"`,
+        `"${r.date || ''}"`,
+        `"${(r.grade || '').replace(/"/g, '""')}"`,
+        r.gsm || 0,
+        r.weight || 0,
+        r.width || 0,
+        `"${(r.location || 'Not Assigned').replace(/"/g, '""')}"`,
+        `"${(r.jop || '').replace(/"/g, '""')}"`,
+        `"${(r.pic || '').replace(/"/g, '""')}"`,
+        `"${(r.status || '').replace(/"/g, '""')}"`,
+        r.in_shipment_queue ? '"Yes"' : '"No"',
+        `"${(r.visual || 'OK').replace(/"/g, '""')}"`,
+        `"${(r.exMaterial || 'IMPORT').replace(/"/g, '""')}"`
+      ].join(','))
+    ]
+
+    const csvContent = '\uFEFF' + csvRows.join('\r\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `rollyn_roll_inventory_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    SystemUI.toast({
+      message: `Exported ${dataToExport.length} roll records to CSV successfully.`,
+      type: 'success'
+    })
   }
 
   function openEdit(r: RollItem) {

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts'
 import { usePage } from '@inertiajs/react'
-import { Search, Filter, Package } from 'lucide-react'
+import { Search, Filter, Package, Download } from 'lucide-react'
+import { SystemUI } from '@/Utils/SystemUI'
 
 interface OutgoingRoll {
   id: number
@@ -39,6 +40,42 @@ export default function Reports() {
       r.grade.toLowerCase().includes(q)
     )
   })
+
+  function exportOutgoingCSV() {
+    const dataToExport = filteredOutgoing.length > 0 ? filteredOutgoing : (outgoingRolls as OutgoingRoll[])
+    if (dataToExport.length === 0) {
+      SystemUI.toast({ message: 'No outgoing rolls to export.', type: 'warning' })
+      return
+    }
+
+    const headers = ['Roll Number', 'JOP', 'Customer', 'Grade', 'GSM', 'Weight (kg)', 'Entry Date', 'Status']
+    const rows = [
+      'sep=,',
+      headers.join(','),
+      ...dataToExport.map(r => [
+        `"${(r.no_roll || '').replace(/"/g, '""')}"`,
+        `"${(r.jop || '').replace(/"/g, '""')}"`,
+        `"${(r.customer || '').replace(/"/g, '""')}"`,
+        `"${(r.grade || '').replace(/"/g, '""')}"`,
+        r.gsm,
+        r.weight,
+        `"${r.entry_date || ''}"`,
+        `"${(r.status || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ]
+
+    const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `rollyn_outgoing_shipments_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    SystemUI.toast({ message: `Exported ${dataToExport.length} outgoing roll records to CSV.`, type: 'success' })
+  }
 
   const totalPages = Math.ceil(filteredOutgoing.length / perPage)
   const pagedOutgoing = filteredOutgoing.slice((page - 1) * perPage, page * perPage)
@@ -146,8 +183,8 @@ export default function Reports() {
           <span className="text-xs font-semibold text-slate-500">{filteredOutgoing.length} rolls</span>
         </div>
 
-        {/* Search */}
-        <div className="card p-3 sm:p-4">
+        {/* Search & Export */}
+        <div className="card p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:max-w-md">
             <Search size={16} className="text-slate-400 shrink-0" />
             <input
@@ -157,6 +194,14 @@ export default function Reports() {
               className="w-full min-w-0 bg-transparent border-none outline-none text-sm text-slate-800 placeholder:text-slate-400"
             />
           </div>
+
+          <button
+            onClick={exportOutgoingCSV}
+            className="btn btn-secondary btn-sm flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+          >
+            <Download size={13} />
+            <span>Export CSV</span>
+          </button>
         </div>
 
         {/* Outgoing Table */}

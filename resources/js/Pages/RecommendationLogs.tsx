@@ -171,6 +171,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
         ];
 
         const csvRows = [
+            "sep=,",
             headers.join(","),
             ...logs.map((l) =>
                 [
@@ -192,11 +193,11 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
             ),
         ];
 
-        const csvContent =
-            "data:text/csv;charset=utf-8," +
-            encodeURIComponent(csvRows.join("\n"));
+        const csvContent = '\uFEFF' + csvRows.join('\r\n')
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
         const link = document.createElement("a");
-        link.setAttribute("href", csvContent);
+        link.setAttribute("href", url);
         link.setAttribute(
             "download",
             `rollyn_location_recommendation_logs_${new Date().toISOString().slice(0, 10)}.csv`,
@@ -204,6 +205,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
 
         SystemUI.toast({
             message: `Exported ${logs.length} recommendation log records to CSV.`,
