@@ -58,6 +58,8 @@ class RollController extends Controller
         $grades = Grade::all();
         $locations = Location::all();
         $jops = Jop::all();
+        $customers = \App\Models\Customer::all();
+        $qcUsers = \App\Models\User::where('role', 'qc')->get();
 
         return Inertia::render('RollInventory', [
             'rolls' => $rolls,
@@ -65,6 +67,8 @@ class RollController extends Controller
             'grades' => $grades,
             'locations' => $locations,
             'jops' => $jops,
+            'customers' => $customers,
+            'qcUsers' => $qcUsers,
         ]);
     }
 
