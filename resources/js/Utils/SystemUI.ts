@@ -25,6 +25,8 @@ class SystemUIManager {
     private modalListeners: ModalListener[] = [];
     private toastListeners: ToastListener[] = [];
     private toastRemoveListeners: ToastRemoveListener[] = [];
+    private lastToastMap: Map<string, number> = new Map();
+    private activeToastIds: string[] = [];
 
     subscribeModal(listener: ModalListener) {
         this.modalListeners.push(listener);
@@ -107,8 +109,29 @@ class SystemUIManager {
     }
 
     toast(options: ToastOptions | string) {
-        const id = Math.random().toString(36).substring(2, 9);
         const opt = typeof options === 'string' ? { message: options } : options;
+        const msg = (opt.message || '').trim();
+        const type = opt.type || 'info';
+        const key = `${type}:${msg}`;
+        const now = Date.now();
+
+        // 1. Deduplicate & anti-spam: ignore identical toast message triggered within 3.5 seconds
+        const lastTime = this.lastToastMap.get(key) || 0;
+        if (now - lastTime < 3500) {
+            return '';
+        }
+        this.lastToastMap.set(key, now);
+
+        const id = Math.random().toString(36).substring(2, 9);
+        this.activeToastIds.push(id);
+
+        // 2. Limit maximum visible toasts to 3 (remove oldest if exceeding)
+        if (this.activeToastIds.length > 3) {
+            const oldestId = this.activeToastIds.shift();
+            if (oldestId) {
+                this.removeToast(oldestId);
+            }
+        }
 
         this.toastListeners.forEach(listener => listener({ ...opt, id }));
 
@@ -122,6 +145,7 @@ class SystemUIManager {
     }
 
     removeToast(id: string) {
+        this.activeToastIds = this.activeToastIds.filter(i => i !== id);
         this.toastRemoveListeners.forEach(listener => listener(id));
     }
 }

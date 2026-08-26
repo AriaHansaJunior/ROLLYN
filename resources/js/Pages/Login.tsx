@@ -59,6 +59,16 @@ export default function Login() {
         </div>
 
         {}
+        {new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('suspended') && (
+          <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-900 text-xs flex items-start gap-2 shadow-xs">
+            <span className="font-black text-red-600 text-sm">⚠</span>
+            <div className="leading-relaxed">
+              <strong className="block font-bold">Akun Telah Ditangguhkan</strong>
+              Terdeteksi 10 kali kesalahan scan roll berturut-turut. Silakan hubungi Administrator untuk memulihkan akses akun Anda.
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="card p-6 sm:p-7 space-y-4 shadow-xl rounded-2xl bg-white border border-slate-200/80">
           <div>
             <h2 className="text-base font-bold text-slate-900 mb-0.5">Sign In</h2>

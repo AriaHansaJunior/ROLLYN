@@ -18,7 +18,7 @@ export default function SlotStatus() {
   const totalSlots = locations.length;
 
   const warehouseData = totalSlots > 0 ? [{
-    id: 'E17',
+    id: 'Kolom A',
     total: totalSlots,
     available: availableCount,
     occupied: occupiedCount,

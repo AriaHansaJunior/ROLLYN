@@ -16,12 +16,36 @@ class DesignUiController extends Controller
         $locations = Location::with(['rolls' => function($query) {
             $query->with(['grade', 'jop.gsm', 'jop.rollsWidth'])->latest('created_at');
         }])->get();
-        return Inertia::render('WarehouseMap', ['locations' => $locations]);
+
+        $unslottedRolls = Roll::whereNull('locations_id')
+            ->with(['grade', 'jop.gsm', 'jop.rollsWidth', 'shift'])
+            ->orderBy('entry_date', 'desc')
+            ->orderBy('no', 'desc')
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id' => $r->no_roll ?? ('R-' . $r->no),
+                    'raw_id' => $r->no,
+                    'no_roll' => $r->no_roll,
+                    'grade' => $r->grade->grade ?? '—',
+                    'gsm' => $r->jop->gsm->gsm ?? ($r->gsm ?? 150),
+                    'weight' => $r->weight ?? 0,
+                    'date' => $r->entry_date ? \Carbon\Carbon::parse($r->entry_date)->format('Y-m-d') : '—',
+                    'jop' => $r->jop->jop ?? '—',
+                ];
+            });
+
+        return Inertia::render('WarehouseMap', [
+            'locations' => $locations,
+            'unslottedRolls' => $unslottedRolls,
+        ]);
     }
 
     public function slotStatus()
     {
-        $locations = Location::all();
+        $locations = Location::with(['rolls' => function($query) {
+            $query->with(['grade', 'jop.gsm', 'jop.rollsWidth'])->latest('created_at');
+        }])->get();
         return Inertia::render('SlotStatus', ['locations' => $locations]);
     }
 
@@ -62,7 +86,7 @@ class DesignUiController extends Controller
 
         $warehouseData = [
             [
-                'id' => 'E17',
+                'id' => 'Kolom A',
                 'occupied' => $occupiedSlots,
                 'available' => $availableSlots,
             ]
