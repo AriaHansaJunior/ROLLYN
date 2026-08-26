@@ -25,7 +25,7 @@ class DashboardController extends Controller
 
         $warehouseData = [
             [
-                'id' => 'E17',
+                'id' => 'Kolom A',
                 'total' => $totalSlots,
                 'occupied' => $occupiedSlots,
                 'available' => $availableSlots,

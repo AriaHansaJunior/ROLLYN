@@ -3,7 +3,7 @@ import {
   Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X,
   Download, MapPin, Package, Camera, QrCode, CheckCircle2, XCircle, Clock,
   AlertTriangle, UserCheck, Calendar, Building2, Truck, Check, RefreshCw, Layers,
-  Ban, ShieldCheck
+  Ban, ShieldCheck, ShieldAlert
 } from 'lucide-react'
 import { router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
@@ -186,6 +186,10 @@ export default function RollInventory({
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'pending' | 'completed' | 'canceled'>('all')
   const [manualScanInput, setManualScanInput] = useState('')
   const [isProcessingScan, setIsProcessingScan] = useState(false)
+  const [consecutiveQcErrors, setConsecutiveQcErrors] = useState<number>(0)
+  const consecutiveQcErrorsRef = useRef<number>(0)
+  const [showSuspendedModal, setShowSuspendedModal] = useState<boolean>(false)
+  const lastScannedThrottleRef = useRef<{ code: string; time: number }>({ code: '', time: 0 })
 
   // QC Reject Modal State
   const [showRejectModal, setShowRejectModal] = useState(false)
@@ -468,7 +472,7 @@ export default function RollInventory({
   // SHIPMENTS & QC FUNCTIONS
   // ----------------------------------------------------
   function handleQCScan(scannedData: string) {
-    if (!activeShipment || isProcessingScan || activeShipment.status === 'canceled') return
+    if (!activeShipment || isProcessingScan || activeShipment.status === 'canceled' || showSuspendedModal) return
 
     let cleanVal = scannedData.trim()
     let rollNo = cleanVal
@@ -508,6 +512,8 @@ export default function RollInventory({
         onSuccess: () => {
           setIsProcessingScan(false)
           setManualScanInput('')
+          consecutiveQcErrorsRef.current = 0
+          setConsecutiveQcErrors(0) // Reset consecutive errors on successful valid scan
           SystemUI.toast({ message: `✓ Roll ${targetRoll.no_roll} PASSED QC inspection!`, type: 'success' })
         },
         onError: () => {
@@ -534,9 +540,27 @@ export default function RollInventory({
           type: 'info'
         })
         setActiveShipmentId(otherShipment.id)
+        consecutiveQcErrorsRef.current = 0
+        setConsecutiveQcErrors(0)
       } else {
+        // Anti-spam camera frame throttle
+        const now = Date.now()
+        if (lastScannedThrottleRef.current.code === q && (now - lastScannedThrottleRef.current.time) < 2500) {
+          return
+        }
+        lastScannedThrottleRef.current = { code: q, time: now }
+
+        consecutiveQcErrorsRef.current += 1
+        const newErrors = consecutiveQcErrorsRef.current
+        setConsecutiveQcErrors(newErrors)
+
+        if (newErrors >= 10) {
+          setShowSuspendedModal(true)
+          return
+        }
+
         SystemUI.toast({
-          message: `Roll "${rollNo}" is not in this shipment!`,
+          message: `Roll "${rollNo}" tidak ada dalam shipment ini! (Percobaan salah: ${newErrors}/10)`,
           type: 'warning'
         })
       }
@@ -1868,6 +1892,44 @@ export default function RollInventory({
         onClose={() => setShowQRScanner(false)}
         onScanSuccess={handleStorageQRScanSuccess}
       />
+
+      {/* 6. QC Security Lockout & Account Suspension Modal */}
+      {showSuspendedModal && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-fade-in">
+          <div className="card w-full max-w-md p-6 bg-white rounded-2xl shadow-2xl space-y-4 border-2 border-red-500 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner animate-pulse">
+              <ShieldAlert size={36} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                AKUN DITANGGUHKAN
+              </h3>
+              <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-0.5 rounded-full mt-1 inline-block">
+                Security Lockout Activated
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed text-justify bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              Sistem mendeteksi <strong>10 kali kesalahan scan barcode berturut-turut</strong> dalam sesi inspeksi ini. Demi menjaga keamanan integritas warehouse dan mencegah anomali shipment, sesi akun Anda telah <strong>ditangguhkan</strong>.
+            </p>
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 font-medium text-left flex items-start gap-2">
+              <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+              <span>Silakan <strong>hubungi Administrator</strong> untuk verifikasi roll fisik dan memulihkan kembali akses akun Anda.</span>
+            </div>
+            <button
+              onClick={() => {
+                router.post('/logout', {}, {
+                  onFinish: () => {
+                    window.location.href = '/login?suspended=1'
+                  }
+                })
+              }}
+              className="btn btn-primary w-full py-2.5 font-bold text-xs bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center justify-center gap-2"
+            >
+              <span>OK, Saya Mengerti (Keluar Akun)</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

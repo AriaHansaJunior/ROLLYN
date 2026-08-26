@@ -64,7 +64,9 @@ class RollController extends Controller
 
         $shifts = Shift::all();
         $grades = Grade::all();
-        $locations = Location::all();
+        $locations = Location::with(['rolls' => function ($query) {
+            $query->with(['grade', 'jop.gsm', 'jop.rollsWidth'])->latest('created_at');
+        }])->get();
         $jops = Jop::all();
         $customers = \App\Models\Customer::all();
         $qcUsers = \App\Models\User::where('role', 'qc')->get();
@@ -180,7 +182,9 @@ class RollController extends Controller
             'roll' => $formattedRoll,
             'shifts' => Shift::all(),
             'grades' => Grade::all(),
-            'locations' => Location::all(),
+            'locations' => Location::with(['rolls' => function ($query) {
+                $query->with(['grade', 'jop.gsm', 'jop.rollsWidth'])->latest('created_at');
+            }])->get(),
             'jops' => Jop::all(),
         ]);
     }
@@ -193,12 +197,15 @@ class RollController extends Controller
             return redirect()->back()->with('error', 'Roll record not found.');
         }
 
-        // Fill missing required attributes from existing roll record
+        $defaultShiftId = Shift::first()?->id ?? 1;
+        $defaultGradeId = Grade::first()?->id ?? 1;
+
+        // Fill missing required attributes from existing roll record or defaults
         $request->merge([
-            'no_roll' => $request->input('no_roll', $roll->no_roll),
-            'shifts_id' => $request->input('shifts_id', $roll->shifts_id),
+            'no_roll' => $request->input('no_roll', $roll->no_roll ?? ('R-' . $roll->no)),
+            'shifts_id' => $request->input('shifts_id', $roll->shifts_id ?? $defaultShiftId),
             'entry_date' => $request->input('entry_date', $roll->entry_date ? \Carbon\Carbon::parse($roll->entry_date)->format('Y-m-d') : now()->toDateString()),
-            'grades_id' => $request->input('grades_id', $roll->grades_id),
+            'grades_id' => $request->input('grades_id', $roll->grades_id ?? $defaultGradeId),
         ]);
 
         $validated = $request->validate([
@@ -216,45 +223,52 @@ class RollController extends Controller
 
         DB::beginTransaction(); // ensure atomic slot reallocation
         try {
+            $oldLocationId = $roll->locations_id;
+            $newLocationId = array_key_exists('locations_id', $validated) ? $validated['locations_id'] : $oldLocationId;
 
-            // free old slot and lock new slot to prevent race condition
-            if (array_key_exists('locations_id', $validated) && $validated['locations_id'] != $roll->locations_id) {
-                $oldLocationId = $roll->locations_id;
-                $newLocationId = $validated['locations_id'];
+            // Enforce 4-roll max capacity per slot
+            if ($newLocationId && $newLocationId != $oldLocationId) {
+                $currentOccupancy = Roll::where('locations_id', $newLocationId)
+                    ->where('no', '!=', $roll->no)
+                    ->count();
 
-                if ($oldLocationId) {
-                    Location::where('id', $oldLocationId)->update(['status' => 0]);
-                }
-                if ($newLocationId) {
-                    Location::where('id', $newLocationId)->update(['status' => 1]);
-                }
-
-                // Log evaluation for recommendation system if assigning or moving location
-                if ($newLocationId) {
-                    $recommendedLocationId = $request->input('recommended_locations_id');
-                    $actionTypeInput = $request->input('action_type');
-                    $actionType = in_array(strtoupper($actionTypeInput ?? ''), ['ASSIGN', 'MOVE'])
-                        ? strtoupper($actionTypeInput)
-                        : ($oldLocationId ? 'MOVE' : 'ASSIGN');
-
-                    $isMatch = ($recommendedLocationId && (int)$newLocationId === (int)$recommendedLocationId) ? 1 : 0;
-                    $userId = Auth::id() ?? ($roll->users_id ?? null);
-
-                    LocationRecommendationLog::create([
-                        'rolls_no' => $roll->no,
-                        'no_roll' => $validated['no_roll'] ?? $roll->no_roll,
-                        'users_id' => $userId,
-                        'action_type' => $actionType,
-                        'previous_locations_id' => $oldLocationId,
-                        'recommended_locations_id' => $recommendedLocationId ? (int)$recommendedLocationId : null,
-                        'selected_locations_id' => (int)$newLocationId,
-                        'is_match' => $isMatch,
-                        'notes' => $request->input('notes'),
-                    ]);
+                if ($currentOccupancy >= 4) {
+                    DB::rollBack();
+                    return redirect()->back()->with('error', 'Slot tersebut sudah penuh (maksimal 4 roll). Silakan pilih slot lain.');
                 }
             }
 
+            // Log evaluation for recommendation system if assigning or moving location
+            if ($newLocationId && $newLocationId != $oldLocationId) {
+                $recommendedLocationId = $request->input('recommended_locations_id');
+                $actionTypeInput = $request->input('action_type');
+                $actionType = in_array(strtoupper($actionTypeInput ?? ''), ['ASSIGN', 'MOVE'])
+                    ? strtoupper($actionTypeInput)
+                    : ($oldLocationId ? 'MOVE' : 'ASSIGN');
+
+                $isMatch = ($recommendedLocationId && (int)$newLocationId === (int)$recommendedLocationId) ? 1 : 0;
+                $userId = Auth::id() ?? ($roll->users_id ?? null);
+
+                LocationRecommendationLog::create([
+                    'rolls_no' => $roll->no,
+                    'no_roll' => $validated['no_roll'] ?? $roll->no_roll,
+                    'users_id' => $userId,
+                    'action_type' => $actionType,
+                    'previous_locations_id' => $oldLocationId,
+                    'recommended_locations_id' => $recommendedLocationId ? (int)$recommendedLocationId : null,
+                    'selected_locations_id' => (int)$newLocationId,
+                    'is_match' => $isMatch,
+                    'notes' => $request->input('notes'),
+                ]);
+            }
+
             $roll->update($validated);
+
+            // Sync stack counts and statuses for affected slots
+            if ($oldLocationId != $newLocationId) {
+                $this->syncLocationStackState($oldLocationId);
+                $this->syncLocationStackState($newLocationId);
+            }
 
             DB::commit();
 
@@ -273,15 +287,15 @@ class RollController extends Controller
             return redirect()->back()->with('error', 'Roll record not found.');
         }
 
-        DB::beginTransaction(); // prevent orphan slotted locations on deletion failure
+        DB::beginTransaction();
         try {
-
-            // release physical warehouse map slot
-            if ($roll->locations_id) {
-                Location::where('id', $roll->locations_id)->update(['status' => 0]);
-            }
+            $oldLocationId = $roll->locations_id;
 
             $roll->delete();
+
+            if ($oldLocationId) {
+                $this->syncLocationStackState($oldLocationId);
+            }
 
             DB::commit();
 
@@ -311,14 +325,19 @@ class RollController extends Controller
         try {
             $totalWeight = 0;
             $count = 0;
+            $affectedLocations = [];
 
             foreach ($rolls as $roll) {
                 if ($roll->locations_id) {
-                    Location::where('id', $roll->locations_id)->update(['status' => 0]);
+                    $affectedLocations[] = $roll->locations_id;
                 }
                 $totalWeight += ($roll->weight ?? 0);
                 $count++;
-                $roll->delete(); // For this system, shipped rolls are removed from active inventory
+                $roll->delete();
+            }
+
+            foreach (array_unique($affectedLocations) as $locId) {
+                $this->syncLocationStackState($locId);
             }
 
             \App\Models\SystemNotification::create([
@@ -334,5 +353,11 @@ class RollController extends Controller
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to confirm shipments: ' . $e->getMessage());
         }
+    }
+
+    private function syncLocationStackState($locationId)
+    {
+        if (!$locationId) return;
+        Location::find($locationId)?->syncState();
     }
 }

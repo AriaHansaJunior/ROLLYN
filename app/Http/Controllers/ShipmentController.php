@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Shipment;
 use App\Models\ShipmentRoll;
 use App\Models\Roll;
+use App\Models\Location;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -50,16 +51,25 @@ class ShipmentController extends Controller
                 'shipment_date' => $request->shipment_date,
             ]);
 
+            $affectedLocations = [];
             foreach ($dbRolls as $roll) {
                 ShipmentRoll::create([
                     'shipment_id' => $shipment->id,
                     'roll_no' => $roll->no,
                     'qc_status' => 'pending'
                 ]);
+                if ($roll->locations_id) {
+                    $affectedLocations[] = $roll->locations_id;
+                }
+            }
+
+            // Sync location states to Shipment Plan (status = 3)
+            foreach (array_unique($affectedLocations) as $locId) {
+                Location::find($locId)?->syncState();
             }
 
             DB::commit();
-            return redirect('/roll-inventory?tab=shipments')->with('success', 'Shipment created successfully.');
+            return redirect('/roll-inventory?tab=shipments')->with('success', 'Shipment created successfully. Warehouse slots updated to Shipment Plan.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->withErrors(['error' => 'Failed to create shipment: ' . $e->getMessage()]);
@@ -88,14 +98,28 @@ class ShipmentController extends Controller
             return redirect()->back()->withErrors(['no_roll' => 'Roll does not belong to this shipment.']);
         }
 
-        $shipmentRoll->update([
-            'qc_status' => 'passed',
-            'qc_checked_at' => now()
-        ]);
-        
-        $this->updateShipmentStatus($shipmentRoll->shipment_id);
+        DB::beginTransaction();
+        try {
+            $shipmentRoll->update([
+                'qc_status' => 'passed',
+                'qc_checked_at' => now()
+            ]);
 
-        return redirect()->back()->with('success', 'Roll marked as passed.');
+            // Release roll from warehouse storage slot upon QC pass
+            $oldLocationId = $roll->locations_id;
+            if ($oldLocationId) {
+                $roll->update(['locations_id' => null]);
+                Location::find($oldLocationId)?->syncState();
+            }
+
+            $this->updateShipmentStatus($shipmentRoll->shipment_id);
+
+            DB::commit();
+            return redirect()->back()->with('success', "Roll {$roll->no_roll} marked as passed and freed from warehouse slot.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Failed to update QC status: ' . $e->getMessage()]);
+        }
     }
 
     public function qcReject(Request $request)
@@ -111,24 +135,42 @@ class ShipmentController extends Controller
             ->where('roll_no', $request->roll_no)
             ->firstOrFail();
 
-        if ($request->reject_type === 'replace') {
-            $shipmentRoll->update([
-                'qc_status' => 'rejected_replace',
-                'qc_notes' => $request->notes,
-                'qc_checked_at' => now()
-            ]);
-            // Logic to handle JOP creation could go here or emit an event
-        } else {
-            $shipmentRoll->update([
-                'qc_status' => 'passed',
-                'qc_notes' => 'Fixed: ' . $request->notes,
-                'qc_checked_at' => now()
-            ]);
-        }
-        
-        $this->updateShipmentStatus($shipmentRoll->shipment_id);
+        $roll = Roll::where('no', $request->roll_no)->first();
 
-        return redirect()->back()->with('success', 'Roll rejection status updated.');
+        DB::beginTransaction();
+        try {
+            if ($request->reject_type === 'replace') {
+                $shipmentRoll->update([
+                    'qc_status' => 'rejected_replace',
+                    'qc_notes' => $request->notes,
+                    'qc_checked_at' => now()
+                ]);
+                // Keep roll in warehouse or sync state
+                if ($roll && $roll->locations_id) {
+                    Location::find($roll->locations_id)?->syncState();
+                }
+            } else {
+                $shipmentRoll->update([
+                    'qc_status' => 'passed',
+                    'qc_notes' => 'Fixed: ' . $request->notes,
+                    'qc_checked_at' => now()
+                ]);
+                // Release roll from warehouse storage slot
+                if ($roll && $roll->locations_id) {
+                    $oldLocId = $roll->locations_id;
+                    $roll->update(['locations_id' => null]);
+                    Location::find($oldLocId)?->syncState();
+                }
+            }
+
+            $this->updateShipmentStatus($shipmentRoll->shipment_id);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Roll rejection status updated.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Failed to reject roll: ' . $e->getMessage()]);
+        }
     }
 
     public function cancelRoll($shipmentId, $rollNo)
@@ -144,7 +186,13 @@ class ShipmentController extends Controller
             return redirect()->back()->withErrors(['error' => 'Roll not found in this shipment.']);
         }
 
+        $roll = Roll::where('no', $shipmentRoll->roll_no)->first();
+
         $shipmentRoll->delete();
+
+        if ($roll && $roll->locations_id) {
+            Location::find($roll->locations_id)?->syncState();
+        }
 
         $this->updateShipmentStatus($shipmentId);
 
@@ -153,8 +201,16 @@ class ShipmentController extends Controller
 
     public function cancelShipment($id)
     {
-        $shipment = Shipment::findOrFail($id);
+        $shipment = Shipment::with('shipmentRolls')->findOrFail($id);
+        
+        $rollNos = $shipment->shipmentRolls->pluck('roll_no')->toArray();
+        $affectedLocations = Roll::whereIn('no', $rollNos)->whereNotNull('locations_id')->pluck('locations_id')->toArray();
+
         $shipment->update(['status' => 'canceled']);
+
+        foreach (array_unique($affectedLocations) as $locId) {
+            Location::find($locId)?->syncState();
+        }
 
         return redirect()->back()->with('success', "Shipment {$shipment->shipment_number} has been canceled.");
     }

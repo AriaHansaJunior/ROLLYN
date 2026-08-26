@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { X, Package, MoveRight, Layers, Eye, MapPin, Calendar, AlertCircle } from 'lucide-react'
+import { X, Package, MoveRight, Layers, Eye, MapPin, Calendar, AlertCircle, PlusCircle, CheckCircle2 } from 'lucide-react'
 import { Link, router } from '@inertiajs/react'
+import { SystemUI } from '@/Utils/SystemUI'
 
 type SlotStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -10,6 +11,25 @@ interface LocationItem {
   status: number
   stack_count?: string | null
   rolls?: { no: number; no_roll: string; weight?: number; grade?: any; jop?: any }[]
+}
+
+interface UnslottedRoll {
+  id: string
+  raw_id: number
+  no_roll: string
+  grade: string
+  gsm: number
+  weight: number
+  date: string
+  jop: string
+}
+
+interface SlotRoll {
+  id: number
+  number: string
+  weight?: number
+  grade?: string
+  gsm?: number
 }
 
 interface Slot {
@@ -23,15 +43,16 @@ interface Slot {
   grade?: string
   gsm?: number
   width?: number
-  rollsList?: { id: number; number: string; }[]
+  rollsList: SlotRoll[]
 }
 
 interface Props {
   locations?: LocationItem[]
+  unslottedRolls?: UnslottedRoll[]
 }
 
 const statusConfig: Record<number, { label: string; bgClass: string; dot: string }> = {
-  0: { label: 'Free Space', bgClass: 'bg-white border-2 border-gray-300 text-gray-800', dot: '#ffffff' },
+  0: { label: 'Free Space (0/4)', bgClass: 'bg-white border-2 border-gray-300 text-gray-800', dot: '#ffffff' },
   1: { label: 'Slot Planning', bgClass: 'bg-gray-200 border-2 border-gray-300 text-gray-800', dot: '#e5e7eb' },
   2: { label: 'Slotted', bgClass: 'bg-gray-500 border-2 border-gray-600 text-white', dot: '#6b7280' },
   3: { label: 'Shipment Plan', bgClass: 'bg-green-600 border-2 border-green-700 text-white', dot: '#16a34a' },
@@ -43,7 +64,6 @@ const statusConfig: Record<number, { label: string; bgClass: string; dot: string
 const stackCountOptions = ['✓', '2', '3', '4'];
 
 // Define each rack's structure: which sub-columns exist and how many rows each sub-column has
-// Format: { rack: string, cols: { col: number, rows: number }[], special?: 'loading-dock-1' | 'loading-dock-2' | 'door' | 'empty', specialRows?: number }
 interface RackConfig {
   rack: string
   cols: { col: number; maxRow: number }[]
@@ -90,7 +110,7 @@ const RACK_CONFIGS: RackConfig[] = [
   { rack: 'A1', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
 ];
 
-export default function WarehouseMap({ locations = [] }: Props) {
+export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Props) {
   const [selectedSlotCodes, setSelectedSlotCodes] = useState<string[]>([])
   const [editStatus, setEditStatus] = useState<number>(0)
   const [editStackCount, setEditStackCount] = useState<string>('')
@@ -100,6 +120,10 @@ export default function WarehouseMap({ locations = [] }: Props) {
   const [selectRowsOn, setSelectRowsOn] = useState(false)
   const [selectColOn, setSelectColOn] = useState(false)
   const [selectBlockOn, setSelectBlockOn] = useState(false)
+
+  // Direct roll assignment from sidebar
+  const [selectedUnslottedRollId, setSelectedUnslottedRollId] = useState<string>('')
+  const [isAssigningFromSidebar, setIsAssigningFromSidebar] = useState(false)
 
   function toggleMode(mode: 'row' | 'col' | 'block') {
     let newModeState = false
@@ -127,9 +151,14 @@ export default function WarehouseMap({ locations = [] }: Props) {
     const rollId = params.get('assign_roll')
     const rollNo = params.get('roll_no')
     if (rollId) {
+      const decodedRollNo = rollNo ? decodeURIComponent(rollNo) : rollId
       setAssignMode(true)
       setAssignRollId(rollId)
-      setAssignRollNo(rollNo ? decodeURIComponent(rollNo) : rollId)
+      setAssignRollNo(decodedRollNo)
+      setAssignForm({
+        rollNumber: decodedRollNo,
+        entryDate: new Date().toISOString().slice(0, 10),
+      })
     }
   }, [])
 
@@ -137,19 +166,26 @@ export default function WarehouseMap({ locations = [] }: Props) {
   const slotMap = useMemo(() => {
     const map = new Map<string, Slot>()
     locations.forEach(loc => {
-      const roll = loc.rolls && loc.rolls.length > 0 ? loc.rolls[0] : null
+      const rolls = loc.rolls || []
+      const primaryRoll = rolls.length > 0 ? rolls[0] : null
       map.set(loc.location, {
         id: loc.id,
         code: loc.location,
         status: (loc.status >= 0 && loc.status <= 6 ? loc.status : 0) as SlotStatus,
-        stackCount: loc.stack_count,
-        rollId: roll?.no,
-        rollNumber: roll?.no_roll,
-        weight: roll?.weight,
-        grade: roll?.grade?.grade,
-        gsm: roll?.jop?.gsm?.gsm,
-        width: roll?.jop?.rollsWidth?.width,
-        rollsList: loc.rolls?.map(r => ({ id: r.no, number: r.no_roll })) || [],
+        stackCount: loc.stack_count || (rolls.length > 0 ? (rolls.length === 1 ? '✓' : String(rolls.length)) : null),
+        rollId: primaryRoll?.no,
+        rollNumber: primaryRoll?.no_roll,
+        weight: primaryRoll?.weight,
+        grade: primaryRoll?.grade?.grade,
+        gsm: primaryRoll?.jop?.gsm?.gsm,
+        width: primaryRoll?.jop?.rollsWidth?.width,
+        rollsList: rolls.map(r => ({
+          id: r.no,
+          number: r.no_roll,
+          weight: r.weight,
+          grade: r.grade?.grade,
+          gsm: r.jop?.gsm?.gsm
+        })),
       })
     })
     return map
@@ -165,16 +201,14 @@ export default function WarehouseMap({ locations = [] }: Props) {
     const rwSet = new Set<number>()
 
     slotMap.forEach(slot => {
-      // Only count slots that belong to Kolom A
       if (slot.code.startsWith('A')) {
         slotsCount++
-        if (slot.rollId) {
+        slot.rollsList.forEach(r => {
           rollsCount++
-          weightSum += slot.weight || 0
-          if (slot.grade) grdSet.add(slot.grade)
-          if (slot.gsm) gsmSet.add(slot.gsm)
-          if (slot.width) rwSet.add(slot.width)
-        }
+          weightSum += r.weight || 0
+          if (r.grade) grdSet.add(r.grade)
+          if (r.gsm) gsmSet.add(r.gsm)
+        })
       }
     })
 
@@ -193,15 +227,31 @@ export default function WarehouseMap({ locations = [] }: Props) {
   const selectedSlots = useMemo(() => selectedSlotCodes.map(c => slotMap.get(c)).filter(Boolean) as Slot[], [selectedSlotCodes, slotMap])
 
   function handleSlotClick(code: string) {
-    const slot = slotMap.get(code) || { id: 0, code, status: 0 as SlotStatus }
+    const slot = slotMap.get(code)
+    if (!slot || slot.id === 0) {
+      SystemUI.toast({
+        message: `Slot ${code} belum terdaftar di database.`,
+        type: 'warning',
+        duration: 3000
+      })
+      return
+    }
+
     if (assignMode) {
-      if (slot.status === 0) {
+      const count = slot.rollsList.length
+      if (count < 4) {
         setAssignSlot(slot)
         setAssignForm({
-          rollNumber: '',
+          rollNumber: assignRollNo || '',
           entryDate: new Date().toISOString().slice(0, 10),
         })
         setShowAssignPopup(true)
+      } else {
+        SystemUI.toast({
+          message: `Slot ${code} sudah penuh (4/4 roll). Silakan pilih slot lain.`,
+          type: 'warning',
+          duration: 3000
+        })
       }
     } else {
       let codesToSelect = new Set<string>([code])
@@ -281,10 +331,47 @@ export default function WarehouseMap({ locations = [] }: Props) {
       stack_count: editStackCount === '' ? null : editStackCount,
     }, {
       preserveScroll: true,
-      onSuccess: () => setIsUpdating(false),
+      onSuccess: () => {
+        setIsUpdating(false)
+        SystemUI.toast({ message: 'Status lokasi berhasil diperbarui di database.', type: 'success' })
+      },
       onError: () => {
         setIsUpdating(false)
-        alert("Failed to update locations")
+        SystemUI.toast({ message: 'Gagal memperbarui status lokasi di database.', type: 'error' })
+      }
+    })
+  }
+
+  function handleAssignFromSidebar() {
+    if (!selectedUnslottedRollId || selectedSlots.length !== 1 || !selectedSlots[0].id) {
+      SystemUI.toast({ message: 'Pilih roll yang ingin ditempatkan.', type: 'warning' })
+      return
+    }
+
+    const targetSlot = selectedSlots[0]
+    if (targetSlot.rollsList.length >= 4) {
+      SystemUI.toast({ message: `Slot ${targetSlot.code} sudah penuh (4/4 roll).`, type: 'error' })
+      return
+    }
+
+    setIsAssigningFromSidebar(true)
+
+    router.put(`/rolls/${selectedUnslottedRollId}`, {
+      locations_id: String(targetSlot.id),
+      action_type: 'ASSIGN',
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setIsAssigningFromSidebar(false)
+        setSelectedUnslottedRollId('')
+        SystemUI.toast({
+          message: `Roll berhasil ditempatkan di slot ${targetSlot.code} (Tumpukan ke-${targetSlot.rollsList.length + 1})!`,
+          type: 'success'
+        })
+      },
+      onError: () => {
+        setIsAssigningFromSidebar(false)
+        SystemUI.toast({ message: 'Gagal menempatkan roll ke database.', type: 'error' })
       }
     })
   }
@@ -300,11 +387,10 @@ export default function WarehouseMap({ locations = [] }: Props) {
     }
   }, [selectedSlotCodes])
 
-  // Render a single slot cell (big square like old E17 design)
+  // Render a single slot cell
   function renderSlotCell(code: string, row: number) {
     const slot = slotMap.get(code)
     if (!slot) {
-      // Slot doesn't exist in DB — render a disabled placeholder that still shows the code
       return (
         <div key={code} className="relative group">
           <div className="flex items-center justify-center w-full aspect-square rounded-md border-2 border-dashed border-slate-300 bg-slate-50 text-[10px] tracking-tighter leading-none font-bold text-center text-slate-400 cursor-not-allowed">
@@ -318,32 +404,76 @@ export default function WarehouseMap({ locations = [] }: Props) {
       )
     }
 
-    const cfg = statusConfig[slot.status]
+    const rollsCount = slot.rollsList.length
+    const isFull = rollsCount >= 4
+    const isAvailableToAssign = rollsCount < 4
     const isSelected = selectedSlotCodes.includes(code)
-    const isAssignTarget = assignMode && slot.status === 0
+    const isAssignTarget = assignMode && isAvailableToAssign
+
+    // Visual background config
+    let bgStyle = statusConfig[slot.status]?.bgClass || 'bg-white border-2 border-gray-300 text-gray-800'
+    if (slot.status === 3) {
+      bgStyle = 'bg-emerald-600 border-2 border-emerald-700 text-white shadow-xs'
+    } else if (slot.status === 4) {
+      bgStyle = 'bg-rose-600 border-2 border-rose-700 text-white shadow-xs'
+    } else if (slot.status === 5) {
+      bgStyle = 'bg-amber-400 border-2 border-amber-500 text-slate-900 shadow-xs'
+    } else if (slot.status === 6) {
+      bgStyle = 'bg-blue-600 border-2 border-blue-700 text-white shadow-xs'
+    } else if (rollsCount > 0 && !isFull) {
+      bgStyle = 'bg-slate-700 border-2 border-slate-800 text-white shadow-xs'
+    } else if (isFull) {
+      bgStyle = 'bg-slate-900 border-2 border-slate-950 text-white shadow-md'
+    }
 
     return (
       <div key={code} className="relative group">
         <button
           onClick={() => handleSlotClick(code)}
-          className={`flex flex-col items-center justify-center w-full aspect-square rounded-md text-[10px] tracking-tighter leading-none font-bold text-center acos-smooth-hover cursor-pointer shadow-sm ${
+          className={`flex flex-col items-center justify-center w-full aspect-square rounded-md text-[10px] tracking-tighter leading-none font-bold text-center acos-smooth-hover cursor-pointer shadow-sm relative ${
             isSelected
-              ? `${cfg.bgClass} ring-4 ring-offset-2 ring-indigo-500 scale-105 z-10 transition-transform`
+              ? `${bgStyle} ring-4 ring-offset-2 ring-indigo-500 scale-105 z-10 transition-transform`
               : isAssignTarget
-                ? `${cfg.bgClass} ring-2 ring-emerald-400 hover:ring-4 hover:ring-emerald-500 hover:scale-105 transition-all`
-                : `${cfg.bgClass}`
+                ? `${bgStyle} ring-2 ring-emerald-400 hover:ring-4 hover:ring-emerald-500 hover:scale-105 transition-all`
+                : `${bgStyle}`
           }`}
         >
           <span>{code}</span>
-          {slot.stackCount && (
-            <span className="mt-1 text-[9px] font-black text-slate-800 bg-white/60 backdrop-blur-[1px] border border-slate-900/10 px-1.5 py-0.5 rounded shadow-sm leading-none flex items-center justify-center">
+          
+          {/* Multi-Roll Stack Count Indicator */}
+          {rollsCount > 0 ? (
+            <div className="mt-1 flex items-center gap-0.5">
+              <span className={`text-[9px] font-black px-1.5 py-0.2 rounded leading-none flex items-center justify-center shadow-xs ${
+                isFull 
+                  ? 'bg-rose-500 text-white' 
+                  : 'bg-emerald-400 text-slate-950'
+              }`}>
+                {rollsCount}/4
+              </span>
+            </div>
+          ) : slot.stackCount ? (
+            <span className="mt-1 text-[9px] font-black text-slate-800 bg-white/60 px-1 py-0.2 rounded shadow-sm leading-none">
               {slot.stackCount}
             </span>
-          )}
+          ) : null}
         </button>
-        {/* Tooltip */}
-        <div className="hidden md:block absolute bottom-full mb-2 w-max px-3 py-1.5 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl whitespace-nowrap left-1/2 -translate-x-1/2">
-          Location: <span className="font-bold text-blue-300">{code}</span> | Status: {cfg.label}
+
+        {/* Rich Tooltip */}
+        <div className="hidden md:block absolute bottom-full mb-2 w-max px-3 py-2 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl whitespace-nowrap left-1/2 -translate-x-1/2">
+          <div className="font-bold text-blue-300">Location: {code} (DB ID: {slot.id})</div>
+          <div className="text-slate-300 text-[10px] mt-0.5">
+            Kapasitas: <span className="font-bold text-white">{rollsCount} / 4 Roll</span>
+            {isFull ? ' (PENUH)' : ` (${4 - rollsCount} slot tersisa)`}
+          </div>
+          {rollsCount > 0 && (
+            <div className="text-[10px] text-slate-400 border-t border-slate-700 mt-1 pt-1 space-y-0.5">
+              {slot.rollsList.map((r, i) => (
+                <div key={r.id}>
+                  #{i + 1}: <span className="font-bold text-white font-mono">{r.number}</span> ({r.grade || '—'}, {r.weight || 0}kg)
+                </div>
+              ))}
+            </div>
+          )}
           <div className="absolute top-full border-4 border-transparent border-t-slate-900 left-1/2 -translate-x-1/2"></div>
         </div>
       </div>
@@ -354,7 +484,6 @@ export default function WarehouseMap({ locations = [] }: Props) {
   function renderRack(config: RackConfig) {
     const { rack, cols, special, specialColSpan, specialRowStart, specialRowSpan } = config
 
-    // Compute the actual number of rows for this rack
     const rackMaxRows = Math.max(
       ...cols.map(c => c.maxRow),
       (specialRowStart && specialRowSpan) ? specialRowStart + specialRowSpan - 1 : 0
@@ -366,7 +495,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
       <div key={rack} className="flex-shrink-0 w-[220px]">
         {/* Rack Header */}
         <div className="text-center font-bold text-slate-700 bg-slate-100 py-1.5 rounded-t-lg mb-1 text-sm border border-slate-200">
-          {rack}
+          Rack {rack}
         </div>
         {/* Sub-column headers */}
         <div className="grid grid-cols-4 gap-1.5 mb-2">
@@ -383,10 +512,8 @@ export default function WarehouseMap({ locations = [] }: Props) {
             return cols.map(c => {
               const code = `${rack}-${c.col}-${row}`
 
-              // Render special area (LOADING DOCK / DOOR) on the first cell of the area
               if (special && specialRowStart && specialRowSpan && specialColSpan) {
                 if (c.col === cols[0].col && row === specialRowStart) {
-                  // Render the special merged cell
                   return (
                     <div
                       key={`${rack}-special`}
@@ -404,9 +531,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
                     </div>
                   )
                 }
-                // Skip cells that are part of the special area
                 if (row >= specialRowStart && row < specialRowStart + specialRowSpan) {
-                  // For DOOR: only skip cols 4,3,2 (first 3 cols). Col 1 might have slots.
                   if (special === 'DOOR') {
                     const colIndex = cols.findIndex(x => x.col === c.col)
                     if (colIndex < specialColSpan) return null
@@ -416,7 +541,6 @@ export default function WarehouseMap({ locations = [] }: Props) {
                 }
               }
 
-              // Check if this row exceeds the max for this sub-column
               if (row > c.maxRow) {
                 return <div key={code} className="w-full aspect-square" />
               }
@@ -435,6 +559,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Warehouse Map</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Denah tata letak gudang Kolom A — Kapasitas hingga 4 roll per slot</p>
         </div>
       </div>
 
@@ -444,9 +569,9 @@ export default function WarehouseMap({ locations = [] }: Props) {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <MapPin size={18} className="text-blue-600 shrink-0" />
             <div className="min-w-0">
-              <div className="text-sm font-bold text-blue-900">Assign Roll Mode</div>
+              <div className="text-sm font-bold text-blue-900">Assign Roll Mode (Kapasitas maks 4 roll)</div>
               <div className="text-xs text-blue-700 truncate">
-                Assigning roll <span className="font-bold font-mono">{assignRollNo}</span> — Select a <span className="font-bold">Free Space</span> slot below
+                Assigning roll <span className="font-bold font-mono">{assignRollNo}</span> — Pilih slot yang tersedia (&lt; 4 roll) di peta
               </div>
             </div>
           </div>
@@ -454,7 +579,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
             className="btn btn-secondary text-xs px-3 py-1.5 shrink-0 cursor-pointer"
             onClick={cancelAssignMode}
           >
-            Cancel
+            Batal Mode Assign
           </button>
         </div>
       )}
@@ -471,8 +596,9 @@ export default function WarehouseMap({ locations = [] }: Props) {
               </div>
               <div>
                 <h3 className="text-sm sm:text-base font-bold text-slate-800">
-                  Kolom A
+                  Kolom A (Racks A1 - A17)
                 </h3>
+                <span className="text-[11px] text-slate-500 font-medium">420 Slots × Maks 4 Roll = 1.680 Kapasitas Total</span>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -522,13 +648,13 @@ export default function WarehouseMap({ locations = [] }: Props) {
                 <span className="sm:hidden">{multiSelectMode ? 'ON' : 'OFF'}</span>
               </button>
               <div className="hidden md:flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-                <span>Scroll right →</span>
+                <span>Scroll kanan →</span>
                 <MoveRight size={13} />
               </div>
             </div>
           </div>
 
-          {/* Grid Area — Horizontal scroll with large boxes */}
+          {/* Grid Area */}
           <div className="w-full overflow-x-auto pb-4 pt-2 px-2 snap-x">
             <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
               {RACK_CONFIGS.map(config => renderRack(config))}
@@ -538,44 +664,40 @@ export default function WarehouseMap({ locations = [] }: Props) {
           <div className="mt-auto">
             {/* Legend */}
             <div className="mt-5 pt-3 border-t border-slate-100">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Slot Status Legend</div>
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Slot Capacity & Status Legend</div>
               <div className="flex flex-wrap gap-2 text-xs">
-                {Object.entries(statusConfig).map(([key, cfg]) => (
-                  <div
-                    key={key}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-200 bg-slate-50/50"
-                  >
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: cfg.dot }} />
-                    <span className="text-[11px] font-medium text-slate-700">{cfg.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Slot Planning → Slotted flow hint */}
-            <div className="mt-3 pt-3 border-t border-slate-100">
-              <div className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                <AlertCircle size={14} className="text-slate-400 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-slate-500 leading-relaxed m-0">
-                  <span className="font-bold text-slate-700">Slot Planning</span> indicates a slot has been reserved for a roll but the roll has not yet physically arrived.
-                  Once the roll is placed in the warehouse, the PIC updates the status to <span className="font-bold text-slate-700">Slotted</span>.
-                </p>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-200 bg-white">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-slate-300" />
+                  <span className="text-[11px] font-medium text-slate-700">Kosong (0/4)</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-emerald-600 bg-emerald-600 text-white">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
+                  <span className="text-[11px] font-bold">Shipment Plan (Siap Kirim)</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-700 bg-slate-700 text-white">
+                  <span className="text-[9px] font-bold bg-emerald-400 text-slate-900 px-1 rounded">1-3/4</span>
+                  <span className="text-[11px] font-medium">Terisi Sebagian (Bisa Ditumpuk)</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-900 bg-slate-900 text-white">
+                  <span className="text-[9px] font-bold bg-rose-500 text-white px-1 rounded">4/4</span>
+                  <span className="text-[11px] font-medium">Penuh (Maks 4 Roll)</span>
+                </div>
               </div>
             </div>
 
             {/* Summary Data */}
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-blue-500 mb-1">Total Roll</div>
+                <div className="text-[10px] uppercase font-bold text-blue-500 mb-1">Total Roll Tersimpan</div>
                 <div className="text-lg font-black text-blue-900">{totalRolls}</div>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-emerald-600 mb-1">Weight (KGS)</div>
+                <div className="text-[10px] uppercase font-bold text-emerald-600 mb-1">Total Berat (KGS)</div>
                 <div className="text-lg font-black text-emerald-900">{totalWeight.toLocaleString('id-ID', {minimumFractionDigits: 2})}</div>
               </div>
               <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-indigo-500 mb-1">Capacity (Slots)</div>
-                <div className="text-lg font-black text-indigo-900">{totalSlots}</div>
+                <div className="text-[10px] uppercase font-bold text-indigo-500 mb-1">Total Slot Fisik</div>
+                <div className="text-lg font-black text-indigo-900">{totalSlots} ({totalSlots * 4} max rolls)</div>
               </div>
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-center">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Specs Available</div>
@@ -593,10 +715,10 @@ export default function WarehouseMap({ locations = [] }: Props) {
         {!assignMode && (
           <div
             className={`flex-shrink-0 overflow-hidden acos-layout-transition ${
-              selectedSlots.length > 0 ? "w-full lg:w-80 opacity-100 max-h-[1000px] mt-2 lg:mt-0" : "w-full lg:w-0 opacity-0 max-h-0 lg:max-h-[1000px]"
+              selectedSlots.length > 0 ? "w-full lg:w-88 opacity-100 max-h-[1200px] mt-2 lg:mt-0" : "w-full lg:w-0 opacity-0 max-h-0 lg:max-h-[1200px]"
             }`}
           >
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col gap-3 w-full lg:w-80 h-full acos-sidebar-enter">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col gap-3 w-full lg:w-88 h-full acos-sidebar-enter">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
@@ -604,10 +726,10 @@ export default function WarehouseMap({ locations = [] }: Props) {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">
-                      {selectedSlots.length === 1 ? 'Location Detail' : 'Multiple Locations'}
+                      {selectedSlots.length === 1 ? 'Detail Slot & Tumpukan' : 'Multiple Locations'}
                     </h3>
                     <div className="text-[11px] font-mono text-slate-500">
-                      {selectedSlots.length === 1 ? selectedSlots[0].code : `${selectedSlots.length} slots selected`}
+                      {selectedSlots.length === 1 ? `${selectedSlots[0].code} (ID: ${selectedSlots[0].id})` : `${selectedSlots.length} slots terpilih`}
                     </div>
                   </div>
                 </div>
@@ -619,7 +741,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
                 </button>
               </div>
 
-              {/* Location Info */}
+              {/* Location Info & Capacity */}
               {selectedSlots.length === 1 ? (
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-100">
@@ -627,20 +749,95 @@ export default function WarehouseMap({ locations = [] }: Props) {
                     <span className="font-bold text-slate-900 font-mono">{selectedSlots[0].code}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Warehouse Area</span>
-                    <span className="font-medium text-slate-800">Kolom A</span>
+                    <span className="text-slate-500">Kapasitas Slot</span>
+                    <span className="font-bold text-slate-900">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${
+                        selectedSlots[0].rollsList.length >= 4 
+                          ? 'bg-rose-100 text-rose-800' 
+                          : selectedSlots[0].rollsList.length > 0 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {selectedSlots[0].rollsList.length} / 4 Roll
+                      </span>
+                    </span>
                   </div>
                 </div>
               ) : (
                 <div className="text-xs text-slate-500 py-2 border-b border-slate-100">
-                  Bulk updating {selectedSlots.length} slots. Apply status and stack count below to update all selected slots.
+                  Bulk update {selectedSlots.length} slots terpilih.
+                </div>
+              )}
+
+              {/* Direct Slot Assignment for Slots with Capacity (< 4 rolls) */}
+              {selectedSlots.length === 1 && selectedSlots[0].id > 0 && selectedSlots[0].rollsList.length < 4 && unslottedRolls && unslottedRolls.length > 0 && (
+                <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                    <PlusCircle size={14} className="text-emerald-600" />
+                    <span>Tumpuk Roll ke Slot Ini (Sisa {4 - selectedSlots[0].rollsList.length})</span>
+                  </div>
+                  <select
+                    value={selectedUnslottedRollId}
+                    onChange={e => setSelectedUnslottedRollId(e.target.value)}
+                    className="form-select text-xs w-full font-medium"
+                  >
+                    <option value="">-- Pilih Roll Tersedia ({unslottedRolls.length}) --</option>
+                    {unslottedRolls.map(r => (
+                      <option key={r.raw_id} value={r.raw_id}>
+                        {r.no_roll} - {r.grade} ({r.weight} kg)
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!selectedUnslottedRollId || isAssigningFromSidebar}
+                    onClick={handleAssignFromSidebar}
+                    className="btn btn-sm btn-primary w-full text-xs font-bold py-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isAssigningFromSidebar ? 'Menyimpan ke DB...' : `Tempatkan sebagai Roll ke-${selectedSlots[0].rollsList.length + 1}`}
+                  </button>
+                </div>
+              )}
+
+              {/* Stacked Rolls List */}
+              {selectedSlots.length === 1 && selectedSlots[0].rollsList.length > 0 && (
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
+                    <span>Rolls yang Bertumpuk di Slot Ini:</span>
+                    <span className="text-[10px] font-bold text-blue-600">{selectedSlots[0].rollsList.length} Roll</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+                    {selectedSlots[0].rollsList.map((roll, idx) => (
+                      <Link
+                        key={roll.id}
+                        href={`/roll-detail/${roll.number}`}
+                        className="flex items-center justify-between p-2 rounded-lg bg-blue-50/60 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <div className="text-xs font-bold text-blue-950 font-mono">{roll.number}</div>
+                            <div className="text-[10px] text-slate-500">
+                              {roll.grade || '—'} • {roll.weight || 0} kg
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Eye size={12} />
+                          Detail
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* Status & Stack Count Dropdowns */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3 pt-2 border-t border-slate-100">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Status</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Status Slot</label>
                   <select
                     className="form-select w-full text-sm font-semibold text-slate-800"
                     value={editStatus}
@@ -653,7 +850,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Stack Count</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Stack Count Manual Override</label>
                   <select
                     className="form-select w-full text-sm font-semibold text-slate-800"
                     value={editStackCount}
@@ -661,7 +858,7 @@ export default function WarehouseMap({ locations = [] }: Props) {
                   >
                     <option value="">(None)</option>
                     {stackCountOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
+                      <option key={opt} value={opt}>{opt} ({opt === '✓' ? '1 roll' : `${opt} roll`})</option>
                     ))}
                   </select>
                 </div>
@@ -669,44 +866,19 @@ export default function WarehouseMap({ locations = [] }: Props) {
                 <button
                   onClick={handleUpdateLocation}
                   disabled={isUpdating}
-                  className="btn btn-primary w-full text-sm py-2"
+                  className="btn btn-primary w-full text-sm py-2 cursor-pointer font-bold"
                 >
-                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                  {isUpdating ? 'Menyimpan...' : 'Simpan Perubahan Slot'}
                 </button>
               </div>
-
-              {/* See Roll Details link */}
-              {selectedSlots.length === 1 && selectedSlots[0].status !== 0 && selectedSlots[0].rollsList && selectedSlots[0].rollsList.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-slate-100">
-                  <div className="text-xs font-semibold text-slate-700 mb-2">Assigned Rolls</div>
-                  <div className="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
-                    {selectedSlots[0].rollsList.map(roll => (
-                      <Link
-                        key={roll.id}
-                        href={`/roll-detail/${roll.number}`}
-                        className="flex items-center justify-between p-2 rounded-lg bg-blue-50/50 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-colors group"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Package size={14} className="text-blue-500" />
-                          <span className="text-xs font-bold text-blue-900 font-mono">{roll.number}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Eye size={12} />
-                          Details
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Assignment Popup Modal */}
+      {/* Assignment Popup Modal (When in assignMode) */}
       {showAssignPopup && assignSlot && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
           <div className="card w-full sm:max-w-md p-5 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -722,32 +894,19 @@ export default function WarehouseMap({ locations = [] }: Props) {
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Roll</span>
+                <span className="text-slate-500 font-medium">Roll yang Ditempatkan</span>
                 <span className="font-bold text-blue-700 font-mono">{assignRollNo}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Warehouse</span>
-                <span className="font-semibold text-slate-800">Kolom A</span>
+                <span className="text-slate-500 font-medium">Target Slot</span>
+                <span className="font-bold text-slate-900 font-mono">{assignSlot.code} (ID: {assignSlot.id})</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Slot</span>
-                <span className="font-bold text-slate-900 font-mono">{assignSlot.code}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Initial Status</span>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px]">
-                  <div className="w-2 h-2 rounded-full bg-slate-400" />
-                  Slot Planning
+                <span className="text-slate-500 font-medium">Posisi Tumpukan</span>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px]">
+                  Tumpukan ke-{assignSlot.rollsList.length + 1} dari 4
                 </span>
               </div>
-            </div>
-
-            <div className="flex items-start gap-2 p-2.5 bg-blue-50 rounded-lg border border-blue-100">
-              <AlertCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-blue-700 leading-relaxed m-0">
-                The roll will initially be set to <span className="font-bold">Slot Planning</span>.
-                Once the roll physically arrives at the warehouse, the PIC can update the status to <span className="font-bold">Slotted</span>.
-              </p>
             </div>
 
             <div className="space-y-3">
@@ -758,10 +917,9 @@ export default function WarehouseMap({ locations = [] }: Props) {
                 <input
                   value={assignForm.rollNumber}
                   onChange={e => setAssignForm(f => ({ ...f, rollNumber: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full font-mono font-bold"
                   placeholder="Enter roll number"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">Manually assigned during warehouse assignment</p>
               </div>
 
               <div>
@@ -779,14 +937,17 @@ export default function WarehouseMap({ locations = [] }: Props) {
             </div>
 
             <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
-              <button className="btn btn-secondary text-xs px-3 py-1.5" onClick={() => setShowAssignPopup(false)}>
-                Cancel
+              <button className="btn btn-secondary text-xs px-3 py-1.5 cursor-pointer" onClick={() => setShowAssignPopup(false)}>
+                Batal
               </button>
               <button
-                className="btn btn-primary text-xs px-3 py-1.5"
+                className="btn btn-primary text-xs px-4 py-1.5 cursor-pointer font-bold"
                 onClick={() => {
-                  if (!assignForm.rollNumber.trim()) return
-                  if (assignRollId) {
+                  if (!assignForm.rollNumber.trim()) {
+                    SystemUI.toast({ message: 'Nomor roll tidak boleh kosong.', type: 'warning' })
+                    return
+                  }
+                  if (assignRollId && assignSlot.id > 0) {
                     router.put(`/rolls/${assignRollId}`, {
                       locations_id: String(assignSlot.id),
                       no_roll: assignForm.rollNumber,
@@ -796,15 +957,22 @@ export default function WarehouseMap({ locations = [] }: Props) {
                       onSuccess: () => {
                         setShowAssignPopup(false)
                         cancelAssignMode()
+                        SystemUI.toast({
+                          message: `Roll ${assignForm.rollNumber} berhasil ditempatkan di ${assignSlot.code}!`,
+                          type: 'success'
+                        })
                       },
                       onError: () => {
-                        alert("Failed to assign roll. Ensure all required data is provided.")
+                        SystemUI.toast({
+                          message: 'Gagal menempatkan roll. Pastikan kapasitas slot mencukupi.',
+                          type: 'error'
+                        })
                       }
                     })
                   }
                 }}
               >
-                Assign Roll
+                Konfirmasi Assign Roll
               </button>
             </div>
           </div>

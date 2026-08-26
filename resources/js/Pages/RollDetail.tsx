@@ -155,6 +155,7 @@ export default function RollDetail({
         (Boolean(currentRoll.location) &&
             currentRoll.location !== "Unallocated" &&
             currentRoll.location !== "No Slot" &&
+            currentRoll.location !== "Not Assigned" &&
             currentRoll.location !== "—");
 
     const [showEditModal, setShowEditModal] = useState(false);
@@ -373,67 +374,19 @@ export default function RollDetail({
                         <Printer size={13} />
                         <span>Print Label Tag</span>
                     </button>
-                    <span className="badge bg-blue-50 text-blue-700 border-blue-200 font-bold px-3 py-1 text-xs">
-                        {currentRoll.status}
+                    <span className={`badge font-bold px-3 py-1 text-xs ${
+                        isSlotted 
+                            ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                        {isSlotted ? (currentRoll.status || 'Slotted') : 'Not Assigned'}
                     </span>
                 </div>
             </div>
 
-            {/* Main Grid with QR Barcode Documentation Card */}
+            {/* Main Grid */}
             <div className="grid grid-cols-1 min-[680px]:grid-cols-2 min-[1180px]:grid-cols-3 gap-4">
-                {/* 1. Barcode & QR Code Documentation Card */}
-                <div className="card p-4 bg-gradient-to-b from-white to-slate-50/50 border border-slate-200 space-y-3">
-                    <div className="flex items-center justify-between border-b-2 border-blue-600 pb-2">
-                        <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                            <QrCode size={14} className="text-blue-600" />
-                            <span>Barcode & QR Documentation</span>
-                        </h3>
-                        <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">
-                            Incoming Tag
-                        </span>
-                    </div>
-
-                    <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-slate-200 shadow-inner space-y-2">
-                        <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-xs">
-                            <QRCodeSVG value={qrPayload} size={135} />
-                        </div>
-
-                        {/* Barcode Visual Representation */}
-                        <div className="w-full text-center pt-1 border-t border-slate-100">
-                            <div className="font-mono text-xs font-bold tracking-[0.25em] text-slate-900">
-                                *{currentRoll.no_roll || currentRoll.id}*
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-mono">
-                                {currentRoll.grade} • {currentRoll.weight} KG
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-1.5 text-xs">
-                        <div className="flex justify-between items-center text-slate-600 text-[11px]">
-                            <span>QR Tag Status:</span>
-                            <span className="font-bold text-emerald-600 flex items-center gap-1">
-                                <CheckCircle size={11} /> Verified Core Label
-                            </span>
-                        </div>
-                        <div className="flex justify-between items-center text-slate-600 text-[11px]">
-                            <span>JOP Reference:</span>
-                            <span className="font-semibold text-slate-800 font-mono">
-                                {currentRoll.jop}
-                            </span>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={() => setShowLabelModal(true)}
-                        className="w-full btn btn-secondary text-xs py-1.5 flex items-center justify-center gap-1.5 font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100 border-blue-200 cursor-pointer transition-colors"
-                    >
-                        <Maximize2 size={13} />
-                        <span>View & Print Sticker Label</span>
-                    </button>
-                </div>
-
-                {/* 2. Roll Information */}
+                {/* 1. Roll Information */}
                 <Section title="Roll Information" icon={<Tag size={13} />}>
                     <InfoRow
                         label="Roll Number"
@@ -489,15 +442,27 @@ export default function RollDetail({
                     />
                 </Section>
 
-                {/* 5. Warehouse Information */}
+                {/* Warehouse Information */}
                 <Section
                     title="Warehouse Information"
                     icon={<MapPin size={13} />}
                 >
-                    <InfoRow label="Location" value={currentRoll.location} />
-                    <InfoRow label="Warehouse" value="Warehouse E17" />
-                    <InfoRow label="Slot Status" value={currentRoll.status} />
-                    <InfoRow label="Stacking Rule" value="Tier 1-4 Compliant" />
+                    <InfoRow 
+                        label="Location" 
+                        value={isSlotted ? currentRoll.location : "Not Assigned"} 
+                    />
+                    <InfoRow 
+                        label="Warehouse" 
+                        value={isSlotted ? "Warehouse Kolom A" : "Not Assigned"} 
+                    />
+                    <InfoRow 
+                        label="Slot Status" 
+                        value={isSlotted ? "Slotted" : (currentRoll.status || "Not Assigned")} 
+                    />
+                    <InfoRow 
+                        label="Stacking Capacity" 
+                        value={isSlotted ? "Maks 4 Roll per Slot" : "—"} 
+                    />
                 </Section>
 
                 {/* 6. Order Information */}

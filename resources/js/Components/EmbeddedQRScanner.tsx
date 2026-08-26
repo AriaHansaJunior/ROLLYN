@@ -15,6 +15,9 @@ interface EmbeddedQRScannerProps {
 }
 
 export default function EmbeddedQRScanner({ onScanSuccess, lastScannedRoll }: EmbeddedQRScannerProps) {
+  const onScanSuccessRef = useRef(onScanSuccess)
+  onScanSuccessRef.current = onScanSuccess
+
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -155,7 +158,9 @@ export default function EmbeddedQRScanner({ onScanSuccess, lastScannedRoll }: Em
       // Audio context restricted or unavailable
     }
 
-    onScanSuccess(data)
+    if (onScanSuccessRef.current) {
+      onScanSuccessRef.current(data)
+    }
 
     // Reset last scanned result cache after 2.5 seconds to allow rescanning
     setTimeout(() => {
