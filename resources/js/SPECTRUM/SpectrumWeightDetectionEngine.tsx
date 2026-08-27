@@ -204,17 +204,26 @@ export default function SpectrumWeightDetectionEngine({
             frames.push(await captureBase64());
 
             const quality = analyseImageQuality(rawCanvas);
-            const [legacyOutcome, spectrumData] = await Promise.all([
-                recogniseWeight(variants, quality),
-                detectSpectrumWeight(frames),
-            ]);
+
+            const spectrumData = await detectSpectrumWeight(frames);
+            
+            let legacyOutcome: any = null;
+            
+            if (!spectrumData || spectrumData.weight_detected === 0 || spectrumData.confidence < 0.80) {
+                legacyOutcome = await recogniseWeight(variants, quality);
+            }
 
             setSpectrumResult(spectrumData);
 
-            if ("result" in legacyOutcome) {
-                setOcrResult(legacyOutcome.result);
+            if (legacyOutcome) {
+                if ("result" in legacyOutcome) {
+                    setOcrResult(legacyOutcome.result);
+                } else {
+                    setOcrError(legacyOutcome.error);
+                }
             } else {
-                setOcrError(legacyOutcome.error);
+                setOcrResult(null);
+                setOcrError(null);
             }
 
             if (spectrumData && spectrumData.weight_detected > 0 && spectrumData.confidence >= 0.80) {
@@ -224,7 +233,7 @@ export default function SpectrumWeightDetectionEngine({
                     message: "Detection complete — SPECTRUM 4.0 ready!",
                     type: "success",
                 });
-            } else if ("result" in legacyOutcome) {
+            } else if (legacyOutcome && "result" in legacyOutcome) {
                 setSelectedEngine("ocr");
                 setEditedWeight(String(legacyOutcome.result.weight));
                 SystemUI.toast({

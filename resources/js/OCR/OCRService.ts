@@ -11,6 +11,8 @@ function localAsset(path: string): string {
 
 function buildLocalOptions() {
   return {
+    workerPath: localAsset('worker.min.js'),
+    corePath: localAsset('tesseract-core.wasm.js'),
     langPath: localAsset('lang-data'),
     logger: () => {},
   };
@@ -314,7 +316,7 @@ async function runWorkerOnVariants(
   }> = [];
   const attempts: Array<{ label: string; text: string; confidence: number; engine: string }> = [];
 
-  for (const variant of variants) {
+  for (const variant of variants.slice(0, 2)) {
     try {
       const { data } = await worker.recognize(variant.dataUrl);
       const rawText = data.text ?? '';
