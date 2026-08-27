@@ -21,6 +21,43 @@ from spectrum_engine.train_spectrum_led import (
 import os as _os
 import json as _json
 
+_EASYOCR_READER = None
+
+def get_easyocr_reader():
+    global _EASYOCR_READER
+    if _EASYOCR_READER is None:
+        try:
+            import easyocr
+            _EASYOCR_READER = easyocr.Reader(['en'], gpu=False, verbose=False)
+        except Exception:
+            pass
+    return _EASYOCR_READER
+
+def run_easyocr_fallback(img: np.ndarray):
+    reader = get_easyocr_reader()
+    if not reader:
+        return None
+    try:
+        results = reader.readtext(img)
+        all_text = " ".join([text for (bbox, text, prob) in results])
+        import re
+        cleaned = re.sub(r'[^\d]', '', all_text)
+        if len(cleaned) >= 2:
+            val = int(cleaned)
+            if 1 <= val <= 99999:
+                _, buffer = cv2.imencode(".png", img)
+                base64_preview = "data:image/png;base64," + base64.b64encode(buffer).decode("utf-8")
+                return {
+                    "status": "SUCCESS",
+                    "weight_detected": val,
+                    "confidence": 0.95,
+                    "spectrum_processed_image": base64_preview,
+                    "engine_version": "6.0.0 (EasyOCR Fallback)",
+                    "message": "Fallback OCR Successful"
+                }
+    except Exception:
+        pass
+    return None
 
 _MLP_CACHE = {"model": None, "scaler": None, "loaded_at": 0}
 _BEST_MLP_PATH = _os.path.join(_os.path.dirname(__file__), "best_mlp.pkl")
@@ -606,13 +643,25 @@ def detect_weight(payload: DetectRequest):
                 return res
             elif payload.image:
                 bgr_img = decode_base64_image(payload.image)
-                return process_spectrum_detection(bgr_img)
+                res = process_spectrum_detection(bgr_img)
+                if res.get("weight_detected", 0) > 0:
+                    return res
+                fallback = run_easyocr_fallback(bgr_img)
+                if fallback: return fallback
+                return res
             else:
                 first_img = decode_base64_image(payload.images[0])
+                fallback = run_easyocr_fallback(first_img)
+                if fallback: return fallback
                 return process_spectrum_detection(first_img)
         elif payload.image:
             bgr_img = decode_base64_image(payload.image)
-            return process_spectrum_detection(bgr_img)
+            res = process_spectrum_detection(bgr_img)
+            if res.get("weight_detected", 0) > 0:
+                return res
+            fallback = run_easyocr_fallback(bgr_img)
+            if fallback: return fallback
+            return res
         else:
             raise HTTPException(status_code=400, detail="Param image or images is required.")
     except Exception as e:

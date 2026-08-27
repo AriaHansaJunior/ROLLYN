@@ -204,7 +204,7 @@ async function getEngWorker(): Promise<any> {
 
   engWorker.initialising = true;
   try {
-    const worker = await createWorker('eng', OEM.LSTM_ONLY, buildLocalOptions());
+    const worker = await createWorker('eng', OEM.LSTM_ONLY);
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_LINE,
       tessedit_char_whitelist: '0123456789.,',
@@ -247,8 +247,7 @@ async function getDigitalWorker(): Promise<any> {
   try {
     const worker = await createWorker(
       'letsgodigital',
-      OEM.TESSERACT_ONLY,
-      { ...buildLocalOptions(), legacyCore: true, legacyLang: true }
+      OEM.TESSERACT_ONLY
     );
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_LINE,
