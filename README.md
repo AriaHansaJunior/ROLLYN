@@ -35,11 +35,12 @@ The application responsibilities remain separated and maintainable:
 
 ## Core Features & Modules
 
-### 1. Automated Weighing Data Capture (Computer Vision)
-To eliminate manual transcription of weighing information, the system uses computer vision and OCR to read data directly from the weighing scale displays.
-- A camera captures the physical scale display in real time.
-- The system processes the image to automatically detect and extract the weight data.
-- This data is recorded directly into the system, bypassing manual entry and preventing human error.
+### 1. Automated Weighing Data Capture (Advanced Computer Vision)
+To eliminate manual transcription of weighing information, the system uses a robust, frontend-native Computer Vision and OCR pipeline to read data directly from weighing scale displays.
+- **Live Camera & Dual Engine:** Supports real-time image capture processed either via a fast local OCR pipeline (Tesseract) or an advanced AI backend (SPECTRUM 4.0).
+- **Intelligent Auto-Correction:** Features a native frontend CV pipeline that automatically detects digit regions, auto-crops, and mathematically straightens tilted photos (perspective & rotation correction).
+- **Illumination Resilience:** Utilizes Local Adaptive Thresholding and Morphological operations to successfully read both standard white-background scales and complex dark-background/7-segment LED scales, preserving dim or glowing segments.
+- **Structural Validation:** Cross-checks the physical count of illuminated digits against the OCR output to guarantee data integrity before recording the weight into the system.
 
 ### 2. Warehouse Management & Tracking
 The system tracks the lifecycle of finished goods, managing their status, storage locations, and movements across multiple warehouse zones (Warehouse A through Warehouse G).
