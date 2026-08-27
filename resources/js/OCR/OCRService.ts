@@ -11,15 +11,8 @@ function localAsset(path: string): string {
 
 function buildLocalOptions() {
   return {
-    workerPath: localAsset('worker.min.js'),
-    corePath:   localAsset(''),
-    langPath:   localAsset('lang-data'),
+    langPath: localAsset('lang-data'),
     logger: () => {},
-
-    gzip: false,
-
-    load_system_dawg: '0',
-    load_freq_dawg: '0',
   };
 }
 
@@ -253,7 +246,7 @@ async function getDigitalWorker(): Promise<any> {
     const worker = await createWorker(
       'letsgodigital',
       OEM.TESSERACT_ONLY,
-      buildLocalOptions(),
+      { ...buildLocalOptions(), legacyCore: true, legacyLang: true }
     );
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_LINE,

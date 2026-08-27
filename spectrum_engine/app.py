@@ -126,19 +126,31 @@ def decode_base64_image(base64_str: str) -> np.ndarray:
 
 
 def preprocess_hsv_red_led(bgr_img: np.ndarray):
+    # 1. Red LED Detection
     hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-
     lower_red1 = np.array([0, 100, 100])
     upper_red1 = np.array([10, 255, 255])
     lower_red2 = np.array([160, 100, 100])
     upper_red2 = np.array([180, 255, 255])
-
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     red_mask = cv2.bitwise_or(mask1, mask2)
 
+    # 2. Dark LCD / Ink Detection (black on light bg)
+    gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
+    dark_mask = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 15
+    )
+    # Remove small noise from adaptive threshold
+    noise_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    dark_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_OPEN, noise_kernel)
+
+    # 3. Combine both masks
+    combined_mask = cv2.bitwise_or(red_mask, dark_mask)
+
+    # 4. Standard cleanup
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    closed_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
+    closed_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
     dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
 
     return dilated_mask

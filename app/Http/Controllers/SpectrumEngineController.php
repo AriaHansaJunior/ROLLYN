@@ -60,7 +60,8 @@ img = decode_base64_image(b64)
 res = process_spectrum_detection(img)
 print(json.dumps(res))
 ";
-            $cmd = 'python -c ' . escapeshellarg($pythonCode);
+            $engineDir = base_path('spectrum_engine');
+            $cmd = 'cmd /c cd /d ' . escapeshellarg($engineDir) . ' && python -c ' . escapeshellarg($pythonCode);
             $output = shell_exec($cmd);
             @unlink($tempImg);
 

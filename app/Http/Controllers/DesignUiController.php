@@ -51,6 +51,28 @@ class DesignUiController extends Controller
 
     public function incomingRoll() { 
         $jops = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])->latest()->get();
+
+        // Auto-start SPECTRUM Engine if it's not running
+        $connection = @fsockopen('127.0.0.1', 8001, $errno, $errstr, 1);
+        if (is_resource($connection)) {
+            fclose($connection);
+        } else {
+            $engineDir = base_path('spectrum_engine');
+            try {
+                if (class_exists('COM')) {
+                    $shell = new \COM("WScript.Shell");
+                    $cmd = "cmd /c cd /d " . escapeshellarg($engineDir) . " && python -m uvicorn app:app --host 127.0.0.1 --port 8001";
+                    $shell->Run($cmd, 0, false); // 0 = hidden window, false = do not wait
+                } else {
+                    exec('start "" /B cmd /c "cd /d ' . escapeshellarg($engineDir) . ' && python -m uvicorn app:app --host 127.0.0.1 --port 8001 > NUL 2>&1"');
+                }
+            } catch (\Throwable $e) {
+                exec('start "" /B cmd /c "cd /d ' . escapeshellarg($engineDir) . ' && python -m uvicorn app:app --host 127.0.0.1 --port 8001 > NUL 2>&1"');
+            }
+            // Add a brief delay to allow the engine to start
+            usleep(500000); // 500ms
+        }
+
         return Inertia::render('IncomingRoll', ['jopList' => $jops]); 
     }
     public function ocrMonitoring() { return Inertia::render('OcrMonitoring'); }

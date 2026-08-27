@@ -220,28 +220,33 @@ export default function SpectrumWeightDetectionEngine({
             if (spectrumData && spectrumData.weight_detected > 0 && spectrumData.confidence >= 0.80) {
                 setSelectedEngine("spectrum");
                 setEditedWeight(String(spectrumData.weight_detected));
+                SystemUI.toast({
+                    message: "Detection complete — SPECTRUM 4.0 ready!",
+                    type: "success",
+                });
             } else if ("result" in legacyOutcome) {
                 setSelectedEngine("ocr");
                 setEditedWeight(String(legacyOutcome.result.weight));
+                SystemUI.toast({
+                    message: "SPECTRUM low confidence. Legacy OCR result used.",
+                    type: "warning",
+                });
             } else if (spectrumData && spectrumData.weight_detected > 0) {
                 setSelectedEngine("spectrum");
                 setEditedWeight(String(spectrumData.weight_detected));
-            }
-
-            setIsManuallyEdited(false);
-            setEngineState("success");
-
-            if (spectrumData && spectrumData.confidence < 0.80) {
                 SystemUI.toast({
-                    message: "Warning: SPECTRUM 4.0 confidence < 80%. Please verify detected weight.",
+                    message: "Warning: SPECTRUM confidence < 80%. Please verify detected weight.",
                     type: "warning",
                 });
             } else {
                 SystemUI.toast({
-                    message: "Detection complete — SPECTRUM 4.0 (Heuristic & NMS Active) ready!",
-                    type: "success",
+                    message: "No weight detected. Please enter the weight manually.",
+                    type: "error",
                 });
             }
+
+            setIsManuallyEdited(false);
+            setEngineState("success");
         } catch (err) {
             console.error("[OCR] Error during recognition:", err);
             const errorTitle = "Processing Error";
