@@ -233,14 +233,14 @@ export default function Shipments({ shipments }: Props) {
                     <input type="radio" className="mt-0.5" name="reject_type" value="replace" checked={rejectForm.reject_type === 'replace'} onChange={e => setRejectForm(f => ({ ...f, reject_type: e.target.value }))} />
                     <div>
                       <div className="text-xs font-bold text-slate-800">Meminta Ganti</div>
-                      <div className="text-[10px] text-slate-500">Roll ini rusak parah dan perlu JOP pengganti.</div>
+                      <div className="text-[10px] text-slate-500">This roll is severely damaged and requires a replacement JOP.</div>
                     </div>
                   </label>
                   <label className="flex items-start gap-2 p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
                     <input type="radio" className="mt-0.5" name="reject_type" value="fixed" checked={rejectForm.reject_type === 'fixed'} onChange={e => setRejectForm(f => ({ ...f, reject_type: e.target.value }))} />
                     <div>
-                      <div className="text-xs font-bold text-slate-800">Sudah Diperbaiki Sendiri</div>
-                      <div className="text-[10px] text-slate-500">Rusak ringan, sudah diperbaiki di tempat dan siap dikirim (Passed).</div>
+                      <div className="text-xs font-bold text-slate-800">Fixed Locally</div>
+                      <div className="text-[10px] text-slate-500">Minor damage, fixed locally and ready for shipment (Passed).</div>
                     </div>
                   </label>
                 </div>

@@ -620,7 +620,7 @@ export default function RollInventory({
         }
 
         SystemUI.toast({
-          message: `Roll "${rollNo}" tidak ada dalam shipment ini! (Percobaan salah: ${newErrors}/10)`,
+          message: `Roll "${rollNo}" is not in this shipment! (Invalid attempts: ${newErrors}/10)`,
           type: 'warning'
         })
       }
@@ -1740,7 +1740,7 @@ export default function RollInventory({
                     />
                     <div>
                       <div className="text-xs font-bold text-red-900">Meminta Ganti (Replace)</div>
-                      <div className="text-[11px] text-slate-500">Roll rusak/cacat tidak layak kirim. Akan ditandai untuk dibuatkan JOP pengganti.</div>
+                      <div className="text-[11px] text-slate-500">Roll is damaged/defective and unfit for shipping. It will be flagged for a replacement JOP.</div>
                     </div>
                   </label>
 
@@ -1754,8 +1754,8 @@ export default function RollInventory({
                       onChange={e => setRejectForm(f => ({ ...f, reject_type: e.target.value as any }))}
                     />
                     <div>
-                      <div className="text-xs font-bold text-green-900">Sudah Diperbaiki Sendiri (Fixed)</div>
-                      <div className="text-[11px] text-slate-500">Kerusakan minor sudah diperbaiki di tempat oleh QC. Status roll menjadi Passed.</div>
+                      <div className="text-xs font-bold text-green-900">Fixed Locally (Fixed)</div>
+                      <div className="text-[11px] text-slate-500">Minor damage has been fixed locally by QC. Roll status is now Passed.</div>
                     </div>
                   </label>
                 </div>
@@ -1768,7 +1768,7 @@ export default function RollInventory({
                   rows={2}
                   value={rejectForm.notes}
                   onChange={e => setRejectForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="Deskripsi kerusakan atau tindakan perbaikan..."
+                  placeholder="Description of damage or repair action..."
                 />
               </div>
             </div>
@@ -1969,11 +1969,11 @@ export default function RollInventory({
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed text-justify bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-              Sistem mendeteksi <strong>10 kali kesalahan scan barcode berturut-turut</strong> dalam sesi inspeksi ini. Demi menjaga keamanan integritas warehouse dan mencegah anomali shipment, sesi akun Anda telah <strong>ditangguhkan</strong>.
+              The system detected <strong>10 consecutive barcode scan errors</strong> in this inspection session. To maintain warehouse integrity and prevent shipment anomalies, your account session has been <strong>suspended</strong>.
             </p>
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 font-medium text-left flex items-start gap-2">
               <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-              <span>Silakan <strong>hubungi Administrator</strong> untuk verifikasi roll fisik dan memulihkan kembali akses akun Anda.</span>
+              <span>Please <strong>contact the Administrator</strong> to verify physical rolls and restore your account access.</span>
             </div>
             <button
               onClick={() => {
@@ -1985,7 +1985,7 @@ export default function RollInventory({
               }}
               className="btn btn-primary w-full py-2.5 font-bold text-xs bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center justify-center gap-2"
             >
-              <span>OK, Saya Mengerti (Keluar Akun)</span>
+              <span>OK, I Understand (Log Out)</span>
             </button>
           </div>
         </div>

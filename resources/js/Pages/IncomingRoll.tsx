@@ -660,7 +660,7 @@ export default function IncomingRoll() {
                                                 }));
                                         }}
                                         className={`form-input w-full ${errors.plybond ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1.8 atau 400"
+                                        placeholder="e.g. 1.8 or 400"
                                     />
                                     {errors.plybond && (
                                         <p className="text-red-600 text-[11px] mt-1">
@@ -748,7 +748,7 @@ export default function IncomingRoll() {
                                                 }));
                                         }}
                                         className={`form-input w-full ${errors.thickness ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 0.22 atau 600"
+                                        placeholder="e.g. 0.22 or 600"
                                     />
                                     {errors.thickness && (
                                         <p className="text-red-600 text-[11px] mt-1">
@@ -778,7 +778,7 @@ export default function IncomingRoll() {
                                                 }));
                                         }}
                                         className={`form-input w-full ${errors.bulk ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1.4 atau 1,4"
+                                        placeholder="e.g. 1.4 or 1,4"
                                     />
                                     {errors.bulk && (
                                         <p className="text-red-600 text-[11px] mt-1">

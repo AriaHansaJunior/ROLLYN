@@ -129,7 +129,7 @@ export default function SpectrumSlotSelectorModal({
     const loc = dbLocationMap.get(code)
     if (!loc || !loc.id) {
       SystemUI.toast({
-        message: `Slot ${code} belum terdaftar di database.`,
+        message: `Slot ${code} is not registered in the database.`,
         type: 'warning',
         duration: 3000
       })
@@ -139,7 +139,7 @@ export default function SpectrumSlotSelectorModal({
     const rollsInSlot = loc.rolls || []
     if (rollsInSlot.length >= 4) {
       SystemUI.toast({
-        message: `Slot ${code} sudah penuh (4/4 roll). Silakan pilih slot lain.`,
+        message: `Slot ${code} is full (4/4 rolls). Please choose another slot.`,
         type: 'warning',
         duration: 3000
       })
@@ -175,7 +175,7 @@ export default function SpectrumSlotSelectorModal({
 
   const handleConfirm = () => {
     if (!selectedLocationId || selectedLocationId === '0') {
-      SystemUI.toast({ message: 'Silakan pilih slot lokasi yang valid.', type: 'error' })
+      SystemUI.toast({ message: 'Please select a valid location slot.', type: 'error' })
       return
     }
 
@@ -209,14 +209,14 @@ export default function SpectrumSlotSelectorModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                  {mode === 'move' ? 'Pindah Lokasi Roll (Relokasi)' : 'Pilih Slot Lokasi Warehouse'}
+                  {mode === 'move' ? 'Move Roll Location (Relocate)' : 'Select Warehouse Location Slot'}
                 </h3>
                 <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                   Warehouse Kolom A (420 Slots)
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Setiap slot dapat menampung hingga <strong>4 roll</strong> bertumpuk di database
+                Each slot can hold up to <strong>4 rolls</strong> stacked in the database
               </p>
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function SpectrumSlotSelectorModal({
                   className="btn btn-sm px-4 py-2 font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
                 >
                   <Check size={15} />
-                  <span>{isSubmitting ? 'Menyimpan...' : 'Gunakan & Simpan Slot Rekomendasi'}</span>
+                  <span>{isSubmitting ? 'Saving...' : 'Use & Save Recommended Slot'}</span>
                 </button>
               </div>
 
@@ -311,12 +311,12 @@ export default function SpectrumSlotSelectorModal({
                   </span>
                   <span className="text-[11px] font-bold text-slate-700 bg-white border border-slate-300 px-2 py-0.5 rounded-md">
                     {selectedSlotRolls.length === 0 
-                      ? 'Kosong (Tumpukan 1/4)' 
-                      : `Sudah ada ${selectedSlotRolls.length} roll → Tumpukan ke-${selectedSlotRolls.length + 1}`}
+                      ? 'Empty (Stack 1/4)' 
+                      : `Already has ${selectedSlotRolls.length} rolls → Stack ${selectedSlotRolls.length + 1}`}
                   </span>
                 </div>
               ) : (
-                <span className="italic text-slate-400">Belum dipilih</span>
+                <span className="italic text-slate-400">Not selected</span>
               )}
             </div>
           </div>
@@ -328,7 +328,7 @@ export default function SpectrumSlotSelectorModal({
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Cari Rack / Slot (mis. A17, A1-2-1)..."
+                  placeholder="Search Rack / Slot (e.g., A17, A1-2-1)..."
                   value={searchSlot}
                   onChange={e => setSearchSlot(e.target.value)}
                   className="form-input text-xs pl-8 py-1 rounded-lg w-56"
@@ -448,7 +448,7 @@ export default function SpectrumSlotSelectorModal({
                                   ? 'bg-slate-100 border border-dashed border-slate-200 text-slate-300 cursor-not-allowed'
                                   : `${bgStyle} cursor-pointer shadow-xs`
                               }`}
-                              title={isFull ? `Slot ${code} sudah penuh (4/4 roll)` : `Klik untuk memilih, double-click untuk langsung simpan slot ${code}`}
+                              title={isFull ? `Slot ${code} is full (4/4 rolls)` : `Click to select, double-click to save slot ${code} immediately`}
                             >
                               {isRecommended && (
                                 <span className="absolute -top-1 -right-0.5 bg-blue-600 text-white text-[7px] font-bold px-1 rounded-full">
@@ -502,7 +502,7 @@ export default function SpectrumSlotSelectorModal({
               className="btn btn-secondary text-xs px-4 py-2 cursor-pointer font-medium"
               onClick={onClose}
             >
-              Batal
+              Cancel
             </button>
             <button
               type="button"
@@ -513,10 +513,10 @@ export default function SpectrumSlotSelectorModal({
               <Check size={15} />
               <span>
                 {isSubmitting
-                  ? 'Menyimpan...'
+                  ? 'Saving...'
                   : selectedSlotCode
-                  ? `Konfirmasi Tempatkan ke Slot ${selectedSlotCode}`
-                  : 'Konfirmasi Pilih Slot'}
+                  ? `Confirm Assign to Slot ${selectedSlotCode}`
+                  : 'Confirm Slot Selection'}
               </span>
             </button>
           </div>

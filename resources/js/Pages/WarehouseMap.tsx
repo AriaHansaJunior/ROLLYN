@@ -376,7 +376,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     const slot = slotMap.get(code)
     if (!slot || slot.id === 0) {
       SystemUI.toast({
-        message: `Slot ${code} belum terdaftar di database.`,
+        message: `Slot ${code} is not registered in the database.`,
         type: 'warning',
         duration: 3000
       })
@@ -394,7 +394,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         setShowAssignPopup(true)
       } else {
         SystemUI.toast({
-          message: `Slot ${code} sudah penuh (4/4 roll). Silakan pilih slot lain.`,
+          message: `Slot ${code} is full (4/4 rolls). Please choose another slot.`,
           type: 'warning',
           duration: 3000
         })
@@ -478,24 +478,24 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
       preserveScroll: true,
       onSuccess: () => {
         setIsUpdating(false)
-        SystemUI.toast({ message: 'Status lokasi berhasil diperbarui di database.', type: 'success' })
+        SystemUI.toast({ message: 'Location status successfully updated in database.', type: 'success' })
       },
       onError: () => {
         setIsUpdating(false)
-        SystemUI.toast({ message: 'Gagal memperbarui status lokasi di database.', type: 'error' })
+        SystemUI.toast({ message: 'Failed to update location status in database.', type: 'error' })
       }
     })
   }
 
   function handleAssignFromSidebar() {
     if (!selectedUnslottedRollId || selectedSlots.length !== 1 || !selectedSlots[0].id) {
-      SystemUI.toast({ message: 'Pilih roll yang ingin ditempatkan.', type: 'warning' })
+      SystemUI.toast({ message: 'Select a roll to assign.', type: 'warning' })
       return
     }
 
     const targetSlot = selectedSlots[0]
     if (targetSlot.rollsList.length >= 4) {
-      SystemUI.toast({ message: `Slot ${targetSlot.code} sudah penuh (4/4 roll).`, type: 'error' })
+      SystemUI.toast({ message: `Slot ${targetSlot.code} is full (4/4 rolls).`, type: 'error' })
       return
     }
 
@@ -514,13 +514,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         }
         setSelectedUnslottedRollId('')
         SystemUI.toast({
-          message: `Roll berhasil ditempatkan di slot ${targetSlot.code} (Tumpukan ke-${targetSlot.rollsList.length + 1})!`,
+          message: `Roll successfully assigned to slot ${targetSlot.code} (Stack ${targetSlot.rollsList.length + 1})!`,
           type: 'success'
         })
       },
       onError: () => {
         setIsAssigningFromSidebar(false)
-        SystemUI.toast({ message: 'Gagal menempatkan roll ke database.', type: 'error' })
+        SystemUI.toast({ message: 'Failed to assign roll to database.', type: 'error' })
       }
     })
   }
@@ -1112,7 +1112,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Roll yang Ditempatkan</span>
+                <span className="text-slate-500 font-medium">Assigned Roll</span>
                 <span className="font-bold text-blue-700 font-mono">{assignRollNo}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
@@ -1122,7 +1122,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               <div className="flex justify-between py-2 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Posisi Tumpukan</span>
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px]">
-                  Tumpukan ke-{assignSlot.rollsList.length + 1} dari 4
+                  Stack {assignSlot.rollsList.length + 1} of 4
                 </span>
               </div>
             </div>
@@ -1156,13 +1156,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
 
             <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
               <button className="btn btn-secondary text-xs px-3 py-1.5 cursor-pointer" onClick={() => setShowAssignPopup(false)}>
-                Batal
+                Cancel
               </button>
               <button
                 className="btn btn-primary text-xs px-4 py-1.5 cursor-pointer font-bold"
                 onClick={() => {
                   if (!assignForm.rollNumber.trim()) {
-                    SystemUI.toast({ message: 'Nomor roll tidak boleh kosong.', type: 'warning' })
+                    SystemUI.toast({ message: 'Roll number cannot be empty.', type: 'warning' })
                     return
                   }
                   if (assignRollId && assignSlot.id > 0) {
@@ -1176,13 +1176,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                         setShowAssignPopup(false)
                         cancelAssignMode()
                         SystemUI.toast({
-                          message: `Roll ${assignForm.rollNumber} berhasil ditempatkan di ${assignSlot.code}!`,
+                          message: `Roll ${assignForm.rollNumber} successfully assigned to ${assignSlot.code}!`,
                           type: 'success'
                         })
                       },
                       onError: () => {
                         SystemUI.toast({
-                          message: 'Gagal menempatkan roll. Pastikan kapasitas slot mencukupi.',
+                          message: 'Failed to assign roll. Ensure the slot has enough capacity.',
                           type: 'error'
                         })
                       }
@@ -1190,7 +1190,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   }
                 }}
               >
-                Konfirmasi Assign Roll
+                Confirm Assign Roll
               </button>
             </div>
           </div>

@@ -139,7 +139,7 @@ export function evaluateSpectrumRecommendation(
     } else if (tier <= 3) {
       if (rollWeight < 900) {
         weightScore = 95.0
-        reasonings.push(`Penempatan Seimbang: Baris ${tier} cocok untuk berat ${rollWeight} kg`)
+        reasonings.push(`Balanced Placement: Tier ${tier} suitable for weight ${rollWeight} kg`)
       } else {
         weightScore = 60.0
       }
@@ -216,7 +216,7 @@ export function evaluateSpectrumRecommendation(
         tier: parseInt(fallback.code.split('-')[2] || '1', 10),
       } : null,
       confidence: 60.0,
-      reasonings: ['Slot kosong yang tersedia di database'],
+      reasonings: ['Empty slot available in database'],
       topCandidates: [],
       featureWeights: weights
     }

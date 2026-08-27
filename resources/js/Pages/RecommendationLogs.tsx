@@ -81,32 +81,32 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
         overall_match_rate:
             logs.length > 0
                 ? Math.round(
-                      (logs.filter((l) => l.is_match).length / logs.length) *
-                          100,
-                  )
+                    (logs.filter((l) => l.is_match).length / logs.length) *
+                    100,
+                )
                 : 0,
         assign_total: logs.filter((l) => l.action_type === "ASSIGN").length,
         assign_match_rate:
             logs.filter((l) => l.action_type === "ASSIGN").length > 0
                 ? Math.round(
-                      (logs.filter(
-                          (l) => l.action_type === "ASSIGN" && l.is_match,
-                      ).length /
-                          logs.filter((l) => l.action_type === "ASSIGN")
-                              .length) *
-                          100,
-                  )
+                    (logs.filter(
+                        (l) => l.action_type === "ASSIGN" && l.is_match,
+                    ).length /
+                        logs.filter((l) => l.action_type === "ASSIGN")
+                            .length) *
+                    100,
+                )
                 : 0,
         move_total: logs.filter((l) => l.action_type === "MOVE").length,
         move_match_rate:
             logs.filter((l) => l.action_type === "MOVE").length > 0
                 ? Math.round(
-                      (logs.filter(
-                          (l) => l.action_type === "MOVE" && l.is_match,
-                      ).length /
-                          logs.filter((l) => l.action_type === "MOVE").length) *
-                          100,
-                  )
+                    (logs.filter(
+                        (l) => l.action_type === "MOVE" && l.is_match,
+                    ).length /
+                        logs.filter((l) => l.action_type === "MOVE").length) *
+                    100,
+                )
                 : 0,
     };
 
@@ -219,13 +219,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-700 flex items-center justify-center border border-blue-200">
-                        <Sparkles size={22} className="text-blue-600" />
-                    </div>
                     <div>
                         <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                             Recommendation Logs & Evaluation
-                            <span className="text-[11px] font-bold tracking-normal uppercase bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
+                            <span className="text-[11px] font-bold tracking-normal uppercase bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200 whitespace-nowrap shrink-0">
                                 Admin Only
                             </span>
                         </h2>
@@ -441,11 +438,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                             setActionFilter(action);
                                             setPage(1);
                                         }}
-                                        className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
-                                            actionFilter === action
-                                                ? "bg-white text-blue-700 shadow-xs"
-                                                : "text-slate-600 hover:text-slate-900"
-                                        }`}
+                                        className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${actionFilter === action
+                                            ? "bg-white text-blue-700 shadow-xs"
+                                            : "text-slate-600 hover:text-slate-900"
+                                            }`}
                                     >
                                         {action === "All"
                                             ? "All Actions"
@@ -465,11 +461,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                     setStatusFilter("All");
                                     setPage(1);
                                 }}
-                                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
-                                    statusFilter === "All"
-                                        ? "bg-white text-slate-900 shadow-xs"
-                                        : "text-slate-600 hover:text-slate-900"
-                                }`}
+                                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${statusFilter === "All"
+                                    ? "bg-white text-slate-900 shadow-xs"
+                                    : "text-slate-600 hover:text-slate-900"
+                                    }`}
                             >
                                 All
                             </button>
@@ -478,11 +473,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                     setStatusFilter("1");
                                     setPage(1);
                                 }}
-                                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${
-                                    statusFilter === "1"
-                                        ? "bg-emerald-600 text-white shadow-xs"
-                                        : "text-emerald-700 hover:text-emerald-900"
-                                }`}
+                                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${statusFilter === "1"
+                                    ? "bg-emerald-600 text-white shadow-xs"
+                                    : "text-emerald-700 hover:text-emerald-900"
+                                    }`}
                             >
                                 <CheckCircle2 size={12} />
                                 <span>Match (1)</span>
@@ -492,11 +486,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                     setStatusFilter("0");
                                     setPage(1);
                                 }}
-                                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${
-                                    statusFilter === "0"
-                                        ? "bg-rose-600 text-white shadow-xs"
-                                        : "text-rose-700 hover:text-rose-900"
-                                }`}
+                                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${statusFilter === "0"
+                                    ? "bg-rose-600 text-white shadow-xs"
+                                    : "text-rose-700 hover:text-rose-900"
+                                    }`}
                             >
                                 <AlertTriangle size={12} />
                                 <span>Override (0)</span>
@@ -547,8 +540,8 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                             </p>
                                             <p className="text-xs text-slate-400 max-w-sm">
                                                 {search ||
-                                                actionFilter !== "All" ||
-                                                statusFilter !== "All"
+                                                    actionFilter !== "All" ||
+                                                    statusFilter !== "All"
                                                     ? "Try adjusting your search filters to view other log data."
                                                     : "Records will automatically appear when an operator assigns or relocates a roll slot."}
                                             </p>
@@ -614,7 +607,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                                         </div>
                                                         {log.user_email &&
                                                             log.user_email !==
-                                                                "—" && (
+                                                            "—" && (
                                                                 <div className="text-[10px] text-slate-400 leading-tight">
                                                                     {
                                                                         log.user_email
@@ -628,7 +621,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                             {/* Action Type */}
                                             <td className="py-3 px-3.5 text-center whitespace-nowrap">
                                                 {log.action_type ===
-                                                "ASSIGN" ? (
+                                                    "ASSIGN" ? (
                                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
                                                         ASSIGN
                                                     </span>
@@ -664,11 +657,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                             {/* Selected Slot */}
                                             <td className="py-3 px-3.5 whitespace-nowrap">
                                                 <div
-                                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-xs border ${
-                                                        isMatch
-                                                            ? "bg-blue-50 text-blue-800 border-blue-200"
-                                                            : "bg-rose-50 text-rose-800 border-rose-200"
-                                                    }`}
+                                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-xs border ${isMatch
+                                                        ? "bg-blue-50 text-blue-800 border-blue-200"
+                                                        : "bg-rose-50 text-rose-800 border-rose-200"
+                                                        }`}
                                                 >
                                                     <MapPin
                                                         size={11}
@@ -732,61 +724,60 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
             {/* Pagination Footer */}
             <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
                 <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-500">
-                            Showing {filteredLogs.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filteredLogs.length)} of {filteredLogs.length}
-                        </span>
-                        <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                            <span className="text-xs text-slate-500">Rows per page:</span>
-                            <select
-                                value={perPage}
-                                onChange={(e) => {
-                                    setPerPage(Number(e.target.value));
-                                    setPage(1);
-                                }}
-                                className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
-                            >
-                                {[5, 10, 25, 50].map((n) => (
-                                    <option key={n} value={n}>
-                                        {n}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                    <div className="flex gap-1">
-                        <button
-                            className="btn btn-secondary btn-sm"
-                            disabled={page === 1}
-                            onClick={() => setPage((p) => p - 1)}
+                    <span className="text-xs text-slate-500">
+                        Showing {filteredLogs.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filteredLogs.length)} of {filteredLogs.length}
+                    </span>
+                    <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                        <span className="text-xs text-slate-500">Rows per page:</span>
+                        <select
+                            value={perPage}
+                            onChange={(e) => {
+                                setPerPage(Number(e.target.value));
+                                setPage(1);
+                            }}
+                            className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                         >
-                            Prev
-                        </button>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                            (p) => (
-                                <button
-                                    key={p}
-                                    className={`btn btn-sm ${
-                                        p === page
-                                            ? "btn-primary"
-                                            : "btn-secondary"
-                                    } min-w-[30px] justify-center`}
-                                    onClick={() => setPage(p)}
-                                >
-                                    {p}
-                                </button>
-                            ),
-                        )}
-                        <button
-                            className="btn btn-secondary btn-sm"
-                            disabled={
-                                page === totalPages || totalPages === 0
-                            }
-                            onClick={() => setPage((p) => p + 1)}
-                        >
-                            Next
-                        </button>
+                            {[5, 10, 25, 50].map((n) => (
+                                <option key={n} value={n}>
+                                    {n}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
+                <div className="flex gap-1">
+                    <button
+                        className="btn btn-secondary btn-sm"
+                        disabled={page === 1}
+                        onClick={() => setPage((p) => p - 1)}
+                    >
+                        Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (p) => (
+                            <button
+                                key={p}
+                                className={`btn btn-sm ${p === page
+                                    ? "btn-primary"
+                                    : "btn-secondary"
+                                    } min-w-[30px] justify-center`}
+                                onClick={() => setPage(p)}
+                            >
+                                {p}
+                            </button>
+                        ),
+                    )}
+                    <button
+                        className="btn btn-secondary btn-sm"
+                        disabled={
+                            page === totalPages || totalPages === 0
+                        }
+                        onClick={() => setPage((p) => p + 1)}
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
 
             {/* Log Detail Modal */}
             {selectedLog && (
@@ -796,11 +787,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                         <div className="flex justify-between items-start border-b border-slate-100 pb-3">
                             <div className="flex items-center gap-2.5">
                                 <div
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${
-                                        selectedLog.is_match
-                                            ? "bg-emerald-100 text-emerald-800"
-                                            : "bg-rose-100 text-rose-800"
-                                    }`}
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${selectedLog.is_match
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-rose-100 text-rose-800"
+                                        }`}
                                 >
                                     {selectedLog.is_match ? (
                                         <CheckCircle2 size={18} />
@@ -827,11 +817,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
 
                         {/* Evaluation Result Banner */}
                         <div
-                            className={`p-3.5 rounded-xl border flex items-center justify-between ${
-                                selectedLog.is_match
-                                    ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
-                                    : "bg-rose-50/80 border-rose-200 text-rose-900"
-                            }`}
+                            className={`p-3.5 rounded-xl border flex items-center justify-between ${selectedLog.is_match
+                                ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                                : "bg-rose-50/80 border-rose-200 text-rose-900"
+                                }`}
                         >
                             <div>
                                 <div className="text-xs font-bold uppercase tracking-wider">
@@ -862,11 +851,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                 </div>
                             </div>
                             <span
-                                className={`px-2.5 py-1 rounded-lg text-xs font-extrabold ${
-                                    selectedLog.is_match
-                                        ? "bg-emerald-600 text-white"
-                                        : "bg-rose-600 text-white"
-                                }`}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-extrabold ${selectedLog.is_match
+                                    ? "bg-emerald-600 text-white"
+                                    : "bg-rose-600 text-white"
+                                    }`}
                             >
                                 {selectedLog.is_match
                                     ? "Accepted"
@@ -901,11 +889,10 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                     <span>Selected (User)</span>
                                 </div>
                                 <div
-                                    className={`text-base font-extrabold font-mono ${
-                                        selectedLog.is_match
-                                            ? "text-blue-700"
-                                            : "text-rose-700"
-                                    }`}
+                                    className={`text-base font-extrabold font-mono ${selectedLog.is_match
+                                        ? "text-blue-700"
+                                        : "text-rose-700"
+                                        }`}
                                 >
                                     {selectedLog.selected_location}
                                 </div>
