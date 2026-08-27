@@ -220,76 +220,21 @@ async function getEngWorker(): Promise<any> {
   }
 }
 
-async function getDigitalWorker(): Promise<any> {
-  if (digitalWorker.ready && digitalWorker.instance) return digitalWorker.instance;
-  if (digitalWorker.failed) throw new Error('digital worker previously failed');
-
-  if (digitalWorker.initialising) {
-    return new Promise((resolve, reject) => {
-      const interval = setInterval(() => {
-        if (digitalWorker.ready && digitalWorker.instance) {
-          clearInterval(interval);
-          resolve(digitalWorker.instance);
-        }
-        if (digitalWorker.failed) {
-          clearInterval(interval);
-          reject(new Error('digital worker failed'));
-        }
-      }, 100);
-      setTimeout(() => {
-        clearInterval(interval);
-        reject(new Error('digital worker timed out'));
-      }, 30_000);
-    });
-  }
-
-  digitalWorker.initialising = true;
-  try {
-    const worker = await createWorker(
-      'letsgodigital',
-      OEM.TESSERACT_ONLY
-    );
-    await worker.setParameters({
-      tessedit_pageseg_mode: PSM.SINGLE_LINE,
-      tessedit_char_whitelist: '0123456789.',
-    });
-    digitalWorker.instance = worker;
-    digitalWorker.ready = true;
-    digitalWorker.initialising = false;
-    return worker;
-  } catch (err) {
-    console.warn('[OCR] letsgodigital worker failed to init (legacy engine may not be available):', err);
-    digitalWorker.initialising = false;
-    digitalWorker.failed = true;
-    throw err;
-  }
-}
+// digitalWorker removed to save memory and init time
+// we rely on SPECTRUM for digital displays now
 
 export async function initOCRWorker(): Promise<void> {
-
-  await Promise.allSettled([
-    getEngWorker().catch(err => console.warn('[OCR] eng worker pre-init failed:', err)),
-    getDigitalWorker().catch(err => console.warn('[OCR] digital worker pre-init failed:', err)),
-  ]);
+  await getEngWorker().catch(err => console.warn('[OCR] eng worker pre-init failed:', err));
 }
 
 export async function terminateOCRWorker(): Promise<void> {
-  const tasks: Promise<void>[] = [];
   if (engWorker.instance) {
-    tasks.push(engWorker.instance.terminate());
+    await engWorker.instance.terminate();
     engWorker.instance = null;
     engWorker.ready = false;
     engWorker.initialising = false;
     engWorker.failed = false;
   }
-  if (digitalWorker.instance) {
-    tasks.push(digitalWorker.instance.terminate());
-    digitalWorker.instance = null;
-    digitalWorker.ready = false;
-    digitalWorker.initialising = false;
-    digitalWorker.failed = false;
-  }
-  await Promise.allSettled(tasks);
 }
 
 async function runWorkerOnVariants(
@@ -315,7 +260,7 @@ async function runWorkerOnVariants(
   }> = [];
   const attempts: Array<{ label: string; text: string; confidence: number; engine: string }> = [];
 
-  for (const variant of variants.slice(0, 2)) {
+  for (const variant of variants) {
     try {
       const { data } = await worker.recognize(variant.dataUrl);
       const rawText = data.text ?? '';
@@ -328,7 +273,6 @@ async function runWorkerOnVariants(
 
       const weight = normaliseWeight(token);
       if (weight === null || weight <= 0) continue;
-
       if (weight < 1 || weight > 99_999) continue;
 
       candidates.push({
@@ -338,6 +282,11 @@ async function runWorkerOnVariants(
         variantLabel: `[${engineLabel}] ${variant.label}`,
         variantDataUrl: variant.dataUrl,
       });
+
+      // BREAK EARLY if we find a very confident result!
+      if (confidence >= 80) {
+        break;
+      }
     } catch {
       continue;
     }
@@ -349,54 +298,34 @@ async function runWorkerOnVariants(
 export async function recogniseWeight(
   variants: PreprocessedVariant[],
   quality: ImageQualityReport,
-): Promise<{ result: OcrResult } | { error: OcrError }> {
-
-  const workerTasks: Promise<{
-    candidates: Array<{
-      weight: number;
-      confidence: number;
-      rawText: string;
-      variantLabel: string;
-      variantDataUrl: string;
-    }>;
-    attempts: Array<{ label: string; text: string; confidence: number; engine: string }>;
-  }>[] = [];
+): Promise<{ result?: OcrResult; error?: OcrError }> {
 
   const standardVariants = variants.filter(v => !v.digital);
+  
+  let workerResult = null;
   try {
     const ew = await getEngWorker();
     if (standardVariants.length > 0) {
-      workerTasks.push(runWorkerOnVariants(ew, standardVariants, 'ENG'));
+      workerResult = await runWorkerOnVariants(ew, standardVariants, 'ENG');
     }
   } catch {
     console.warn('[OCR] eng worker not available');
   }
 
-  const digitalVariants = variants.filter(v => v.digital);
-  try {
-    const dw = await getDigitalWorker();
-    if (digitalVariants.length > 0) {
-      workerTasks.push(runWorkerOnVariants(dw, digitalVariants, 'DIGITAL'));
-    }
-  } catch {
-    console.warn('[OCR] digital worker not available, running with eng only');
-  }
-
-  if (workerTasks.length === 0) {
+  if (!workerResult) {
     return {
       error: {
         title: 'OCR Engine Not Ready',
-        message:
-          'No OCR engine could be initialised. ' +
-          'Please refresh the page and try again.',
+        message: 'No OCR engine could be initialised. Please refresh the page and try again.',
       },
     };
   }
 
-  const results = await Promise.all(workerTasks);
-  const allCandidates = results.flatMap(r => r.candidates);
-  const allAttempts = results.flatMap(r => r.attempts);
-
+  const allCandidates = workerResult.candidates;
+  const allAttempts = workerResult.attempts;
+  
+  const digitalVariants = variants.filter(v => v.digital);
+  
   for (const variant of digitalVariants) {
     if (!variant.canvas) continue;
     try {

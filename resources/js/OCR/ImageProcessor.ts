@@ -274,6 +274,37 @@ export function analyseImageQuality(canvas: HTMLCanvasElement): ImageQualityRepo
   };
 }
 
+function isDarkBackground(canvas: HTMLCanvasElement): boolean {
+  const ctx = canvas.getContext('2d')!;
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+  
+  // Calculate average brightness of the entire image.
+  // Because the background typically occupies >60% of the bounding box, 
+  // the overall average is highly indicative of the background color,
+  // preventing failures when the camera is zoomed in and digits touch the edges.
+  let sum = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  
+  const avgBrightness = sum / (canvas.width * canvas.height);
+  return avgBrightness < 100;
+}
+
+function invertCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const ctx = canvas.getContext('2d')!;
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 255 - data[i];
+    data[i + 1] = 255 - data[i + 1];
+    data[i + 2] = 255 - data[i + 2];
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
 export async function preprocessImage(
   video: HTMLVideoElement,
   roi: ROI = DEFAULT_ROI,
@@ -285,7 +316,58 @@ export async function preprocessImage(
   const roiCanvas = cropROI(fullCanvas, roi);
 
   const TARGET_W = 400;
-  const baseCanvas = upscale(roiCanvas, TARGET_W);
+  let baseCanvas = upscale(roiCanvas, TARGET_W);
+
+  if (isDarkBackground(baseCanvas)) {
+    console.debug('[OCR] Dedicated Dark Background Pipeline activated.');
+    const invertedBase = invertCanvas(cloneCanvas(baseCanvas));
+    
+    const variants: PreprocessedVariant[] = [];
+    
+    // Var 1: Inverted Grayscale (Fastest, often works perfectly)
+    const var1 = toGrayscale(cloneCanvas(invertedBase));
+    variants.push({
+      label: 'Dark-Var1 (Inverted Gray)',
+      canvas: var1,
+      dataUrl: padCanvas(var1).toDataURL('image/png'),
+      digital: false
+    });
+    
+    // Var 2: High Contrast + Auto Threshold (fixes glowing halos from LED digits)
+    let var2 = toGrayscale(cloneCanvas(invertedBase));
+    var2 = adjustBrightnessContrast(var2, 0.2, 0.8);
+    var2 = threshold(var2, 0);
+    variants.push({
+      label: 'Dark-Var2 (Contrast+Thresh)',
+      canvas: var2,
+      dataUrl: padCanvas(var2).toDataURL('image/png'),
+      digital: false
+    });
+    
+    // Var 3: Aggressive Sharpening (good for blurry/distant digits)
+    let var3 = toGrayscale(cloneCanvas(invertedBase));
+    var3 = sharpen(var3, 1.2);
+    var3 = adjustBrightnessContrast(var3, 0.1, 0.5);
+    variants.push({
+      label: 'Dark-Var3 (Sharpen)',
+      canvas: var3,
+      dataUrl: padCanvas(var3).toDataURL('image/png'),
+      digital: false
+    });
+
+    // Var 4: Hard Threshold (cuts away weak gray halos entirely)
+    let var4 = toGrayscale(cloneCanvas(invertedBase));
+    var4 = adjustBrightnessContrast(var4, 0.1, 0.4);
+    var4 = threshold(var4, 170); // High threshold pushes light grays to white
+    variants.push({
+      label: 'Dark-Var4 (Hard Thresh)',
+      canvas: var4,
+      dataUrl: padCanvas(var4).toDataURL('image/png'),
+      digital: false
+    });
+    
+    return { variants, rawCanvas: invertedBase };
+  }
 
   const rawCanvas = cloneCanvas(baseCanvas);
 
