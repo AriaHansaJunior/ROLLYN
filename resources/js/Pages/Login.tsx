@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState, useRef } from 'react'
 import { useForm, router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -7,6 +7,8 @@ import { Mail, Lock, ArrowRight, Loader2, ShieldCheck, ChevronRight } from 'luci
 export default function Login() {
   const { flash } = usePage<any>().props
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const focusedFieldRef = useRef<string | null>(null)
+  const isHovering = useRef(false)
   const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
@@ -51,15 +53,34 @@ export default function Login() {
   }
 
   const handleMouseEnter = () => {
+    isHovering.current = true
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
       setShowForm(true)
     }
   }
 
   const handleMouseLeave = () => {
+    isHovering.current = false
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      if (focusedFieldRef.current) return // Prevent closing if an input is focused
       setShowForm(false)
     }
+  }
+
+  const handleInputFocus = (field: string) => {
+    setFocusedField(field)
+    focusedFieldRef.current = field
+  }
+
+  const handleInputBlur = () => {
+    setFocusedField(null)
+    focusedFieldRef.current = null
+    // Slight delay allows autofill clicks or tab navigation to complete before checking state
+    setTimeout(() => {
+      if (!isHovering.current && focusedFieldRef.current === null && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+        setShowForm(false)
+      }
+    }, 150)
   }
 
   const containerVariants = {
@@ -255,8 +276,8 @@ export default function Login() {
                         type="email"
                         placeholder="admin@spectacore.id"
                         value={data.email}
-                        onFocus={() => setFocusedField('email')}
-                        onBlur={() => setFocusedField(null)}
+                        onFocus={() => handleInputFocus('email')}
+                        onBlur={handleInputBlur}
                         onChange={e => {
                           setData('email', e.target.value)
                           if (errors.email) clearErrors('email')
@@ -291,8 +312,8 @@ export default function Login() {
                         type="password"
                         placeholder="••••••••"
                         value={data.password}
-                        onFocus={() => setFocusedField('password')}
-                        onBlur={() => setFocusedField(null)}
+                        onFocus={() => handleInputFocus('password')}
+                        onBlur={handleInputBlur}
                         onChange={e => {
                           setData('password', e.target.value)
                           if (errors.password) clearErrors('password')

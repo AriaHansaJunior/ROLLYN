@@ -111,7 +111,7 @@ export default function TargetOrder() {
               onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
               className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
             >
-              {[5, 10, 20, 50].map(n => (
+              {[5, 10, 25, 50].map(n => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>

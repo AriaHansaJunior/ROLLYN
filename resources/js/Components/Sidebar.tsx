@@ -8,6 +8,8 @@ import {
     Eye,
     Target,
     FileText,
+    ClipboardList,
+    BarChart2,
     Settings,
     Users,
     User,
@@ -41,12 +43,12 @@ const navSections = [
         label: "Orders",
         items: [
             { id: "target-order", label: "Target Order", icon: Target },
-            { id: "jop", label: "Job Order Production (JOP)", icon: FileText },
+            { id: "jop", label: "Job Order Production (JOP)", icon: ClipboardList },
         ],
     },
     {
         label: "Reports",
-        items: [{ id: "reports", label: "Reports", icon: FileText }],
+        items: [{ id: "reports", label: "Reports", icon: BarChart2 }],
     },
     {
         label: "Administration",

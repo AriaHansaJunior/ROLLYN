@@ -15,6 +15,7 @@ import {
     Layers,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     Eye,
     X,
     TrendingUp,
@@ -68,7 +69,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
     );
     const [statusFilter, setStatusFilter] = useState<"All" | "1" | "0">("All");
     const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(15);
+    const [perPage, setPerPage] = useState(10);
     const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -229,8 +230,8 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                             </span>
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
-                            Evaluasi akurasi dan kepatuhan operator terhadap
-                            rekomendasi penempatan lokasi slot gudang (Assign &
+                            Evaluate accuracy and operator compliance regarding
+                            warehouse slot location recommendations (Assign &
                             Move)
                         </p>
                     </div>
@@ -327,7 +328,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                         />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1.5 font-medium">
-                        Kesesuaian pada penempatan slot pertama kali
+                        Accuracy of initial slot assignments
                     </p>
                 </div>
 
@@ -358,7 +359,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                         />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1.5 font-medium">
-                        Kesesuaian pada proses relokasi slot
+                        Accuracy during slot relocation processes
                     </p>
                 </div>
 
@@ -389,7 +390,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                         />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1.5 font-medium">
-                        User memilih slot berbeda dari rekomendasi
+                        User selected a slot different from the recommendation
                     </p>
                 </div>
             </div>
@@ -412,7 +413,8 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                 setSearch(e.target.value);
                                 setPage(1);
                             }}
-                            className="form-input w-full pl-9 text-xs"
+                            className="form-input w-full text-xs"
+                            style={{ paddingLeft: '2.5rem' }}
                         />
                         {search && (
                             <button
@@ -547,8 +549,8 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                                 {search ||
                                                 actionFilter !== "All" ||
                                                 statusFilter !== "All"
-                                                    ? "Coba sesuaikan filter pencarian untuk melihat data log lainnya."
-                                                    : "Pencatatan akan muncul secara otomatis ketika operator menetapkan atau memindahkan lokasi slot roll."}
+                                                    ? "Try adjusting your search filters to view other log data."
+                                                    : "Records will automatically appear when an operator assigns or relocates a roll slot."}
                                             </p>
                                         </div>
                                     </td>
@@ -725,56 +727,66 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                         </tbody>
                     </table>
                 </div>
+            </div>
 
-                {/* Pagination Footer */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-slate-500">
-                    <div className="flex items-center gap-2">
-                        <span>
-                            Showing{" "}
-                            {filteredLogs.length > 0
-                                ? (page - 1) * perPage + 1
-                                : 0}{" "}
-                            to {Math.min(page * perPage, filteredLogs.length)}{" "}
-                            of {filteredLogs.length} entries
+            {/* Pagination Footer */}
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
+                <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500">
+                            Showing {filteredLogs.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filteredLogs.length)} of {filteredLogs.length}
                         </span>
-                        <select
-                            value={perPage}
-                            onChange={(e) => {
-                                setPerPage(Number(e.target.value));
-                                setPage(1);
-                            }}
-                            className="form-input text-xs py-1 px-2"
-                        >
-                            <option value={10}>10 / page</option>
-                            <option value={15}>15 / page</option>
-                            <option value={25}>25 / page</option>
-                            <option value={50}>50 / page</option>
-                        </select>
+                        <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                            <span className="text-xs text-slate-500">Rows per page:</span>
+                            <select
+                                value={perPage}
+                                onChange={(e) => {
+                                    setPerPage(Number(e.target.value));
+                                    setPage(1);
+                                }}
+                                className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                            >
+                                {[5, 10, 25, 50].map((n) => (
+                                    <option key={n} value={n}>
+                                        {n}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
-
-                    <div className="flex items-center gap-1">
+                    <div className="flex gap-1">
                         <button
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            className="btn btn-secondary btn-sm"
                             disabled={page === 1}
-                            className="btn btn-secondary px-2.5 py-1 text-xs disabled:opacity-40 cursor-pointer"
+                            onClick={() => setPage((p) => p - 1)}
                         >
-                            <ChevronLeft size={14} />
+                            Prev
                         </button>
-                        <span className="px-2 font-bold text-slate-700">
-                            Page {page} of {totalPages}
-                        </span>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                            (p) => (
+                                <button
+                                    key={p}
+                                    className={`btn btn-sm ${
+                                        p === page
+                                            ? "btn-primary"
+                                            : "btn-secondary"
+                                    } min-w-[30px] justify-center`}
+                                    onClick={() => setPage(p)}
+                                >
+                                    {p}
+                                </button>
+                            ),
+                        )}
                         <button
-                            onClick={() =>
-                                setPage((p) => Math.min(totalPages, p + 1))
+                            className="btn btn-secondary btn-sm"
+                            disabled={
+                                page === totalPages || totalPages === 0
                             }
-                            disabled={page >= totalPages}
-                            className="btn btn-secondary px-2.5 py-1 text-xs disabled:opacity-40 cursor-pointer"
+                            onClick={() => setPage((p) => p + 1)}
                         >
-                            <ChevronRight size={14} />
+                            Next
                         </button>
                     </div>
                 </div>
-            </div>
 
             {/* Log Detail Modal */}
             {selectedLog && (
@@ -876,7 +888,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                     {selectedLog.recommended_location}
                                 </div>
                                 <div className="text-[10px] text-slate-500">
-                                    Sistem algoritma gudang
+                                    Warehouse algorithm system
                                 </div>
                             </div>
 
@@ -898,7 +910,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                                     {selectedLog.selected_location}
                                 </div>
                                 <div className="text-[10px] text-slate-500">
-                                    Pilihan aktual operator
+                                    Operator's actual selection
                                 </div>
                             </div>
                         </div>
