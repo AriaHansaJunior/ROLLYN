@@ -65,9 +65,7 @@ export default function Header({ activePage, onMenuClick, onToggleSidebar, sideb
         )}
 
         <div className="flex items-center gap-2 min-w-0 shrink-0">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center font-extrabold text-white text-xs shadow-xs">
-            R
-          </div>
+          <img src="/images/logo-rollyn.png" alt="Rollyn Logo" className="w-7 h-7 object-contain drop-shadow-sm" />
           <span className="font-extrabold text-sm tracking-tight text-blue-900 truncate">ROLLYN</span>
         </div>
 

@@ -146,24 +146,12 @@ export default function Sidebar({
                         borderBottom: "1px solid rgba(255,255,255,0.08)",
                     }}
                 >
-                    <div
-                        style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 4,
-                            background:
-                                "linear-gradient(135deg, #337AB7, #286090)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            fontWeight: 700,
-                            color: "#fff",
-                            fontSize: 14,
-                        }}
-                    >
-                        R
-                    </div>
+                    <img 
+                        src="/images/logo-rollyn.png" 
+                        alt="Rollyn Logo" 
+                        style={{ width: 32, height: 32, objectFit: 'contain' }} 
+                        className="drop-shadow-sm"
+                    />
                     {(!collapsed || mobileOpen) && (
                         <span
                             style={{

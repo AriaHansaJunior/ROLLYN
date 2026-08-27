@@ -148,9 +148,7 @@ export default function Login() {
           
           <div className="relative z-10 flex flex-col h-full lg:block items-center lg:items-start text-center lg:text-left">
             <div className="flex items-center gap-3 mb-10">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/50">
-                <span className="text-white text-xl font-black">R</span>
-              </div>
+              <img src="/images/logo-rollyn.png" alt="Rollyn Logo" className="w-12 h-12 object-contain" />
               <span className="text-2xl font-black tracking-widest text-white">ROLLYN</span>
             </div>
 
@@ -225,9 +223,7 @@ export default function Login() {
               {/* Mobile Logo & Back button */}
               <div className="lg:hidden flex items-center justify-between mb-10 mt-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg shadow-blue-600/30">
-                    <span className="text-white text-lg font-black">R</span>
-                  </div>
+                  <img src="/images/logo-rollyn.png" alt="Rollyn Logo" className="w-10 h-10 object-contain" />
                   <h1 className="text-xl font-black tracking-widest text-slate-900">ROLLYN</h1>
                 </div>
                 <button 
