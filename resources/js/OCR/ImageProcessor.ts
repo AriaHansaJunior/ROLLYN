@@ -39,13 +39,48 @@ function cropROI(
   source: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement,
   roi: ROI,
 ): HTMLCanvasElement {
-  const srcW = source instanceof HTMLVideoElement ? source.videoWidth : source.width;
-  const srcH = source instanceof HTMLVideoElement ? source.videoHeight : source.height;
+  let sx, sy, sw, sh;
 
-  const sx = Math.floor(roi.x * srcW);
-  const sy = Math.floor(roi.y * srcH);
-  const sw = Math.floor(roi.width * srcW);
-  const sh = Math.floor(roi.height * srcH);
+  if (source instanceof HTMLVideoElement) {
+    const videoW = source.videoWidth;
+    const videoH = source.videoHeight;
+    const clientW = source.clientWidth;
+    const clientH = source.clientHeight;
+
+    if (clientW > 0 && clientH > 0) {
+      const scale = Math.max(clientW / videoW, clientH / videoH);
+      const scaledW = videoW * scale;
+      const scaledH = videoH * scale;
+
+      const offsetX = (clientW - scaledW) / 2;
+      const offsetY = (clientH - scaledH) / 2;
+
+      const uiX = roi.x * clientW;
+      const uiY = roi.y * clientH;
+      const uiW = roi.width * clientW;
+      const uiH = roi.height * clientH;
+
+      sx = (uiX - offsetX) / scale;
+      sy = (uiY - offsetY) / scale;
+      sw = uiW / scale;
+      sh = uiH / scale;
+    } else {
+      sx = roi.x * videoW;
+      sy = roi.y * videoH;
+      sw = roi.width * videoW;
+      sh = roi.height * videoH;
+    }
+  } else {
+    sx = roi.x * source.width;
+    sy = roi.y * source.height;
+    sw = roi.width * source.width;
+    sh = roi.height * source.height;
+  }
+
+  sx = Math.floor(Math.max(0, sx));
+  sy = Math.floor(Math.max(0, sy));
+  sw = Math.floor(sw);
+  sh = Math.floor(sh);
 
   const [canvas, ctx] = makeCanvas(sw, sh);
   ctx.drawImage(source as CanvasImageSource, sx, sy, sw, sh, 0, 0, sw, sh);
