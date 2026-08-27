@@ -19,6 +19,8 @@ class KolomGSeeder extends Seeder
         $locations = [];
         $now = Carbon::now();
 
+        $existing = DB::table('locations')->where('location', 'like', 'G%')->pluck('location')->flip();
+
         // Racks G12 to G1
         for ($rack = 12; $rack >= 1; $rack--) {
             $rackPrefix = 'G' . $rack;
@@ -35,7 +37,7 @@ class KolomGSeeder extends Seeder
                     $locationCode = $rackPrefix . '-' . $col . '-' . $row;
                     
                     // Check if exists
-                    if (!Location::where('location', $locationCode)->exists()) {
+                    if (!isset($existing[$locationCode])) {
                         $locations[] = [
                             'location' => $locationCode,
                             'status' => 0, // Free space

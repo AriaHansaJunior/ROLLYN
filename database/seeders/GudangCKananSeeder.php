@@ -19,6 +19,8 @@ class GudangCKananSeeder extends Seeder
         $locations = [];
         $now = Carbon::now();
 
+        $existing = DB::table('locations')->where('location', 'like', 'C%')->where('location', 'not like', 'C%L%')->pluck('location')->flip();
+
         // Racks C33 to C22 (C35, C34, C21 are not usable in the database)
         for ($rack = 33; $rack >= 22; $rack--) {
             $rackPrefix = 'C' . $rack;
@@ -30,7 +32,7 @@ class GudangCKananSeeder extends Seeder
                     $locationCode = $rackPrefix . '-' . $col . '-' . $row;
                     
                     // Check if exists
-                    if (!Location::where('location', $locationCode)->exists()) {
+                    if (!isset($existing[$locationCode])) {
                         $locations[] = [
                             'location' => $locationCode,
                             'status' => 0, // Free space
@@ -42,9 +44,12 @@ class GudangCKananSeeder extends Seeder
             }
         }
 
-        // Insert directly
+        // Insert in chunks
         if (!empty($locations)) {
-            DB::table('locations')->insert($locations);
+            $chunks = array_chunk($locations, 100);
+            foreach ($chunks as $chunk) {
+                DB::table('locations')->insert($chunk);
+            }
         }
     }
 }

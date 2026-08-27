@@ -28,7 +28,7 @@ class RealDataSeeder extends Seeder
         $core = \App\Models\Core::firstOrCreate(['core' => '3']);
         $cobb = \App\Models\Cobb::firstOrCreate(['cobb' => '100-150']);
         $location = \App\Models\Location::firstOrCreate(
-            ['location' => 'E17-01-1'],
+            ['location' => 'E17-1-1'],
             ['status' => 1]
         );
         $shift = \App\Models\Shift::firstOrCreate(['shift' => 'Shift 1']);

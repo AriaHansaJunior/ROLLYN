@@ -23,9 +23,10 @@ class GudangBKananSeeder extends Seeder
             }
         }
 
+        $existing = DB::table('locations')->where('location', 'like', 'B%')->pluck('location')->flip();
+
         foreach ($slotsB as $loc) {
-            $exists = DB::table('locations')->where('location', $loc)->exists();
-            if (!$exists) {
+            if (!isset($existing[$loc])) {
                 $records[] = [
                     'location' => $loc,
                     'status' => 0, // Free Space
@@ -36,7 +37,10 @@ class GudangBKananSeeder extends Seeder
         }
 
         if (!empty($records)) {
-            DB::table('locations')->insert($records);
+            $chunks = array_chunk($records, 100);
+            foreach ($chunks as $chunk) {
+                DB::table('locations')->insert($chunk);
+            }
             $this->command->info("Inserted " . count($records) . " locations for Gudang B (Kanan).");
         } else {
             $this->command->info("No new locations to insert for Gudang B (Kanan).");

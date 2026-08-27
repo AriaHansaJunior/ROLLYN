@@ -23,9 +23,10 @@ class KolomESeeder extends Seeder
             }
         }
 
+        $existing = DB::table('locations')->where('location', 'like', 'E%')->pluck('location')->flip();
+
         foreach ($slotsE as $loc) {
-            $exists = DB::table('locations')->where('location', $loc)->exists();
-            if (!$exists) {
+            if (!isset($existing[$loc])) {
                 $records[] = [
                     'location' => $loc,
                     'status' => 0,
@@ -36,7 +37,10 @@ class KolomESeeder extends Seeder
         }
 
         if (!empty($records)) {
-            DB::table('locations')->insert($records);
+            $chunks = array_chunk($records, 100);
+            foreach ($chunks as $chunk) {
+                DB::table('locations')->insert($chunk);
+            }
             $this->command->info("Inserted " . count($records) . " locations for Kolom E.");
         } else {
             $this->command->info("No new locations to insert for Kolom E.");

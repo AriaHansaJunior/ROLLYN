@@ -15,6 +15,13 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RollDatabaseSeeder::class,
             LocationSeeder::class,
+            KolomESeeder::class,
+            GudangBKiriSeeder::class,
+            GudangBKananSeeder::class,
+            GudangCKiriSeeder::class,
+            GudangCKananSeeder::class,
+            KolomGSeeder::class,
+            GudangHSeeder::class,
             RealDataSeeder::class,
             TargetOrderSeeder::class,
         ]);

@@ -19,6 +19,8 @@ class GudangHSeeder extends Seeder
         $locations = [];
         $now = Carbon::now();
 
+        $existing = DB::table('locations')->where('location', 'like', 'H%')->pluck('location')->flip();
+
         // Racks H3 to H1
         for ($rack = 3; $rack >= 1; $rack--) {
             $rackPrefix = 'H' . $rack;
@@ -30,7 +32,7 @@ class GudangHSeeder extends Seeder
                     $locationCode = $rackPrefix . '-' . $col . '-' . $row;
                     
                     // Check if exists
-                    if (!Location::where('location', $locationCode)->exists()) {
+                    if (!isset($existing[$locationCode])) {
                         $locations[] = [
                             'location' => $locationCode,
                             'status' => 0, // Free space
@@ -42,9 +44,12 @@ class GudangHSeeder extends Seeder
             }
         }
 
-        // Insert directly
+        // Insert in chunks
         if (!empty($locations)) {
-            DB::table('locations')->insert($locations);
+            $chunks = array_chunk($locations, 100);
+            foreach ($chunks as $chunk) {
+                DB::table('locations')->insert($chunk);
+            }
         }
     }
 }
