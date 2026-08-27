@@ -210,7 +210,7 @@ export default function SpectrumWeightDetectionEngine({
             let legacyOutcome: any = null;
             
             if (!spectrumData || spectrumData.weight_detected === 0 || spectrumData.confidence < 0.80) {
-                legacyOutcome = await recogniseWeight(variants, quality);
+                legacyOutcome = await recogniseWeight(variants, quality, expectedDigitCount);
             }
 
             setSpectrumResult(spectrumData);

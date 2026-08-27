@@ -170,7 +170,7 @@ export default function WeightDetectionEngine({
             latestVariantsRef.current = variants;
 
             const quality = analyseImageQuality(rawCanvas);
-            const outcome = await recogniseWeight(variants, quality);
+            const outcome = await recogniseWeight(variants, quality, expectedDigitCount);
 
             if ("result" in outcome) {
                 setOcrResult(outcome.result);

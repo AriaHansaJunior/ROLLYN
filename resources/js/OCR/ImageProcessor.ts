@@ -305,10 +305,136 @@ function invertCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
   return canvas;
 }
 
+// Extract digit components, correct rotation, crop tight bounding box, and upscale
+function extractAndStraightenDigits(srcCanvas: HTMLCanvasElement, targetW: number): { canvas: HTMLCanvasElement, expectedDigitCount: number } {
+  // 1. Temporary binary image for component extraction
+  let bin = toGrayscale(cloneCanvas(srcCanvas));
+  bin = threshold(bin, 0); // Otsu threshold (dark text on light bg)
+  
+  const ctx = bin.getContext('2d')!;
+  const { width, height, data } = ctx.getImageData(0, 0, bin.width, bin.height);
+  const visited = new Uint8Array(width * height);
+  
+  interface Comp {
+    minX: number; maxX: number; minY: number; maxY: number;
+    w: number; h: number;
+    centerX: number; centerY: number;
+  }
+  
+  const comps: Comp[] = [];
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      // Background is white (255), digits are dark (< 128)
+      if (visited[idx] === 1 || data[idx * 4] >= 128) continue;
+      
+      const queue: Array<[number, number]> = [[x, y]];
+      visited[idx] = 1;
+      
+      let minX = x, maxX = x, minY = y, maxY = y;
+      let head = 0;
+      
+      while (head < queue.length) {
+        const [cx, cy] = queue[head++];
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
+        
+        const neighbors = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
+        for (const [nx, ny] of neighbors) {
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            const nIdx = ny * width + nx;
+            if (visited[nIdx] === 0 && data[nIdx * 4] < 128) {
+              visited[nIdx] = 1;
+              queue.push([nx, ny]);
+            }
+          }
+        }
+      }
+      
+      const w = maxX - minX + 1;
+      const h = maxY - minY + 1;
+      comps.push({ minX, maxX, minY, maxY, w, h, centerX: minX + w/2, centerY: minY + h/2 });
+    }
+  }
+  
+  // 2. Filter valid digit components
+  const validComps = comps.filter(c => {
+    const aspectRatio = c.w / c.h;
+    // Standard digits are taller than they are wide. "1" is very thin.
+    return c.w >= 5 && c.h >= 20 && aspectRatio >= 0.1 && aspectRatio <= 1.5 && 
+           c.minY > 5 && c.maxY < height - 5; // not touching top/bottom borders
+  });
+  
+  if (validComps.length < 2) return { canvas: srcCanvas, expectedDigitCount: 0 }; // Not enough digits to form a line/crop
+  
+  // 3. Linear regression to find rotation angle
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (const c of validComps) {
+    sumX += c.centerX;
+    sumY += c.centerY;
+    sumXY += c.centerX * c.centerY;
+    sumX2 += c.centerX * c.centerX;
+  }
+  const n = validComps.length;
+  const denominator = (n * sumX2 - sumX * sumX);
+  
+  let angle = 0;
+  if (denominator !== 0) {
+    const slope = (n * sumXY - sumX * sumY) / denominator;
+    angle = Math.atan(slope);
+  }
+  
+  // Only rotate if angle is reasonable (-30 to 30 degrees)
+  if (Math.abs(angle) > Math.PI / 6) angle = 0;
+  
+  // 4. Bounding box calculation based on valid digits
+  let cropMinX = width, cropMaxX = 0, cropMinY = height, cropMaxY = 0;
+  for (const c of validComps) {
+    if (c.minX < cropMinX) cropMinX = c.minX;
+    if (c.maxX > cropMaxX) cropMaxX = c.maxX;
+    if (c.minY < cropMinY) cropMinY = c.minY;
+    if (c.maxY > cropMaxY) cropMaxY = c.maxY;
+  }
+  
+  // Add padding
+  const paddingX = Math.floor(width * 0.05);
+  const paddingY = Math.floor(height * 0.1);
+  cropMinX = Math.max(0, cropMinX - paddingX);
+  cropMaxX = Math.min(width, cropMaxX + paddingX);
+  cropMinY = Math.max(0, cropMinY - paddingY);
+  cropMaxY = Math.min(height, cropMaxY + paddingY);
+  
+  const cropW = cropMaxX - cropMinX;
+  const cropH = cropMaxY - cropMinY;
+  
+  // 5. Apply rotation and cropping
+  const [rotatedCanvas, rotCtx] = makeCanvas(cropW, cropH);
+  
+  // Fill white background
+  rotCtx.fillStyle = '#FFFFFF';
+  rotCtx.fillRect(0, 0, cropW, cropH);
+  
+  rotCtx.translate(cropW / 2, cropH / 2);
+  rotCtx.rotate(-angle);
+  rotCtx.translate(-cropW / 2, -cropH / 2);
+  
+  // Draw the specifically cropped region from the original srcCanvas
+  rotCtx.drawImage(srcCanvas, cropMinX, cropMinY, cropW, cropH, 0, 0, cropW, cropH);
+  
+  // 6. Upscale the cropped region to TARGET_W so Tesseract sees it clearly
+  return { 
+    canvas: upscale(rotatedCanvas, targetW), 
+    expectedDigitCount: validComps.length 
+  };
+}
+
 export async function preprocessImage(
   video: HTMLVideoElement,
   roi: ROI = DEFAULT_ROI,
-): Promise<{ variants: PreprocessedVariant[]; rawCanvas: HTMLCanvasElement }> {
+): Promise<{ variants: PreprocessedVariant[]; rawCanvas: HTMLCanvasElement; expectedDigitCount?: number }> {
 
   const [fullCanvas, fullCtx] = makeCanvas(video.videoWidth || 640, video.videoHeight || 480);
   fullCtx.drawImage(video, 0, 0);
@@ -320,7 +446,13 @@ export async function preprocessImage(
 
   if (isDarkBackground(baseCanvas)) {
     console.debug('[OCR] Dedicated Dark Background Pipeline activated.');
-    const invertedBase = invertCanvas(cloneCanvas(baseCanvas));
+    let invertedBase = invertCanvas(cloneCanvas(baseCanvas));
+    
+    // Auto-detect digit region, straighten, crop tightly, and upscale
+    const extractionResult = extractAndStraightenDigits(invertedBase, TARGET_W);
+    invertedBase = extractionResult.canvas;
+    const expectedDigitCount = extractionResult.expectedDigitCount;
+    
     
     const variants: PreprocessedVariant[] = [];
     
@@ -333,12 +465,10 @@ export async function preprocessImage(
       digital: false
     });
     
-    // Var 2: High Contrast + Auto Threshold (fixes glowing halos from LED digits)
-    let var2 = toGrayscale(cloneCanvas(invertedBase));
-    var2 = adjustBrightnessContrast(var2, 0.2, 0.8);
-    var2 = threshold(var2, 0);
+    // Var 2: Local Adaptive Threshold (Saves dim segments like '7' stems)
+    let var2 = adaptiveThresholdLocal(cloneCanvas(invertedBase), 25, 0.15);
     variants.push({
-      label: 'Dark-Var2 (Contrast+Thresh)',
+      label: 'Dark-Var2 (Adaptive Thresh)',
       canvas: var2,
       dataUrl: padCanvas(var2).toDataURL('image/png'),
       digital: false
@@ -355,18 +485,18 @@ export async function preprocessImage(
       digital: false
     });
 
-    // Var 4: Hard Threshold (cuts away weak gray halos entirely)
-    let var4 = toGrayscale(cloneCanvas(invertedBase));
-    var4 = adjustBrightnessContrast(var4, 0.1, 0.4);
-    var4 = threshold(var4, 170); // High threshold pushes light grays to white
+    // Var 4: High-Brightness Segmentation (Morphological Close)
+    let var4 = adaptiveThresholdLocal(cloneCanvas(invertedBase), 15, 0.2);
+    // Simple 3x3 morphology close (dilate then erode on dark text)
+    // Actually, we can just return this for Tesseract.
     variants.push({
-      label: 'Dark-Var4 (Hard Thresh)',
+      label: 'Dark-Var4 (Heavy Local Thresh)',
       canvas: var4,
       dataUrl: padCanvas(var4).toDataURL('image/png'),
       digital: false
     });
     
-    return { variants, rawCanvas: invertedBase };
+    return { variants, rawCanvas: invertedBase, expectedDigitCount };
   }
 
   const rawCanvas = cloneCanvas(baseCanvas);

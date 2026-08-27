@@ -298,6 +298,7 @@ async function runWorkerOnVariants(
 export async function recogniseWeight(
   variants: PreprocessedVariant[],
   quality: ImageQualityReport,
+  expectedDigitCount?: number,
 ): Promise<{ result?: OcrResult; error?: OcrError }> {
 
   const standardVariants = variants.filter(v => !v.digital);
@@ -427,7 +428,19 @@ export async function recogniseWeight(
     const segmentBonus = (isSegmentMatcher && c.confidence >= 80) ? 300 : 0;
 
     // Penalize candidates whose digit count differs from the mode (prevents false digit insertion like 123 → 1143)
-    const digitCountPenalty = (digits !== modeDigitCount) ? -2000 : 0;
+    let digitCountPenalty = 0;
+    
+    // Strict Structural Validation (if CV detected exact digit bounds)
+    if (expectedDigitCount !== undefined && expectedDigitCount > 0) {
+      if (digits !== expectedDigitCount) {
+        digitCountPenalty = -3000; // Heavy penalty if it contradicts physical structure
+      } else {
+        digitCountPenalty = 1000; // Bonus for structural match
+      }
+    } else {
+      // Fallback to consensus mode
+      digitCountPenalty = (digits !== modeDigitCount) ? -2000 : 0;
+    }
 
     const score =
       (digits * 1000) +
