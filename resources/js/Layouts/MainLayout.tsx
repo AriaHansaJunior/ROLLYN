@@ -42,15 +42,23 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F5F5', width: '100vw', maxWidth: '100vw' }}>
-      {!hideSidebar && (
-        <Sidebar
-          activePage={activePage}
-          collapsed={sidebarCollapsed}
-          mobileOpen={mobileMenuOpen}
-          onClose={() => setMobileMenuOpen(false)}
-        />
-      )}
+    <div className="relative bg-slate-50" style={{ display: 'flex', height: '100vh', overflow: 'hidden', width: '100vw', maxWidth: '100vw' }}>
+      {/* Background Atmosphere for Light Glass UI */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-blue-100/50 rounded-full blur-[100px]" />
+        <div className="absolute top-[40%] -right-[10%] w-[40%] h-[60%] bg-cyan-50/50 rounded-full blur-[100px]" />
+        <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[50%] bg-indigo-50/50 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 flex w-full h-full">
+        {!hideSidebar && (
+          <Sidebar
+            activePage={activePage}
+            collapsed={sidebarCollapsed}
+            mobileOpen={mobileMenuOpen}
+            onClose={() => setMobileMenuOpen(false)}
+          />
+        )}
 
       {}
       <div
@@ -87,6 +95,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </div>
         </main>
       </div>
+    </div>
     </div>
   )
 }

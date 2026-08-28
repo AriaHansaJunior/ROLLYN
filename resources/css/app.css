@@ -15,4 +15,23 @@
   --breakpoint-sm: 680px;
   --breakpoint-lg: 1180px;
 }  
- 
+
+/* Global Glassmorphism Utilities */
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 ease-out;
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    .glass-panel:hover {
+      @apply bg-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border-white/80;
+      transform: translateY(-2px);
+    }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .glass-panel:hover {
+      @apply bg-white/80 border-white/80;
+    }
+  }
+}

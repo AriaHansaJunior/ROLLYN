@@ -191,7 +191,7 @@ export default function Login() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="hidden lg:block mt-8 text-blue-300/80 text-sm font-medium animate-pulse"
+                    className="hidden lg:block mt-8 text-blue-300/80 text-sm font-medium"
                   >
                     Hover to login →
                   </motion.div>
@@ -361,7 +361,7 @@ export default function Login() {
                         </>
                       ) : (
                         <>
-                          <span>Secure Sign In</span>
+                          <span>LOGIN</span>
                           <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </>
                       )}

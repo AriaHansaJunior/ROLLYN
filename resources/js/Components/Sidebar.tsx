@@ -118,7 +118,6 @@ export default function Sidebar({
                 style={{
                     width: collapsed && !mobileOpen ? 56 : 280,
                     minWidth: collapsed && !mobileOpen ? 56 : 280,
-                    background: "#1e2d3d",
                     display: "flex",
                     flexDirection: "column",
                     position: "fixed",
@@ -129,13 +128,13 @@ export default function Sidebar({
                     transition:
                         "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
-                className={
+                className={`bg-white/60 backdrop-blur-2xl border-r border-white/60 shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${
                     mobileOpen
                         ? "max-sm:translate-x-0"
                         : "max-sm:-translate-x-full"
-                }
+                }`}
             >
-                {}
+                {/* Header/Logo Sidebar */}
                 <div
                     style={{
                         padding: "0 12px",
@@ -143,23 +142,25 @@ export default function Sidebar({
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        borderBottom: "1px solid rgba(255,255,255,0.08)",
+                        borderBottom: "1px solid rgba(0,0,0,0.05)",
                     }}
+                    className="group cursor-default"
                 >
                     <img 
                         src="/images/logo-rollyn.png" 
                         alt="Rollyn Logo" 
                         style={{ width: 32, height: 32, objectFit: 'contain' }} 
-                        className="drop-shadow-sm"
+                        className="drop-shadow-sm transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                     {(!collapsed || mobileOpen) && (
                         <span
                             style={{
-                                fontWeight: 700,
+                                fontWeight: 800,
                                 fontSize: 16,
-                                color: "#ffffff",
+                                color: "#1e293b",
                                 letterSpacing: "0.04em",
                             }}
+                            className="transition-colors duration-300 group-hover:text-blue-600 drop-shadow-sm"
                         >
                             ROLLYN
                         </span>
@@ -171,7 +172,7 @@ export default function Sidebar({
                             style={{
                                 background: "none",
                                 border: "none",
-                                color: "#aaa",
+                                color: "#94a3b8",
                                 cursor: "pointer",
                                 padding: 4,
                             }}
@@ -181,7 +182,7 @@ export default function Sidebar({
                     )}
                 </div>
 
-                {}
+                {/* Nav Links */}
                 <nav
                     style={{
                         flex: 1,
@@ -208,7 +209,7 @@ export default function Sidebar({
                                         style={{
                                             fontSize: 10,
                                             fontWeight: 700,
-                                            color: "rgba(255,255,255,0.35)",
+                                            color: "#64748b",
                                             letterSpacing: "0.1em",
                                             textTransform: "uppercase",
                                             padding: "0 8px",
@@ -277,9 +278,9 @@ export default function Sidebar({
                     <div
                         style={{
                             padding: "12px 16px",
-                            borderTop: "1px solid rgba(255,255,255,0.08)",
+                            borderTop: "1px solid rgba(0,0,0,0.05)",
                             fontSize: 11,
-                            color: "rgba(255,255,255,0.3)",
+                            color: "#64748b",
                         }}
                     >
                         ROLLYN v1.0.0 &copy; 2026 All Rights Reserved

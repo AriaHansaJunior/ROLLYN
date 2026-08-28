@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { X, Package, MoveRight, Layers, Eye, MapPin, Calendar, AlertCircle, PlusCircle, CheckCircle2 } from 'lucide-react'
 import { Link, router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
+import { motion } from 'framer-motion'
 
 type SlotStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -50,13 +51,13 @@ interface Props {
 }
 
 const statusConfig: Record<number, { label: string; bgClass: string; dot: string }> = {
-  0: { label: 'Free Space (0/4)', bgClass: 'bg-white border-2 border-gray-300 text-gray-800', dot: '#ffffff' },
-  1: { label: 'Slot Planning', bgClass: 'bg-gray-200 border-2 border-gray-300 text-gray-800', dot: '#e5e7eb' },
-  2: { label: 'Slotted', bgClass: 'bg-gray-500 border-2 border-gray-600 text-white', dot: '#6b7280' },
-  3: { label: 'Shipment Plan', bgClass: 'bg-green-600 border-2 border-green-700 text-white', dot: '#16a34a' },
-  4: { label: 'Non-PO', bgClass: 'bg-red-600 border-2 border-red-700 text-white', dot: '#dc2626' },
-  5: { label: 'Move to Another Warehouse', bgClass: 'bg-yellow-400 border-2 border-yellow-500 text-gray-900', dot: '#facc15' },
-  6: { label: 'HOLD', bgClass: 'bg-blue-500 border-2 border-blue-600 text-white', dot: '#3b82f6' },
+  0: { label: 'Free Space (0/4)', bgClass: 'bg-white/60 backdrop-blur-md border border-slate-200 text-slate-700', dot: '#94a3b8' },
+  1: { label: 'Slot Planning', bgClass: 'bg-blue-100/60 backdrop-blur-md border border-blue-200 text-blue-800', dot: '#3b82f6' },
+  2: { label: 'Slotted', bgClass: 'bg-slate-200/60 backdrop-blur-md border border-slate-300 text-slate-800', dot: '#475569' },
+  3: { label: 'Shipment Plan', bgClass: 'bg-emerald-100/60 backdrop-blur-md border border-emerald-200 text-emerald-800', dot: '#10b981' },
+  4: { label: 'Non-PO', bgClass: 'bg-rose-100/60 backdrop-blur-md border border-rose-200 text-rose-800', dot: '#f43f5e' },
+  5: { label: 'Move to Another Warehouse', bgClass: 'bg-amber-100/60 backdrop-blur-md border border-amber-200 text-amber-800', dot: '#f59e0b' },
+  6: { label: 'HOLD', bgClass: 'bg-indigo-100/60 backdrop-blur-md border border-indigo-200 text-indigo-800', dot: '#6366f1' },
 }
 
 const stackCountOptions = ['✓', '2', '3', '4'];
@@ -231,6 +232,18 @@ const H_RACK_CONFIGS: RackConfig[] = [
   { rack: 'H2', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
   { rack: 'H1', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
 ];
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, duration: 0.4 }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+}
 
 export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Props) {
   const [activeArea, setActiveArea] = useState<'A' | 'E' | 'G' | 'H' | 'B_KANAN' | 'B_KIRI' | 'C_KANAN' | 'C_KIRI'>(() => {
@@ -538,10 +551,10 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
   // Render a single slot cell
   function renderSlotCell(code: string, row: number) {
     const slot = slotMap.get(code)
-    if (!slot) {
+      if (!slot) {
       return (
         <div key={code} className="relative group">
-          <div className="flex items-center justify-center w-full aspect-square rounded-md border-2 border-dashed border-slate-300 bg-slate-50 text-[10px] tracking-tighter leading-none font-bold text-center text-slate-400 cursor-not-allowed">
+          <div className="flex items-center justify-center w-full aspect-square rounded-md border-2 border-dashed border-white/10 bg-white/5 text-[10px] tracking-tighter leading-none font-bold text-center text-slate-500 cursor-not-allowed">
             {code}
           </div>
           <div className="hidden md:block absolute bottom-full mb-2 w-max px-3 py-1.5 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl whitespace-nowrap left-1/2 -translate-x-1/2">
@@ -559,31 +572,31 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     const isAssignTarget = assignMode && isAvailableToAssign
 
     // Visual background config
-    let bgStyle = statusConfig[slot.status]?.bgClass || 'bg-white border-2 border-gray-300 text-gray-800'
+    let bgStyle = statusConfig[slot.status]?.bgClass || 'bg-white/60 backdrop-blur-md border-2 border-slate-200 text-slate-700'
     if (slot.status === 3) {
-      bgStyle = 'bg-emerald-600 border-2 border-emerald-700 text-white shadow-xs'
+      bgStyle = 'bg-emerald-100/60 backdrop-blur-md border-2 border-emerald-300 text-emerald-800'
     } else if (slot.status === 4) {
-      bgStyle = 'bg-rose-600 border-2 border-rose-700 text-white shadow-xs'
+      bgStyle = 'bg-rose-100/60 backdrop-blur-md border-2 border-rose-300 text-rose-800'
     } else if (slot.status === 5) {
-      bgStyle = 'bg-amber-400 border-2 border-amber-500 text-slate-900 shadow-xs'
+      bgStyle = 'bg-amber-100/60 backdrop-blur-md border-2 border-amber-300 text-amber-800'
     } else if (slot.status === 6) {
-      bgStyle = 'bg-blue-600 border-2 border-blue-700 text-white shadow-xs'
+      bgStyle = 'bg-indigo-100/60 backdrop-blur-md border-2 border-indigo-300 text-indigo-800'
     } else if (rollsCount > 0 && !isFull) {
-      bgStyle = 'bg-slate-700 border-2 border-slate-800 text-white shadow-xs'
+      bgStyle = 'bg-slate-200/60 backdrop-blur-md border-2 border-slate-300 text-slate-800'
     } else if (isFull) {
-      bgStyle = 'bg-slate-900 border-2 border-slate-950 text-white shadow-md'
+      bgStyle = 'bg-slate-300/80 backdrop-blur-md border-2 border-slate-400 text-slate-900 shadow-inner'
     }
 
     return (
       <div key={code} className="relative group">
         <button
           onClick={() => handleSlotClick(code)}
-          className={`flex flex-col items-center justify-center w-full aspect-square rounded-md text-[10px] tracking-tighter leading-none font-bold text-center acos-smooth-hover cursor-pointer shadow-sm relative ${
+          className={`flex flex-col items-center justify-center w-full aspect-square rounded-lg text-[10px] tracking-tighter leading-none font-bold text-center cursor-pointer shadow-sm relative transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md ${
             isSelected
-              ? `${bgStyle} ring-4 ring-offset-2 ring-indigo-500 scale-105 z-10 transition-transform`
+              ? `${bgStyle} ring-2 ring-blue-400 shadow-md scale-[1.02] z-10`
               : isAssignTarget
-                ? `${bgStyle} ring-2 ring-emerald-400 hover:ring-4 hover:ring-emerald-500 hover:scale-105 transition-all`
-                : `${bgStyle}`
+                ? `${bgStyle} ring-2 ring-emerald-400 shadow-md hover:ring-2 hover:ring-emerald-500 hover:scale-[1.02]`
+                : `${bgStyle} hover:brightness-105`
           }`}
         >
           <span>{code}</span>
@@ -603,22 +616,22 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         </button>
 
         {/* Rich Tooltip */}
-        <div className="hidden md:block absolute bottom-full mb-2 w-max px-3 py-2 bg-slate-900 text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl whitespace-nowrap left-1/2 -translate-x-1/2">
-          <div className="font-bold text-blue-300">Location: {code} (DB ID: {slot.id})</div>
-          <div className="text-slate-300 text-[10px] mt-0.5">
-            Kapasitas: <span className="font-bold text-white">{rollsCount} / 4 Roll</span>
+        <div className="hidden md:block absolute bottom-full mb-2 w-max px-3 py-2 bg-white text-slate-800 text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl border border-slate-200 whitespace-nowrap left-1/2 -translate-x-1/2">
+          <div className="font-bold text-blue-600">Location: {code} (DB ID: {slot.id})</div>
+          <div className="text-slate-500 text-[10px] mt-0.5">
+            Kapasitas: <span className="font-bold text-slate-800">{rollsCount} / 4 Roll</span>
             {isFull ? ' (PENUH)' : ` (${4 - rollsCount} slot tersisa)`}
           </div>
           {rollsCount > 0 && (
-            <div className="text-[10px] text-slate-400 border-t border-slate-700 mt-1 pt-1 space-y-0.5">
+            <div className="text-[10px] text-slate-500 border-t border-slate-100 mt-1 pt-1 space-y-0.5">
               {slot.rollsList.map((r, i) => (
                 <div key={r.id}>
-                  #{i + 1}: <span className="font-bold text-white font-mono">{r.number}</span> ({r.grade || '—'}, {r.weight || 0}kg)
+                  #{i + 1}: <span className="font-bold text-slate-800 font-mono">{r.number}</span> ({r.grade || '—'}, {r.weight || 0}kg)
                 </div>
               ))}
             </div>
           )}
-          <div className="absolute top-full border-4 border-transparent border-t-slate-900 left-1/2 -translate-x-1/2"></div>
+          <div className="absolute top-full border-4 border-transparent border-t-white left-1/2 -translate-x-1/2"></div>
         </div>
       </div>
     )
@@ -636,9 +649,9 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     if (rackMaxRows === 0) return null
 
     return (
-      <div key={rack} className="flex-shrink-0 w-[228px] border border-slate-200 bg-slate-50/30 rounded-xl p-1.5 shadow-sm">
+      <div key={rack} className="flex-shrink-0 w-[228px] border border-white/60 bg-white/60 backdrop-blur-2xl rounded-xl p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative group/rack transition-all duration-300 hover:bg-white/80">
         {/* Rack Header */}
-        <div className="text-center font-bold text-slate-700 bg-slate-100 py-1.5 rounded-lg mb-1.5 text-sm border border-slate-200 uppercase">
+        <div className="text-center font-bold text-slate-800 bg-white/50 backdrop-blur-md py-1.5 rounded-lg mb-1.5 text-sm border border-white/60 shadow-sm uppercase group-hover/rack:bg-white/80 transition-colors drop-shadow-sm">
           {label || rack}
         </div>
         {/* Sub-column headers */}
@@ -665,10 +678,10 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                         gridColumn: `span ${specialColSpan}`,
                         gridRow: `span ${specialRowSpan}`,
                       }}
-                      className={`flex items-center justify-center font-bold text-xs tracking-wider rounded-md z-0 ${
+                      className={`flex items-center justify-center font-bold text-xs tracking-wider rounded-lg z-0 ${
                         special === 'DOOR'
-                          ? 'bg-slate-100 border-2 border-dashed border-slate-300 text-slate-400'
-                          : 'bg-slate-200 border-2 border-slate-300 text-slate-500 shadow-inner'
+                          ? 'bg-slate-50 backdrop-blur-sm border-2 border-dashed border-slate-200 text-slate-400'
+                          : 'bg-slate-100 backdrop-blur-md border border-slate-200 text-slate-500 shadow-inner'
                       }`}
                     >
                       {special}
@@ -698,29 +711,33 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
   }
 
   return (
-    <div className="py-4 px-2.5 sm:px-6 max-w-full overflow-x-hidden">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="py-4 px-2.5 sm:px-6 max-w-full overflow-x-hidden relative">
+      {/* Background blobs to match Dashboard */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-400/5 rounded-full blur-3xl pointer-events-none -z-10 translate-x-1/3 -translate-y-1/3" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-400/5 rounded-full blur-3xl pointer-events-none -z-10 -translate-x-1/4 translate-y-1/4" />
+      
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <motion.div variants={itemVariants} className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Warehouse Map</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Warehouse layout map Column A — Capacity up to 4 rolls per slot</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Warehouse Map</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Warehouse layout map {activeArea === 'B_KANAN' ? 'Warehouse B (RIGHT)' : activeArea === 'B_KIRI' ? 'Warehouse B (LEFT)' : activeArea === 'C_KANAN' ? 'Warehouse C (RIGHT)' : activeArea === 'C_KIRI' ? 'Warehouse C (LEFT)' : activeArea === 'G' ? 'Warehouse G' : activeArea === 'H' ? 'Warehouse H' : `Column ${activeArea}`} — Capacity up to 4 rolls per slot</p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Assignment Mode Banner */}
       {assignMode && (
-        <div className="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-100 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-3 backdrop-blur-md">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <MapPin size={18} className="text-blue-600 shrink-0" />
             <div className="min-w-0">
-              <div className="text-sm font-bold text-blue-900">Assign Roll Mode (Max capacity 4 rolls)</div>
-              <div className="text-xs text-blue-700 truncate">
-                Assigning roll <span className="font-bold font-mono">{assignRollNo}</span> — Select an available slot (&lt; 4 rolls) on the map
+              <div className="text-sm font-bold text-slate-800">Assign Roll Mode (Max capacity 4 rolls)</div>
+              <div className="text-xs text-slate-600 truncate">
+                Assigning roll <span className="font-bold font-mono text-slate-800">{assignRollNo}</span> — Select an available slot (&lt; 4 rolls) on the map
               </div>
             </div>
           </div>
           <button
-            className="btn btn-secondary text-xs px-3 py-1.5 shrink-0 cursor-pointer"
+            className="btn btn-secondary bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm text-xs px-3 py-1.5 shrink-0 cursor-pointer transition-colors"
             onClick={cancelAssignMode}
           >
             Cancel Assign Mode
@@ -732,11 +749,11 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
       <div className="flex flex-col lg:flex-row items-stretch gap-6 overflow-x-hidden w-full relative">
 
         {/* Warehouse Grid Container */}
-        <div className="flex-1 min-w-0 transition-all duration-500 ease-in-out transform-gpu bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 flex flex-col">
+        <motion.div variants={itemVariants} className="flex-1 min-w-0 transition-all duration-500 ease-in-out transform-gpu glass-panel rounded-2xl p-3.5 sm:p-5 flex flex-col relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm shadow-sm">
                   {activeArea.includes('B_') ? 'B' : activeArea.includes('C_') ? 'C' : activeArea}
                 </div>
                 <div>
@@ -746,14 +763,14 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   <span className="text-[11px] text-slate-500 font-medium">{totalSlots} Slots × Max 4 Rolls = {totalSlots * 4} Total Capacity</span>
                 </div>
               </div>
-              <div className="flex flex-wrap bg-slate-100 p-1 rounded-lg self-start sm:self-auto gap-1">
+              <div className="flex flex-wrap bg-slate-100/80 backdrop-blur-md p-1.5 rounded-xl self-start sm:self-auto gap-1.5 border border-slate-200 shadow-inner">
                 <button
                   onClick={() => {
                     setActiveArea('A')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'A' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'A' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Column A
@@ -763,8 +780,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     setActiveArea('E')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'E' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'E' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Column E
@@ -774,8 +791,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     setActiveArea('B_KANAN')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'B_KANAN' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'B_KANAN' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Warehouse B (RIGHT)
@@ -785,8 +802,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     setActiveArea('B_KIRI')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'B_KIRI' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'B_KIRI' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Warehouse B (LEFT)
@@ -796,8 +813,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     setActiveArea('C_KANAN')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'C_KANAN' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'C_KANAN' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Warehouse C (RIGHT)
@@ -807,8 +824,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     setActiveArea('C_KIRI')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'C_KIRI' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'C_KIRI' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Warehouse C (LEFT)
@@ -818,8 +835,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     setActiveArea('G')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'G' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'G' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Warehouse G
@@ -829,8 +846,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                     setActiveArea('H')
                     setSelectedSlotCodes([])
                   }}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    activeArea === 'H' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'H' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                 >
                   Warehouse H
@@ -838,11 +855,11 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-full p-0.5 shadow-sm">
+              <div className="flex items-center bg-slate-100/80 backdrop-blur-md border border-slate-200 rounded-full p-1 shadow-inner">
                 <button
                   onClick={() => toggleMode('row')}
-                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2.5 sm:px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    selectRowsOn ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-200/50'
+                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                    selectRowsOn ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                   title="Select all rows vertically in this column"
                 >
@@ -850,8 +867,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </button>
                 <button
                   onClick={() => toggleMode('col')}
-                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2.5 sm:px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    selectColOn ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-200/50'
+                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                    selectColOn ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                   title="Select all columns horizontally in this row"
                 >
@@ -859,8 +876,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </button>
                 <button
                   onClick={() => toggleMode('block')}
-                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2.5 sm:px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    selectBlockOn ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-200/50'
+                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                    selectBlockOn ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                   title="Select entire block"
                 >
@@ -873,17 +890,17 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   setMultiSelectMode(!multiSelectMode)
                   setSelectedSlotCodes([])
                 }}
-                className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold px-3 py-1 rounded-full border transition-colors cursor-pointer shadow-sm ${
+                className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm backdrop-blur-md ${
                   multiSelectMode 
-                    ? 'bg-indigo-600 text-white border-indigo-700' 
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    ? 'bg-white text-blue-600 border-slate-200 shadow-sm scale-[1.02]' 
+                    : 'bg-slate-50 text-slate-600 border border-slate-200 hover:text-slate-800 hover:bg-white hover:border-slate-300'
                 }`}
               >
                 <Layers size={13} />
                 <span className="hidden sm:inline">Multi-Select: {multiSelectMode ? 'ON' : 'OFF'}</span>
                 <span className="sm:hidden">{multiSelectMode ? 'ON' : 'OFF'}</span>
               </button>
-              <div className="hidden md:flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+              <div className="hidden md:flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-full border border-blue-200 backdrop-blur-sm shadow-inner">
                 <span>Scroll right →</span>
                 <MoveRight size={13} />
               </div>
@@ -899,12 +916,12 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
 
           <div className="mt-auto">
             {/* Legend */}
-            <div className="mt-5 pt-3 border-t border-slate-100">
-              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Status Legend</div>
+            <div className="mt-5 pt-3 border-t border-slate-200">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Status Legend</div>
               <div className="flex flex-wrap gap-2 text-xs">
                 {Object.entries(statusConfig).map(([val, cfg]) => (
-                  <div key={val} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg ${cfg.bgClass}`}>
-                    <span className="text-[11px] font-medium">{cfg.label}</span>
+                  <div key={val} className={`flex items-center gap-1.5 px-3 py-1 rounded-lg backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${cfg.bgClass} hover:brightness-95 transition-all duration-200 cursor-default`}>
+                    <span className="text-[11px] font-bold">{cfg.label}</span>
                   </div>
                 ))}
               </div>
@@ -912,29 +929,29 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
 
             {/* Summary Data */}
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-blue-500 mb-1">Total Stored Rolls</div>
-                <div className="text-lg font-black text-blue-900">{totalRolls}</div>
+              <div className="bg-white/60 border border-slate-200 rounded-xl p-3 flex flex-col justify-center hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:bg-white transition-all duration-300 group">
+                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 group-hover:text-blue-600 transition-colors">Total Stored Rolls</div>
+                <div className="text-lg font-black text-slate-800 transition-colors">{totalRolls}</div>
               </div>
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-emerald-600 mb-1">Total Weight (KGS)</div>
-                <div className="text-lg font-black text-emerald-900">{totalWeight.toLocaleString('id-ID', {minimumFractionDigits: 2})}</div>
+              <div className="bg-white/60 border border-slate-200 rounded-xl p-3 flex flex-col justify-center hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:bg-white transition-all duration-300 group">
+                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 group-hover:text-emerald-600 transition-colors">Total Weight (KGS)</div>
+                <div className="text-lg font-black text-slate-800 transition-colors">{totalWeight.toLocaleString('id-ID', {minimumFractionDigits: 2})}</div>
               </div>
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-indigo-500 mb-1">Total Physical Slots</div>
-                <div className="text-lg font-black text-indigo-900">{totalSlots} ({totalSlots * 4} max rolls)</div>
+              <div className="bg-white/60 border border-slate-200 rounded-xl p-3 flex flex-col justify-center hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:bg-white transition-all duration-300 group">
+                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 group-hover:text-indigo-600 transition-colors">Total Physical Slots</div>
+                <div className="text-lg font-black text-slate-800 transition-colors">{totalSlots} <span className="text-xs text-slate-400 font-medium">({totalSlots * 4} max rolls)</span></div>
               </div>
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col justify-center">
-                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Specs Available</div>
-                <div className="text-[10px] text-slate-700 font-mono line-clamp-2">
-                  <span className="font-bold">GRD:</span> {specs.grd || '-'} <br/>
-                  <span className="font-bold">GSM:</span> {specs.gsm || '-'} <br/>
-                  <span className="font-bold">RW:</span> {specs.rw || '-'}
+              <div className="bg-white/60 border border-slate-200 rounded-xl p-3 flex flex-col justify-center hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:bg-white transition-all duration-300 group">
+                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 group-hover:text-slate-800 transition-colors">Specs Available</div>
+                <div className="text-[10px] text-slate-600 font-mono line-clamp-2 leading-relaxed">
+                  <span className="font-bold text-slate-800">GRD:</span> {specs.grd || '-'} <br/>
+                  <span className="font-bold text-slate-800">GSM:</span> {specs.gsm || '-'} <br/>
+                  <span className="font-bold text-slate-800">RW:</span> {specs.rw || '-'}
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Detail Sidebar */}
         {!assignMode && (
@@ -943,14 +960,14 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               selectedSlots.length > 0 ? "w-full lg:w-88 opacity-100 max-h-[1200px] mt-2 lg:mt-0" : "w-full lg:w-0 opacity-0 max-h-0 lg:max-h-[1200px]"
             }`}
           >
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col gap-3 w-full lg:w-88 h-full acos-sidebar-enter">
+            <div className="bg-white/80 backdrop-blur-2xl rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-slate-200 p-5 flex flex-col gap-3 w-full lg:w-88 h-full acos-sidebar-enter">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shadow-sm">
                     <Layers size={15} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-bold text-slate-800">
                       {selectedSlots.length === 1 ? 'Slot & Stack Detail' : 'Multiple Locations'}
                     </h3>
                     <div className="text-[11px] font-mono text-slate-500">
@@ -960,7 +977,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </div>
                 <button
                   onClick={() => setSelectedSlotCodes([])}
-                  className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+                  className="p-1 text-slate-500 hover:text-slate-800 rounded-lg cursor-pointer transition-colors"
                 >
                   <X size={18} />
                 </button>
@@ -970,24 +987,24 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               {selectedSlots.length === 1 ? (
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Location Code</span>
-                    <span className="font-bold text-slate-900 font-mono">{selectedSlots[0].code}</span>
+                    <span className="text-slate-600">Location Code</span>
+                    <span className="font-bold text-slate-800 font-mono">{selectedSlots[0].code}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Warehouse Area</span>
+                    <span className="text-slate-600">Warehouse Area</span>
                     <span className="font-medium text-slate-800">
                       {activeArea === 'B_KANAN' ? 'Warehouse B (RIGHT)' : activeArea === 'B_KIRI' ? 'Warehouse B (LEFT)' : activeArea === 'C_KANAN' ? 'Warehouse C (RIGHT)' : activeArea === 'C_KIRI' ? 'Warehouse C (LEFT)' : activeArea === 'G' ? 'Warehouse G' : activeArea === 'H' ? 'Warehouse H' : `Column ${activeArea}`}
                     </span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Slot Capacity</span>
-                    <span className="font-bold text-slate-900">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${
+                    <span className="text-slate-600">Slot Capacity</span>
+                    <span className="font-bold text-slate-800">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono border ${
                         selectedSlots[0].rollsList.length >= 4 
-                          ? 'bg-rose-100 text-rose-800' 
+                          ? 'bg-rose-100 text-rose-700 border-rose-200' 
                           : selectedSlots[0].rollsList.length > 0 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-slate-100 text-slate-700'
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
                       }`}>
                         {selectedSlots[0].rollsList.length} / 4 Roll
                       </span>
@@ -995,22 +1012,22 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   </div>
                 </div>
               ) : (
-                <div className="text-xs text-slate-500 py-2 border-b border-slate-100">
+                <div className="text-xs text-slate-600 py-2 border-b border-slate-100">
                   Bulk updating {selectedSlots.length} selected slots.
                 </div>
               )}
 
               {/* Direct Slot Assignment for Slots with Capacity (< 4 rolls) */}
               {selectedSlots.length === 1 && selectedSlots[0].id > 0 && selectedSlots[0].rollsList.length < 4 && unslottedRolls && unslottedRolls.length > 0 && (
-                <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2.5 backdrop-blur-md shadow-inner">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
                     <PlusCircle size={14} className="text-emerald-600" />
                     <span>Stack Roll in This Slot ({4 - selectedSlots[0].rollsList.length} left)</span>
                   </div>
                   <select
                     value={selectedUnslottedRollId}
                     onChange={e => setSelectedUnslottedRollId(e.target.value)}
-                    className="form-select text-xs w-full font-medium"
+                    className="form-select text-xs w-full font-medium bg-white border-slate-200 text-slate-800"
                   >
                     <option value="">-- Select Available Roll ({unslottedRolls.length}) --</option>
                     {unslottedRolls.map(r => (
@@ -1042,15 +1059,15 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                       <Link
                         key={roll.id}
                         href={`/roll-detail/${roll.number}`}
-                        className="flex items-center justify-between p-2 rounded-lg bg-blue-50/60 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-colors group"
+                        className="flex items-center justify-between p-2 rounded-lg bg-blue-50 border border-blue-100 hover:bg-blue-100 hover:border-blue-200 transition-colors group"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center">
+                          <span className="w-5 h-5 rounded-full bg-white text-blue-600 border border-blue-200 text-[10px] font-black flex items-center justify-center shadow-sm">
                             {idx + 1}
                           </span>
                           <div>
-                            <div className="text-xs font-bold text-blue-950 font-mono">{roll.number}</div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="text-xs font-bold text-slate-800 font-mono">{roll.number}</div>
+                            <div className="text-[10px] text-slate-600">
                               {roll.grade || '—'} • {roll.weight || 0} kg
                             </div>
                           </div>
@@ -1068,9 +1085,9 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               {/* Status Dropdowns */}
               <div className="space-y-3 pt-2 border-t border-slate-100">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">Slot Status</label>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Slot Status</label>
                   <select
-                    className="form-select w-full text-sm font-semibold text-slate-800"
+                    className="form-select w-full text-sm font-semibold bg-white border-slate-200 text-slate-800"
                     value={editStatus}
                     onChange={e => setEditStatus(Number(e.target.value))}
                   >
@@ -1096,32 +1113,32 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
 
       {/* Assignment Popup Modal (When in assignMode) */}
       {showAssignPopup && assignSlot && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="card w-full sm:max-w-md p-5 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+          <div className="card w-full sm:max-w-md p-5 bg-white/95 backdrop-blur-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
                   <MapPin size={15} />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">Assign Roll to Slot</h3>
+                <h3 className="text-base font-bold text-slate-800">Assign Roll to Slot</h3>
               </div>
-              <button onClick={() => setShowAssignPopup(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
+              <button onClick={() => setShowAssignPopup(false)} className="text-slate-500 hover:text-slate-800 p-1 cursor-pointer transition-colors">
                 <X size={18} />
               </button>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Assigned Roll</span>
-                <span className="font-bold text-blue-700 font-mono">{assignRollNo}</span>
+                <span className="text-slate-600 font-medium">Assigned Roll</span>
+                <span className="font-bold text-blue-600 font-mono">{assignRollNo}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Target Slot</span>
-                <span className="font-bold text-slate-900 font-mono">{assignSlot.code} (ID: {assignSlot.id})</span>
+                <span className="text-slate-600 font-medium">Target Slot</span>
+                <span className="font-bold text-slate-800 font-mono">{assignSlot.code} (ID: {assignSlot.id})</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Posisi Tumpukan</span>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold text-[11px]">
+                <span className="text-slate-600 font-medium">Posisi Tumpukan</span>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-[11px]">
                   Stack {assignSlot.rollsList.length + 1} of 4
                 </span>
               </div>
@@ -1135,7 +1152,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 <input
                   value={assignForm.rollNumber}
                   onChange={e => setAssignForm(f => ({ ...f, rollNumber: e.target.value }))}
-                  className="form-input w-full font-mono font-bold"
+                  className="form-input w-full font-mono font-bold bg-white border-slate-200 text-slate-800 placeholder-slate-400"
                   placeholder="Enter roll number"
                 />
               </div>
@@ -1149,13 +1166,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   type="date"
                   value={assignForm.entryDate}
                   onChange={e => setAssignForm(f => ({ ...f, entryDate: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full bg-white border-slate-200 text-slate-800"
                 />
               </div>
             </div>
 
             <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
-              <button className="btn btn-secondary text-xs px-3 py-1.5 cursor-pointer" onClick={() => setShowAssignPopup(false)}>
+              <button className="btn btn-secondary bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs px-3 py-1.5 cursor-pointer" onClick={() => setShowAssignPopup(false)}>
                 Cancel
               </button>
               <button
@@ -1196,6 +1213,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
