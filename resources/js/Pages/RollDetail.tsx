@@ -453,7 +453,7 @@ export default function RollDetail({
                     />
                     <InfoRow 
                         label="Warehouse" 
-                        value={isSlotted ? "Warehouse Kolom A" : "Not Assigned"} 
+                        value={isSlotted ? "Warehouse Col A" : "Not Assigned"} 
                     />
                     <InfoRow 
                         label="Slot Status" 

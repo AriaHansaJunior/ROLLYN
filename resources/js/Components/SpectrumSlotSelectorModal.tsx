@@ -23,34 +23,18 @@ interface SpectrumSlotSelectorModalProps {
   currentLocationCode?: string
 }
 
-interface RackConfig {
-  rack: string
-  cols: { col: number; maxRow: number }[]
-  special?: string
-  specialColSpan?: number
-  specialRowStart?: number
-  specialRowSpan?: number
-}
-
-const RACK_CONFIGS: RackConfig[] = [
-  { rack: 'A17', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A16', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'LOADING DOCK 1', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'A15', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A14', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'LOADING DOCK 2', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'A13', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A12', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A11', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A10', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A9', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A8', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A7', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A6', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A5', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'A4', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 12 }], special: 'DOOR', specialColSpan: 3, specialRowStart: 1, specialRowSpan: 12 },
-  { rack: 'A3', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'A2', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'A1', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-]
+import { 
+  AREA_CONFIGS, 
+  RackConfig,
+  A_RACK_CONFIGS,
+  E_RACK_CONFIGS,
+  G_RACK_CONFIGS,
+  H_RACK_CONFIGS,
+  B_KANAN_RACK_CONFIGS,
+  B_KIRI_RACK_CONFIGS,
+  C_KANAN_RACK_CONFIGS,
+  C_KIRI_RACK_CONFIGS
+} from '@/Utils/WarehouseConfigs'
 
 export default function SpectrumSlotSelectorModal({
   isOpen,
@@ -64,9 +48,12 @@ export default function SpectrumSlotSelectorModal({
 }: SpectrumSlotSelectorModalProps) {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('')
   const [selectedSlotCode, setSelectedSlotCode] = useState<string>('')
+  const [activeArea, setActiveArea] = useState<'A' | 'E' | 'G' | 'H' | 'B_KANAN' | 'B_KIRI' | 'C_KANAN' | 'C_KIRI'>('A')
   const [activeRackFilter, setActiveRackFilter] = useState<string>('ALL')
   const [searchSlot, setSearchSlot] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+
+  const currentConfig = AREA_CONFIGS[activeArea]?.racks || []
 
   // Map of all locations from database keyed by location code
   const dbLocationMap = useMemo(() => {
@@ -116,6 +103,20 @@ export default function SpectrumSlotSelectorModal({
       } else if (aiResult?.recommendedSlot && aiResult.recommendedSlot.id > 0) {
         setSelectedLocationId(String(aiResult.recommendedSlot.id))
         setSelectedSlotCode(aiResult.recommendedSlot.code)
+        
+        const code = aiResult.recommendedSlot.code
+        if (code.startsWith('A')) setActiveArea('A')
+        else if (code.startsWith('E')) setActiveArea('E')
+        else if (code.startsWith('G')) setActiveArea('G')
+        else if (code.startsWith('H')) setActiveArea('H')
+        else if (code.startsWith('B')) {
+          const rackNum = parseInt(code.replace('B', '').split('-')[0])
+          setActiveArea(rackNum >= 19 ? 'B_KANAN' : 'B_KIRI')
+        }
+        else if (code.startsWith('C')) {
+          const rackNum = parseInt(code.replace('C', '').split('-')[0])
+          setActiveArea(rackNum >= 19 ? 'C_KANAN' : 'C_KIRI')
+        }
       }
     }
   }, [isOpen, currentLocationId, currentLocationCode, aiResult])
@@ -186,8 +187,8 @@ export default function SpectrumSlotSelectorModal({
 
   const recommendedCode = aiResult?.recommendedSlot?.code || ''
 
-  // Filtered Racks for Kolom A
-  const filteredRacks = RACK_CONFIGS.filter(r => {
+  // Filtered Racks for active area
+  const filteredRacks = currentConfig.filter(r => {
     if (activeRackFilter !== 'ALL' && r.rack !== activeRackFilter) return false
     if (searchSlot.trim()) {
       const q = searchSlot.trim().toUpperCase()
@@ -211,9 +212,6 @@ export default function SpectrumSlotSelectorModal({
                 <h3 className="text-base sm:text-lg font-bold text-slate-900">
                   {mode === 'move' ? 'Move Roll Location (Relocate)' : 'Select Warehouse Location Slot'}
                 </h3>
-                <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                  Warehouse Kolom A (420 Slots)
-                </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
                 Each slot can hold up to <strong>4 rolls</strong> stacked in the database
@@ -242,7 +240,7 @@ export default function SpectrumSlotSelectorModal({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-blue-900 uppercase tracking-wide">
-                        Rekomendasi Slot Terbaik
+                        Best Slot Recommendation
                       </span>
                       <span className="bg-white border border-blue-200 text-blue-700 text-[10px] font-bold px-2 py-0.2 rounded-full">
                         SPECTRUM Live
@@ -253,7 +251,7 @@ export default function SpectrumSlotSelectorModal({
                         {recommendedCode}
                       </span>
                       <span className="text-xs text-slate-600 font-medium">
-                        (Warehouse Kolom A, Rack {aiResult.recommendedSlot.rack})
+                        (Recommendation Engine Pick)
                       </span>
                     </div>
                   </div>
@@ -297,13 +295,13 @@ export default function SpectrumSlotSelectorModal({
                 <span className="font-semibold text-slate-800 ml-1">{roll.grade || '—'} ({roll.gsm || 150} g/m²)</span>
               </div>
               <div>
-                <span className="text-slate-400 font-medium">Berat:</span>
+                <span className="text-slate-400 font-medium">Weight:</span>
                 <span className="font-mono text-slate-800 font-bold ml-1">{roll.weight || 0} kg</span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-medium">Slot Terpilih:</span>
+              <span className="text-slate-500 font-medium">Selected Slot:</span>
               {selectedSlotCode ? (
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-extrabold text-blue-700 bg-blue-100 border border-blue-300 px-3 py-1 rounded-lg text-xs shadow-xs">
@@ -323,37 +321,131 @@ export default function SpectrumSlotSelectorModal({
 
           {/* Rack Filter and Search Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search Rack / Slot (e.g., A17, A1-2-1)..."
-                  value={searchSlot}
-                  onChange={e => setSearchSlot(e.target.value)}
-                  className="form-input text-xs pl-8 py-1 rounded-lg w-56"
-                />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
+              
+              <div className="flex flex-wrap bg-slate-100/80 backdrop-blur-md p-1 rounded-xl self-start sm:self-auto gap-1 border border-slate-200 shadow-inner">
+                <button
+                  onClick={() => {
+                    setActiveArea('A')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'A' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Col A
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('E')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'E' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Col E
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('B_KANAN')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'B_KANAN' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Wh B(R)
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('B_KIRI')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'B_KIRI' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Wh B(L)
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('C_KANAN')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'C_KANAN' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Wh C(R)
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('C_KIRI')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'C_KIRI' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Wh C(L)
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('G')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'G' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Wh G
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveArea('H')
+                    setActiveRackFilter('ALL')
+                  }}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                    activeArea === 'H' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
+                  }`}
+                >
+                  Wh H
+                </button>
               </div>
 
-              <select
-                value={activeRackFilter}
-                onChange={e => setActiveRackFilter(e.target.value)}
-                className="form-select text-xs py-1 rounded-lg font-medium"
-              >
-                <option value="ALL">Semua Rack (A17 - A1)</option>
-                {RACK_CONFIGS.filter(r => !r.special || r.cols.some(c => c.maxRow > 0)).map(r => (
-                  <option key={r.rack} value={r.rack}>Rack {r.rack}</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search Rack/Slot..."
+                    value={searchSlot}
+                    onChange={e => setSearchSlot(e.target.value)}
+                    className="text-xs pl-8 pr-3 py-1.5 rounded-lg w-44 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all shadow-sm"
+                  />
+                </div>
+
+                <select
+                  value={activeRackFilter}
+                  onChange={e => setActiveRackFilter(e.target.value)}
+                  className="text-xs pl-3 pr-8 py-1.5 rounded-lg font-medium border border-slate-200 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                >
+                  <option value="ALL">All Racks</option>
+                  {currentConfig.filter(r => !r.special || r.cols.some(c => c.maxRow > 0)).map(r => (
+                    <option key={r.rack} value={r.rack}>Rack {r.label || r.rack}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-              <span>Geser kanan →</span>
+              <span>Scroll right →</span>
               <MoveRight size={12} />
             </div>
           </div>
 
-          {/* KOLOM A GRID */}
+          {/* GRID */}
           <div className="card overflow-x-auto p-3.5 sm:p-4 bg-slate-50/50 border border-slate-200/80 rounded-xl">
             <div className="flex gap-4 pb-2" style={{ minWidth: 'max-content' }}>
               {filteredRacks.map(config => {
@@ -480,19 +572,19 @@ export default function SpectrumSlotSelectorModal({
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-white border border-slate-300" />
-              <span className="text-slate-600 text-[11px]">Kosong (0/4)</span>
+              <span className="text-slate-600 text-[11px]">Empty (0/4)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-slate-700 border border-slate-800" />
-              <span className="text-slate-700 font-bold text-[11px]">Terisi 1-3/4 (Bisa Ditumpuk)</span>
+              <span className="text-slate-700 font-bold text-[11px]">Occupied 1-3/4 (Stackable)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-slate-900 border border-slate-950" />
-              <span className="text-slate-500 text-[11px]">Penuh (4/4)</span>
+              <span className="text-slate-500 text-[11px]">Full (4/4)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-blue-600 border border-blue-700" />
-              <span className="text-blue-700 font-bold text-[11px]">Slot Terpilih</span>
+              <span className="text-blue-700 font-bold text-[11px]">Selected Slot</span>
             </div>
           </div>
 

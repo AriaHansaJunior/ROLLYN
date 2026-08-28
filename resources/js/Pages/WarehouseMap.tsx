@@ -62,176 +62,18 @@ const statusConfig: Record<number, { label: string; bgClass: string; dot: string
 
 const stackCountOptions = ['✓', '2', '3', '4'];
 
-// Define each rack's structure: which sub-columns exist and how many rows each sub-column has
-interface RackConfig {
-  rack: string
-  label?: string
-  cols: { col: number; maxRow: number }[]
-  special?: string
-  specialColSpan?: number
-  specialRowStart?: number
-  specialRowSpan?: number
-}
-
-const A_RACK_CONFIGS: RackConfig[] = [
-  // A17: 4 × 6
-  { rack: 'A17', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A16: LOADING DOCK 1 — 4 × 6
-  { rack: 'A16', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'LOADING DOCK 1', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  // A15: 4 × 6
-  { rack: 'A15', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A14: LOADING DOCK 2 — 4 × 6
-  { rack: 'A14', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'LOADING DOCK 2', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  // A13: 4 × 6
-  { rack: 'A13', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A12: 4 × 6
-  { rack: 'A12', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A11: 4 × 6
-  { rack: 'A11', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A10: 4 × 6
-  { rack: 'A10', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A9: 4 × 6
-  { rack: 'A9', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A8: 4 × 6
-  { rack: 'A8', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A7: 4 × 6
-  { rack: 'A7', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A6: 4 × 6
-  { rack: 'A6', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A5: 4 × 6
-  { rack: 'A5', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // A4: 1 × 12 (col 1) + DOOR 3 × 12 (cols 4,3,2)
-  { rack: 'A4', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 12 }], special: 'DOOR', specialColSpan: 3, specialRowStart: 1, specialRowSpan: 12 },
-  // A3: 4 × 12
-  { rack: 'A3', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  // A2: 4 × 12
-  { rack: 'A2', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  // A1: 4 × 12
-  { rack: 'A1', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-];
-
-const E_RACK_CONFIGS: RackConfig[] = [
-  { rack: 'E17', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E16', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E15', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E14', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E13', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E12', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E11', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E10', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E9', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E8', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E7', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E6', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E5', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E4', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E3', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'E2', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-];
-
-const G_RACK_CONFIGS: RackConfig[] = [
-  { rack: 'G12', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G11', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G10', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G9', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G8', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G7', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G6', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G5', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G4', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G3', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G2', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 12 }, { col: 1, maxRow: 12 }] },
-  { rack: 'G1', cols: [{ col: 4, maxRow: 12 }, { col: 3, maxRow: 12 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }] },
-];
-
-const B_KANAN_RACK_CONFIGS: RackConfig[] = [
-  { rack: 'B35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B33', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B32', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B31', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B30', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B29', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B28', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B27', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B26', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B25', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B24', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B23', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B22', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'B21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-];
-
-const B_KIRI_RACK_CONFIGS: RackConfig[] = [
-  { rack: 'B35L', label: 'B35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B34L', label: 'B34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B33L', label: 'B33', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B32L', label: 'B32', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B31L', label: 'B31', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B30L', label: 'B30', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B29L', label: 'B29', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B28L', label: 'B28', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B27L', label: 'B27', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'SPARE PART', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  
-  // B26: col 2, 1
-  { rack: 'B26L', label: 'B26', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // B25: full
-  { rack: 'B25L', label: 'B25', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // B24: full
-  { rack: 'B24L', label: 'B24', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  // B23: col 4, 3, 2
-  { rack: 'B23L', label: 'B23', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 0 }] },
-  
-  { rack: 'B22L', label: 'B22', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'B21L', label: 'B21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-];
-
-const C_KANAN_RACK_CONFIGS: RackConfig[] = [
-  { rack: 'C35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'C34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'C33', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C32', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C31', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C30', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C29', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C28', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C27', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C26', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C25', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C24', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C23', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C22', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-];
-
-const C_KIRI_RACK_CONFIGS: RackConfig[] = [
-  { rack: 'C35L', label: 'C35', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'C34L', label: 'C34', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-  { rack: 'C33L', label: 'C33', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C32L', label: 'C32', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C31L', label: 'C31', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C30L', label: 'C30', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C29L', label: 'C29', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C28L', label: 'C28', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C27L', label: 'C27', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C26L', label: 'C26', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C25L', label: 'C25', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C24L', label: 'C24', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C23L', label: 'C23', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C22L', label: 'C22', cols: [{ col: 4, maxRow: 6 }, { col: 3, maxRow: 6 }, { col: 2, maxRow: 6 }, { col: 1, maxRow: 6 }] },
-  { rack: 'C21L', label: 'C21', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: ' ', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 6 },
-];
-
-const H_RACK_CONFIGS: RackConfig[] = [
-  { rack: 'H8', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
-  { rack: 'H7', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
-  { rack: 'H6', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
-  { rack: 'H5', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
-  { rack: 'H4', cols: [{ col: 4, maxRow: 0 }, { col: 3, maxRow: 0 }, { col: 2, maxRow: 0 }, { col: 1, maxRow: 0 }], special: 'AREA SLITTING', specialColSpan: 4, specialRowStart: 1, specialRowSpan: 15 },
-  { rack: 'H3', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
-  { rack: 'H2', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
-  { rack: 'H1', cols: [{ col: 4, maxRow: 15 }, { col: 3, maxRow: 15 }, { col: 2, maxRow: 15 }, { col: 1, maxRow: 15 }] },
-];
+import { 
+  AREA_CONFIGS, 
+  RackConfig,
+  A_RACK_CONFIGS,
+  E_RACK_CONFIGS,
+  G_RACK_CONFIGS,
+  H_RACK_CONFIGS,
+  B_KANAN_RACK_CONFIGS,
+  B_KIRI_RACK_CONFIGS,
+  C_KANAN_RACK_CONFIGS,
+  C_KIRI_RACK_CONFIGS
+} from '@/Utils/WarehouseConfigs'
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -263,9 +105,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
   const [selectColOn, setSelectColOn] = useState(false)
   const [selectBlockOn, setSelectBlockOn] = useState(false)
 
-  // Direct roll assignment from sidebar
-  const [selectedUnslottedRollId, setSelectedUnslottedRollId] = useState<string>('')
-  const [isAssigningFromSidebar, setIsAssigningFromSidebar] = useState(false)
+
 
   function toggleMode(mode: 'row' | 'col' | 'block') {
     let newModeState = false
@@ -277,32 +117,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
       setMultiSelectMode(true)
     }
   }
-
-  const [assignMode, setAssignMode] = useState(false)
-  const [assignRollId, setAssignRollId] = useState<string | null>(null)
-  const [assignRollNo, setAssignRollNo] = useState<string | null>(null)
-  const [showAssignPopup, setShowAssignPopup] = useState(false)
-  const [assignSlot, setAssignSlot] = useState<Slot | null>(null)
-  const [assignForm, setAssignForm] = useState({
-    rollNumber: '',
-    entryDate: new Date().toISOString().slice(0, 10),
-  })
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const rollId = params.get('assign_roll')
-    const rollNo = params.get('roll_no')
-    if (rollId) {
-      const decodedRollNo = rollNo ? decodeURIComponent(rollNo) : rollId
-      setAssignMode(true)
-      setAssignRollId(rollId)
-      setAssignRollNo(decodedRollNo)
-      setAssignForm({
-        rollNumber: decodedRollNo,
-        entryDate: new Date().toISOString().slice(0, 10),
-      })
-    }
-  }, [])
 
   // Build a lookup map for quick slot access
   const slotMap = useMemo(() => {
@@ -396,89 +210,63 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
       return
     }
 
-    if (assignMode) {
-      const count = slot.rollsList.length
-      if (count < 4) {
-        setAssignSlot(slot)
-        setAssignForm({
-          rollNumber: assignRollNo || '',
-          entryDate: new Date().toISOString().slice(0, 10),
-        })
-        setShowAssignPopup(true)
-      } else {
-        SystemUI.toast({
-          message: `Slot ${code} is full (4/4 rolls). Please choose another slot.`,
-          type: 'warning',
-          duration: 3000
-        })
-      }
-    } else {
-      let codesToSelect = new Set<string>([code])
+    let codesToSelect = new Set<string>([code])
 
-      if (selectRowsOn || selectColOn || selectBlockOn) {
-        const parts = code.split('-')
-        if (parts.length === 3) {
-          const rack = parts[0]
-          const col = parts[1]
-          const row = parts[2]
-          
-          const rackConfig = currentConfig.find(r => r.rack === rack)
-          if (rackConfig) {
-            if (selectRowsOn) {
-              const colConfig = rackConfig.cols.find(c => c.col.toString() === col)
-              if (colConfig) {
-                for (let r = 1; r <= colConfig.maxRow; r++) {
-                  codesToSelect.add(`${rack}-${col}-${r}`)
-                }
+    if (selectRowsOn || selectColOn || selectBlockOn) {
+      const parts = code.split('-')
+      if (parts.length === 3) {
+        const rack = parts[0]
+        const col = parts[1]
+        const row = parts[2]
+        
+        const rackConfig = currentConfig.find(r => r.rack === rack)
+        if (rackConfig) {
+          if (selectRowsOn) {
+            const colConfig = rackConfig.cols.find(c => c.col.toString() === col)
+            if (colConfig) {
+              for (let r = 1; r <= colConfig.maxRow; r++) {
+                codesToSelect.add(`${rack}-${col}-${r}`)
               }
             }
-            if (selectColOn) {
-              rackConfig.cols.forEach(c => {
-                if (parseInt(row) <= c.maxRow) {
-                  codesToSelect.add(`${rack}-${c.col}-${row}`)
-                }
-              })
-            }
-            if (selectBlockOn) {
-              rackConfig.cols.forEach(c => {
-                for (let r = 1; r <= c.maxRow; r++) {
-                  codesToSelect.add(`${rack}-${c.col}-${r}`)
-                }
-              })
-            }
+          }
+          if (selectColOn) {
+            rackConfig.cols.forEach(c => {
+              if (parseInt(row) <= c.maxRow) {
+                codesToSelect.add(`${rack}-${c.col}-${row}`)
+              }
+            })
+          }
+          if (selectBlockOn) {
+            rackConfig.cols.forEach(c => {
+              for (let r = 1; r <= c.maxRow; r++) {
+                codesToSelect.add(`${rack}-${c.col}-${r}`)
+              }
+            })
           }
         }
       }
+    }
 
-      const codesArray = Array.from(codesToSelect).filter(c => slotMap.has(c))
+    const codesArray = Array.from(codesToSelect).filter(c => slotMap.has(c))
 
-      if (multiSelectMode) {
-        setSelectedSlotCodes(prev => {
-          const prevSet = new Set(prev)
-          const allCurrentlySelected = codesArray.every(c => prevSet.has(c))
-          
-          if (allCurrentlySelected) {
-            codesArray.forEach(c => prevSet.delete(c))
-          } else {
-            codesArray.forEach(c => prevSet.add(c))
-          }
-          return Array.from(prevSet)
-        })
-      } else {
-        setSelectedSlotCodes([code])
-      }
+    if (multiSelectMode) {
+      setSelectedSlotCodes(prev => {
+        const prevSet = new Set(prev)
+        const allCurrentlySelected = codesArray.every(c => prevSet.has(c))
+        
+        if (allCurrentlySelected) {
+          codesArray.forEach(c => prevSet.delete(c))
+        } else {
+          codesArray.forEach(c => prevSet.add(c))
+        }
+        return Array.from(prevSet)
+      })
+    } else {
+      setSelectedSlotCodes([code])
     }
   }
 
-  function cancelAssignMode() {
-    setAssignMode(false)
-    setAssignRollId(null)
-    setAssignRollNo(null)
-    const url = new URL(window.location.href)
-    url.searchParams.delete('assign_roll')
-    url.searchParams.delete('roll_no')
-    window.history.replaceState({}, '', url.toString())
-  }
+
 
   function handleUpdateLocation() {
     if (selectedSlots.length === 0) return
@@ -500,43 +288,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     })
   }
 
-  function handleAssignFromSidebar() {
-    if (!selectedUnslottedRollId || selectedSlots.length !== 1 || !selectedSlots[0].id) {
-      SystemUI.toast({ message: 'Select a roll to assign.', type: 'warning' })
-      return
-    }
 
-    const targetSlot = selectedSlots[0]
-    if (targetSlot.rollsList.length >= 4) {
-      SystemUI.toast({ message: `Slot ${targetSlot.code} is full (4/4 rolls).`, type: 'error' })
-      return
-    }
-
-    setIsAssigningFromSidebar(true)
-
-    router.put(`/rolls/${selectedUnslottedRollId}`, {
-      locations_id: String(targetSlot.id),
-      action_type: 'ASSIGN',
-    }, {
-      preserveScroll: true,
-      onSuccess: (page: any) => {
-        setIsAssigningFromSidebar(false)
-        if (page.props.flash?.error) {
-          SystemUI.toast({ message: page.props.flash.error, type: 'error' })
-          return
-        }
-        setSelectedUnslottedRollId('')
-        SystemUI.toast({
-          message: `Roll successfully assigned to slot ${targetSlot.code} (Stack ${targetSlot.rollsList.length + 1})!`,
-          type: 'success'
-        })
-      },
-      onError: () => {
-        setIsAssigningFromSidebar(false)
-        SystemUI.toast({ message: 'Failed to assign roll to database.', type: 'error' })
-      }
-    })
-  }
 
   // Sync edit state when selection changes
   useEffect(() => {
@@ -553,7 +305,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     const slot = slotMap.get(code)
       if (!slot) {
       return (
-        <div key={code} className="relative group">
+        <div key={code} className="relative group hover:z-50">
           <div className="flex items-center justify-center w-full aspect-square rounded-md border-2 border-dashed border-white/10 bg-white/5 text-[10px] tracking-tighter leading-none font-bold text-center text-slate-500 cursor-not-allowed">
             {code}
           </div>
@@ -569,7 +321,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     const isFull = rollsCount >= 4
     const isAvailableToAssign = rollsCount < 4
     const isSelected = selectedSlotCodes.includes(code)
-    const isAssignTarget = assignMode && isAvailableToAssign
 
     // Visual background config
     let bgStyle = statusConfig[slot.status]?.bgClass || 'bg-white/60 backdrop-blur-md border-2 border-slate-200 text-slate-700'
@@ -588,15 +339,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     }
 
     return (
-      <div key={code} className="relative group">
+      <div key={code} className="relative group hover:z-50">
         <button
           onClick={() => handleSlotClick(code)}
           className={`flex flex-col items-center justify-center w-full aspect-square rounded-lg text-[10px] tracking-tighter leading-none font-bold text-center cursor-pointer shadow-sm relative transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md ${
             isSelected
               ? `${bgStyle} ring-2 ring-blue-400 shadow-md scale-[1.02] z-10`
-              : isAssignTarget
-                ? `${bgStyle} ring-2 ring-emerald-400 shadow-md hover:ring-2 hover:ring-emerald-500 hover:scale-[1.02]`
-                : `${bgStyle} hover:brightness-105`
+              : `${bgStyle} hover:brightness-105`
           }`}
         >
           <span>{code}</span>
@@ -649,7 +398,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
     if (rackMaxRows === 0) return null
 
     return (
-      <div key={rack} className="flex-shrink-0 w-[228px] border border-white/60 bg-white/60 backdrop-blur-2xl rounded-xl p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative group/rack transition-all duration-300 hover:bg-white/80">
+      <div key={rack} className="flex-shrink-0 w-[228px] border border-white/60 bg-white/60 backdrop-blur-2xl rounded-xl p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] relative group/rack transition-all duration-300 hover:bg-white/80 hover:z-40">
         {/* Rack Header */}
         <div className="text-center font-bold text-slate-800 bg-white/50 backdrop-blur-md py-1.5 rounded-lg mb-1.5 text-sm border border-white/60 shadow-sm uppercase group-hover/rack:bg-white/80 transition-colors drop-shadow-sm">
           {label || rack}
@@ -724,26 +473,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         </div>
       </motion.div>
 
-      {/* Assignment Mode Banner */}
-      {assignMode && (
-        <div className="mb-4 p-3 sm:p-4 bg-blue-50 border border-blue-100 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-3 backdrop-blur-md">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <MapPin size={18} className="text-blue-600 shrink-0" />
-            <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-800">Assign Roll Mode (Max capacity 4 rolls)</div>
-              <div className="text-xs text-slate-600 truncate">
-                Assigning roll <span className="font-bold font-mono text-slate-800">{assignRollNo}</span> — Select an available slot (&lt; 4 rolls) on the map
-              </div>
-            </div>
-          </div>
-          <button
-            className="btn btn-secondary bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm text-xs px-3 py-1.5 shrink-0 cursor-pointer transition-colors"
-            onClick={cancelAssignMode}
-          >
-            Cancel Assign Mode
-          </button>
-        </div>
-      )}
+
 
       {/* Main Layout */}
       <div className="flex flex-col lg:flex-row items-stretch gap-6 overflow-x-hidden w-full relative">
@@ -908,8 +638,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
           </div>
 
           {/* Grid Area */}
-          <div className="w-full overflow-x-auto pb-4 pt-2 px-2 snap-x">
-            <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
+          <div className="w-full overflow-x-auto">
+            <div className="flex gap-4 pt-12 pb-6 px-2 overflow-x-auto custom-scrollbar flex-nowrap min-w-min">
               {currentConfig.map(config => renderRack(config))}
             </div>
           </div>
@@ -954,7 +684,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         </motion.div>
 
         {/* Detail Sidebar */}
-        {!assignMode && (
           <div
             className={`flex-shrink-0 overflow-hidden acos-layout-transition ${
               selectedSlots.length > 0 ? "w-full lg:w-88 opacity-100 max-h-[1200px] mt-2 lg:mt-0" : "w-full lg:w-0 opacity-0 max-h-0 lg:max-h-[1200px]"
@@ -1017,35 +746,6 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </div>
               )}
 
-              {/* Direct Slot Assignment for Slots with Capacity (< 4 rolls) */}
-              {selectedSlots.length === 1 && selectedSlots[0].id > 0 && selectedSlots[0].rollsList.length < 4 && unslottedRolls && unslottedRolls.length > 0 && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2.5 backdrop-blur-md shadow-inner">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
-                    <PlusCircle size={14} className="text-emerald-600" />
-                    <span>Stack Roll in This Slot ({4 - selectedSlots[0].rollsList.length} left)</span>
-                  </div>
-                  <select
-                    value={selectedUnslottedRollId}
-                    onChange={e => setSelectedUnslottedRollId(e.target.value)}
-                    className="form-select text-xs w-full font-medium bg-white border-slate-200 text-slate-800"
-                  >
-                    <option value="">-- Select Available Roll ({unslottedRolls.length}) --</option>
-                    {unslottedRolls.map(r => (
-                      <option key={r.raw_id} value={r.raw_id}>
-                        {r.no_roll} - {r.grade} ({r.weight} kg)
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    disabled={!selectedUnslottedRollId || isAssigningFromSidebar}
-                    onClick={handleAssignFromSidebar}
-                    className="btn btn-sm btn-primary w-full text-xs font-bold py-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {isAssigningFromSidebar ? 'Saving to DB...' : `Assign as Roll #${selectedSlots[0].rollsList.length + 1}`}
-                  </button>
-                </div>
-              )}
 
               {/* Stacked Rolls List */}
               {selectedSlots.length === 1 && selectedSlots[0].rollsList.length > 0 && (
@@ -1108,111 +808,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               </div>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Assignment Popup Modal (When in assignMode) */}
-      {showAssignPopup && assignSlot && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-          <div className="card w-full sm:max-w-md p-5 bg-white/95 backdrop-blur-3xl rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
-                  <MapPin size={15} />
-                </div>
-                <h3 className="text-base font-bold text-slate-800">Assign Roll to Slot</h3>
-              </div>
-              <button onClick={() => setShowAssignPopup(false)} className="text-slate-500 hover:text-slate-800 p-1 cursor-pointer transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600 font-medium">Assigned Roll</span>
-                <span className="font-bold text-blue-600 font-mono">{assignRollNo}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600 font-medium">Target Slot</span>
-                <span className="font-bold text-slate-800 font-mono">{assignSlot.code} (ID: {assignSlot.id})</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600 font-medium">Posisi Tumpukan</span>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-[11px]">
-                  Stack {assignSlot.rollsList.length + 1} of 4
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
-                  Roll Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  value={assignForm.rollNumber}
-                  onChange={e => setAssignForm(f => ({ ...f, rollNumber: e.target.value }))}
-                  className="form-input w-full font-mono font-bold bg-white border-slate-200 text-slate-800 placeholder-slate-400"
-                  placeholder="Enter roll number"
-                />
-              </div>
-
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
-                  <Calendar size={12} className="inline mr-1" />
-                  Warehouse Entry Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={assignForm.entryDate}
-                  onChange={e => setAssignForm(f => ({ ...f, entryDate: e.target.value }))}
-                  className="form-input w-full bg-white border-slate-200 text-slate-800"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
-              <button className="btn btn-secondary bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs px-3 py-1.5 cursor-pointer" onClick={() => setShowAssignPopup(false)}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary text-xs px-4 py-1.5 cursor-pointer font-bold"
-                onClick={() => {
-                  if (!assignForm.rollNumber.trim()) {
-                    SystemUI.toast({ message: 'Roll number cannot be empty.', type: 'warning' })
-                    return
-                  }
-                  if (assignRollId && assignSlot.id > 0) {
-                    router.put(`/rolls/${assignRollId}`, {
-                      locations_id: String(assignSlot.id),
-                      no_roll: assignForm.rollNumber,
-                      entry_date: assignForm.entryDate,
-                      action_type: 'ASSIGN',
-                    }, {
-                      onSuccess: () => {
-                        setShowAssignPopup(false)
-                        cancelAssignMode()
-                        SystemUI.toast({
-                          message: `Roll ${assignForm.rollNumber} successfully assigned to ${assignSlot.code}!`,
-                          type: 'success'
-                        })
-                      },
-                      onError: () => {
-                        SystemUI.toast({
-                          message: 'Failed to assign roll. Ensure the slot has enough capacity.',
-                          type: 'error'
-                        })
-                      }
-                    })
-                  }
-                }}
-              >
-                Confirm Assign Roll
-              </button>
-            </div>
-          </div>
         </div>
-      )}
     </motion.div>
   )
 }
