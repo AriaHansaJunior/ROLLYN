@@ -191,7 +191,7 @@ export default function SpectrumWeightDetectionEngine({
             };
 
             const frames: string[] = [];
-            const { variants, rawCanvas } = await preprocessImage(video, roi);
+            const { variants, rawCanvas, expectedDigitCount } = await preprocessImage(video, roi);
             latestVariantsRef.current = variants;
 
             const frameBase64 = rawCanvas.toDataURL("image/jpeg", 0.9);

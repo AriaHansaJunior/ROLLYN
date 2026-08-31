@@ -166,7 +166,7 @@ export default function WeightDetectionEngine({
         setOcrError(null);
 
         try {
-            const { variants, rawCanvas } = await preprocessImage(video, roi);
+            const { variants, rawCanvas, expectedDigitCount } = await preprocessImage(video, roi);
             latestVariantsRef.current = variants;
 
             const quality = analyseImageQuality(rawCanvas);
