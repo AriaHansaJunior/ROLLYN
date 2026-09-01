@@ -1387,7 +1387,7 @@ export default function RollInventory({
                         </div>
 
                         {/* Admin/PPIC Cancel Shipment Button */}
-                        {!isQC && activeShipment.status !== 'canceled' && (
+                        {!isQC && activeShipment.status !== 'canceled' && activeShipment.status !== 'completed' && (
                           <div className="pl-2 border-l border-slate-200">
                             <button
                               onClick={() => handleCancelShipment(activeShipment)}

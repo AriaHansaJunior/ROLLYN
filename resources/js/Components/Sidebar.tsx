@@ -16,6 +16,7 @@ import {
     ChevronRight,
     Layers,
     Sparkles,
+    History,
 } from "lucide-react";
 import { Link, usePage } from "@inertiajs/react";
 
@@ -44,6 +45,7 @@ const navSections = [
         items: [
             { id: "target-order", label: "Target Order", icon: Target },
             { id: "jop", label: "Job Order Production (JOP)", icon: ClipboardList },
+            { id: "shipment-history", label: "Shipment History", icon: History },
         ],
     },
     {
@@ -97,6 +99,7 @@ export default function Sidebar({
             "slot-status",
             "target-order",
             "jop",
+            "shipment-history",
             "reports",
         ], // Removed 'user-management'
     };

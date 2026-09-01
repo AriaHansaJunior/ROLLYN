@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/locations/{id}', [\App\Http\Controllers\LocationController::class, 'update']);
 
     Route::get('/shipments', [ShipmentController::class, 'index']);
+    Route::get('/shipment-history', [ShipmentController::class, 'history']);
     Route::post('/shipments', [ShipmentController::class, 'store']);
     Route::post('/shipments/qc/scan', [ShipmentController::class, 'qcScan']);
     Route::post('/shipments/qc/reject', [ShipmentController::class, 'qcReject']);

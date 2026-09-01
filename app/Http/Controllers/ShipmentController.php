@@ -19,6 +19,60 @@ class ShipmentController extends Controller
         return redirect('/roll-inventory?tab=shipments');
     }
 
+    public function history(Request $request)
+    {
+        $date = $request->input('date', now()->format('Y-m-d'));
+        
+        $shipments = Shipment::with([
+                'customer', 
+                'admin', 
+                'qc', 
+                'shipmentRolls.roll.grade',
+                'shipmentRolls.roll.jop.gsm',
+                'shipmentRolls.roll.core'
+            ])
+            ->where('status', 'completed')
+            ->whereDate('shipment_date', $date)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($shipment) {
+                return [
+                    'id' => $shipment->id,
+                    'shipment_number' => $shipment->shipment_number,
+                    'shipment_date' => $shipment->shipment_date,
+                    'status' => $shipment->status,
+                    'customer' => ['id' => $shipment->customers_id, 'customer' => $shipment->customer->customer ?? '—'],
+                    'admin' => ['id' => $shipment->admin_users_id, 'username' => $shipment->admin->username ?? '—'],
+                    'qc' => ['id' => $shipment->qc_users_id, 'username' => $shipment->qc->username ?? '—'],
+                    'shipment_rolls' => $shipment->shipmentRolls->map(function ($sr) {
+                        return [
+                            'id' => $sr->id,
+                            'roll_no' => $sr->roll_no,
+                            'qc_status' => $sr->qc_status,
+                            'qc_notes' => $sr->qc_notes,
+                            'qc_checked_at' => $sr->qc_checked_at,
+                            'roll' => [
+                                'no_roll' => $sr->roll->no_roll ?? ('R-' . $sr->roll_no),
+                                'grade' => $sr->roll->grade->grade ?? '—',
+                                'gsm' => $sr->roll->jop->gsm->gsm ?? ($sr->roll->gsm ?? 150),
+                                'weight' => $sr->roll->weight ?? 0,
+                                'width' => 1650, // default if no specific jop width
+                                'length' => 0, 
+                                'joint' => 0,
+                                'type' => $sr->roll->exmaterial ?? 'IMPORT',
+                                'core' => $sr->roll->core->core ?? '76',
+                            ]
+                        ];
+                    }),
+                ];
+            });
+            
+        return Inertia::render('ShipmentHistory', [
+            'shipments' => $shipments,
+            'selectedDate' => $date
+        ]);
+    }
+
     // For Admin to create a new shipment
     public function store(Request $request)
     {
@@ -202,6 +256,10 @@ class ShipmentController extends Controller
     public function cancelShipment($id)
     {
         $shipment = Shipment::with('shipmentRolls')->findOrFail($id);
+        
+        if ($shipment->status === 'completed') {
+            return redirect()->back()->withErrors(['error' => 'Cannot cancel a completed shipment.']);
+        }
         
         $rollNos = $shipment->shipmentRolls->pluck('roll_no')->toArray();
         $affectedLocations = Roll::whereIn('no', $rollNos)->whereNotNull('locations_id')->pluck('locations_id')->toArray();
