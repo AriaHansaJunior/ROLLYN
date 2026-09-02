@@ -131,7 +131,7 @@ export default function Sidebar({
                     transition:
                         "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
-                className={`bg-white/60 backdrop-blur-2xl border-r border-white/60 shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${
+                className={`bg-white/60 max-sm:bg-white backdrop-blur-2xl border-r border-white/60 shadow-[4px_0_24px_rgba(0,0,0,0.02)] ${
                     mobileOpen
                         ? "max-sm:translate-x-0"
                         : "max-sm:-translate-x-full"
