@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Filter, Plus, X, Eye } from 'lucide-react'
+import { Search, Filter, Plus, X, Eye, Printer } from 'lucide-react'
 import { usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import axios from 'axios'
@@ -175,6 +175,158 @@ export default function Jop() {
         SystemUI.toast({ message: msg, type: 'error' })
       }
     })
+  }
+
+  function printSerahTerima(jop: any) {
+    const today = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const rolls = jop.rollsList || []
+    const totalWeight = rolls.reduce((s: number, r: any) => s + (parseFloat(r.weight) || 0), 0)
+    const productionDate = rolls[0]?.entry_date || today
+    const gsm = jop.gsm || '-'
+
+    // Up to 16 rows per page
+    const rows = Array.from({ length: 16 }, (_, i) => {
+      const r = rolls[i]
+      return r
+        ? `<tr>
+            <td style="text-align:center">${i + 1}</td>
+            <td>${r.no_roll || `R-${r.no}` || '-'}</td>
+            <td></td>
+            <td style="text-align:center">${r.grade?.grade || jop.grade || '-'}</td>
+            <td style="text-align:center;font-weight:600">${parseFloat(r.weight || 0).toFixed(0)}</td>
+           </tr>`
+        : `<tr><td></td><td></td><td></td><td></td><td></td></tr>`
+    }).join('')
+
+    const html = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<title>Form Serah Terima Roll Finishgoods</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 10px; color: #000; background:#fff; }
+  .page { width: 210mm; min-height: 297mm; padding: 14mm 14mm 10mm; margin: 0 auto; }
+  .header-box { display: flex; justify-content: space-between; align-items: stretch; border: 1px solid #000; margin-bottom: 4px; }
+  .header-logo { width: 18%; padding: 6px; display: flex; align-items: center; justify-content: center; border-right: 1px solid #000; }
+  .logo-circle { width: 38px; height: 38px; border-radius: 50%; background: #1d4ed8; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 18px; }
+  .header-main { flex: 1; padding: 5px 10px; text-align: center; border-right: 1px solid #000; }
+  .header-main .company { font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
+  .header-main .form-title { font-size: 9px; font-weight: 700; margin-top: 2px; }
+  .header-meta { width: 160px; font-size: 8.5px; }
+  .header-meta table { width: 100%; border-collapse: collapse; }
+  .header-meta td { padding: 2px 4px; border-bottom: 1px solid #ddd; }
+  .header-meta td:first-child { font-weight: 600; width: 70px; }
+  .section-title { text-align: center; font-weight: 900; font-size: 11px; margin: 6px 0 2px; text-transform: uppercase; }
+  .section-sub { text-align: center; font-size: 9px; margin-bottom: 8px; font-weight: 600; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin-bottom: 6px; }
+  .info-row { display: flex; gap: 4px; margin-bottom: 3px; font-size: 9.5px; }
+  .info-label { width: 100px; font-weight: 600; flex-shrink: 0; }
+  .info-value { flex: 1; border-bottom: 1px solid #000; padding-bottom: 1px; }
+  .product-detail { margin-bottom: 6px; }
+  .product-detail table { border-collapse: collapse; width: 280px; }
+  .product-detail th, .product-detail td { border: 1px solid #000; padding: 2px 5px; text-align: center; font-size: 9px; }
+  .product-detail th { background: #f0f0f0; font-weight: 700; }
+  .shift-row { display: flex; gap: 4px; font-size: 9.5px; margin-bottom: 8px; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 2.5px 5px; font-size: 9px; }
+  .main-table th { background: #e8e8e8; font-weight: 700; text-align: center; }
+  .main-table td { min-height: 14px; }
+  .total-row td { font-weight: 700; background: #f5f5f5; }
+  .sig-section { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0; margin-top: 16px; }
+  .sig-block { text-align: center; border: 1px solid #000; padding: 6px 4px; }
+  .sig-block .sig-title { font-weight: 700; font-size: 9px; margin-bottom: 28px; }
+  .sig-block .sig-name { font-size: 8.5px; border-top: 1px solid #000; padding-top: 3px; margin-top: 4px; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { size: A4 portrait; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header-box">
+    <div class="header-logo"><div class="logo-circle">R</div></div>
+    <div class="header-main">
+      <div class="company">PT. INDONESIA ROYAL PAPER</div>
+      <div style="font-size:8px;color:#555;margin-top:1px">FORM SERAH TERIMA ROLL FINISHGOODS</div>
+    </div>
+    <div class="header-meta">
+      <table>
+        <tr><td>Form</td><td>WP-PMR-PN-013</td></tr>
+        <tr><td>Rev</td><td>0</td></tr>
+        <tr><td>Issue Date</td><td>02.01.2025</td></tr>
+        <tr><td>Page</td><td>01 OF 01</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div style="font-size:9px; margin-bottom:5px;">
+    <div class="info-row" style="margin-bottom:2px"><span class="info-label">Form</span><span>:</span><span style="margin-left:6px">WP-PMR-PN-013</span></div>
+    <div class="info-row" style="margin-bottom:2px"><span class="info-label">Job Order No.</span><span>:</span><span style="margin-left:6px;font-weight:700">${jop.jop}</span></div>
+    <div class="info-row"><span class="info-label">Job Order Date</span><span>:</span><span style="margin-left:6px">${today}</span></div>
+  </div>
+
+  <div class="section-title">PT. INDONESIA ROYAL PAPER</div>
+  <div class="section-sub">DELIVERY REPORT FINISHED GOODS TO WAREHOUSE</div>
+
+  <div class="info-grid">
+    <div>
+      <div class="info-row"><span class="info-label">Production Date</span><span>:</span><span class="info-value" style="margin-left:6px">${productionDate}</span></div>
+      <div class="info-row"><span class="info-label">Delivery Date</span><span>:</span><span class="info-value" style="margin-left:6px">${today}</span></div>
+      <div class="info-row"><span class="info-label">Grade Product</span><span>:</span><span class="info-value" style="margin-left:6px;font-weight:700">${jop.grade}</span></div>
+    </div>
+    <div>
+      <div class="info-row"><span class="info-label">Product Detail</span></div>
+      <div class="product-detail">
+        <table>
+          <thead><tr><th>GSM</th><th>IB</th><th>RW</th><th>Core Size</th><th>Thickness</th></tr></thead>
+          <tbody><tr><td>${gsm}</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="shift-row"><span style="width:100px;font-weight:600">Shift</span><span>:</span><span style="margin-left:6px">${rolls[0]?.shift?.shift || '1'}</span></div>
+
+  <table class="main-table">
+    <thead>
+      <tr>
+        <th style="width:28px">No</th>
+        <th style="width:140px;text-align:left">No. Roll</th>
+        <th style="width:90px">Ex. Material</th>
+        <th>Grade</th>
+        <th style="width:80px">Weight (kg)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="3" style="text-align:right;font-weight:700">TOTAL</td>
+        <td style="text-align:center">Roll<br/><span style="font-size:8px">Weight (kg)</span></td>
+        <td style="text-align:center;font-weight:700">${rolls.length}<br/>${totalWeight.toFixed(0)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sig-section">
+    <div class="sig-block"><div class="sig-title">Prepared by:</div><div class="sig-name">(Rewinder)</div></div>
+    <div class="sig-block"><div class="sig-title">Submitted by:</div><div class="sig-name">(Production)</div></div>
+    <div class="sig-block"><div class="sig-title">Controlled by:</div><div class="sig-name">(QA)</div></div>
+    <div class="sig-block"><div class="sig-title">Received by:</div><div class="sig-name">(Warehouse FGS)</div></div>
+  </div>
+</div>
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`
+
+    const w = window.open('', '_blank', 'width=900,height=700')
+    if (w) {
+      w.document.write(html)
+      w.document.close()
+    }
   }
 
   return (
@@ -485,8 +637,8 @@ export default function Jop() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Rincian Hasil Produksi: {selectedJopDetail.jop}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Target: {selectedJopDetail.target} | Realisasi: {selectedJopDetail.rolls} | Sisa: {selectedJopDetail.sisa}</p>
+                <h3 className="text-base font-bold text-slate-900">Production Results: {selectedJopDetail.jop}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Target: {selectedJopDetail.target} | Realized: {selectedJopDetail.rolls} | Remaining: {selectedJopDetail.sisa}</p>
               </div>
               <button 
                 onClick={() => setSelectedJopDetail(null)}
@@ -541,7 +693,14 @@ export default function Jop() {
               </div>
             </div>
             
-            <div className="p-3 border-t border-slate-100 bg-white flex justify-end">
+            <div className="p-3 border-t border-slate-100 bg-white flex items-center justify-between">
+              <button
+                className="btn btn-primary text-xs px-4 py-1.5 cursor-pointer flex items-center gap-1.5"
+                onClick={() => printSerahTerima(selectedJopDetail)}
+              >
+                <Printer size={13} />
+                <span>Print Handover Letter</span>
+              </button>
               <button className="btn btn-secondary text-xs px-4 py-1.5 cursor-pointer" onClick={() => setSelectedJopDetail(null)}>
                 Close
               </button>
