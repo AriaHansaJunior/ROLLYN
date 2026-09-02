@@ -368,8 +368,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         <div className="hidden md:block absolute bottom-full mb-2 w-max px-3 py-2 bg-white text-slate-800 text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl border border-slate-200 whitespace-nowrap left-1/2 -translate-x-1/2">
           <div className="font-bold text-blue-600">Location: {code} (DB ID: {slot.id})</div>
           <div className="text-slate-500 text-[10px] mt-0.5">
-            Kapasitas: <span className="font-bold text-slate-800">{rollsCount} / 4 Roll</span>
-            {isFull ? ' (PENUH)' : ` (${4 - rollsCount} slot tersisa)`}
+            Capacity: <span className="font-bold text-slate-800">{rollsCount} / 4 Roll</span>
+            {isFull ? ' (FULL)' : ` (${4 - rollsCount} slots remaining)`}
           </div>
           {rollsCount > 0 && (
             <div className="text-[10px] text-slate-500 border-t border-slate-100 mt-1 pt-1 space-y-0.5">

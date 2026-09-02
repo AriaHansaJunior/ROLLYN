@@ -543,7 +543,7 @@ export default function Jop() {
             
             <div className="p-3 border-t border-slate-100 bg-white flex justify-end">
               <button className="btn btn-secondary text-xs px-4 py-1.5 cursor-pointer" onClick={() => setSelectedJopDetail(null)}>
-                Tutup
+                Close
               </button>
             </div>
           </div>

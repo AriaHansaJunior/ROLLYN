@@ -42,7 +42,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }, [])
 
   return (
-    <div className="relative bg-slate-50" style={{ display: 'flex', height: '100vh', overflow: 'hidden', width: '100vw', maxWidth: '100vw' }}>
+    <div className="fixed inset-0 bg-slate-50" style={{ display: 'flex', overflow: 'hidden' }}>
       {/* Background Atmosphere for Light Glass UI */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-blue-100/50 rounded-full blur-[100px]" />
