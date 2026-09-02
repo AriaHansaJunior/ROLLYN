@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Filter, Plus, X } from 'lucide-react'
+import { Search, Filter, Plus, X, Eye } from 'lucide-react'
 import { usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import axios from 'axios'
@@ -19,6 +19,7 @@ export default function Jop() {
   const [gradesList, setGradesList] = useState<GradeItem[]>([])
   const [gsmsList, setGsmsList] = useState<GsmItem[]>([])
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [selectedJopDetail, setSelectedJopDetail] = useState<any>(null)
 
   const [form, setForm] = useState({
     spk: '',
@@ -39,6 +40,7 @@ export default function Jop() {
     const target = r.quantity || 1
     const completed = r.rolls ? r.rolls.length : 0
     const progress = Math.round((completed / target) * 100)
+    const sisa = Math.max(0, target - completed)
 
     const status = progress >= 100 ? 'Complete' : progress > 0 ? 'In Progress' : 'Pending'
     const colorClass = progress >= 100 ? 'bg-green-500 text-green-700' : progress >= 60 ? 'bg-blue-600 text-blue-700' : 'bg-amber-500 text-amber-700'
@@ -54,6 +56,8 @@ export default function Jop() {
       gsm: r.gsm?.gsm || '-',
       target: target,
       rolls: completed,
+      sisa: sisa,
+      rollsList: r.rolls || [],
       progress,
       status,
       colorClass,
@@ -219,12 +223,14 @@ export default function Jop() {
             <col className="w-[140px] lg:w-[130px]" />
             <col className="w-[140px] lg:w-[130px]" />
             <col className="w-[140px] lg:w-[130px]" />
-            <col className="w-[180px] lg:w-[160px]" />
-            <col className="w-[110px] lg:w-[100px]" />
-            <col className="w-[80px] lg:w-[70px]" />
-            <col className="w-[100px] lg:w-[90px]" />
-            <col className="w-[100px] lg:w-[90px]" />
-            <col className="w-[160px] lg:w-[150px]" />
+            <col className="w-[160px] lg:w-[140px]" />
+            <col className="w-[90px] lg:w-[80px]" />
+            <col className="w-[70px] lg:w-[60px]" />
+            <col className="w-[85px] lg:w-[80px]" />
+            <col className="w-[85px] lg:w-[80px]" />
+            <col className="w-[85px] lg:w-[80px]" />
+            <col className="w-[140px] lg:w-[130px]" />
+            <col className="w-[90px] lg:w-[80px]" />
           </colgroup>
           <thead>
             <tr>
@@ -234,9 +240,11 @@ export default function Jop() {
               <th style={{ textAlign: 'center' }}>Customer</th>
               <th style={{ textAlign: 'center' }}>Grade</th>
               <th style={{ textAlign: 'center' }}>GSM</th>
-              <th style={{ textAlign: 'center' }}>Target Rolls</th>
-              <th style={{ textAlign: 'center' }}>Completed</th>
+              <th style={{ textAlign: 'center' }}>Target</th>
+              <th style={{ textAlign: 'center' }}>Realisasi</th>
+              <th style={{ textAlign: 'center' }}>Sisa</th>
               <th style={{ textAlign: 'center' }}>Progress</th>
+              <th style={{ textAlign: 'center' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -250,13 +258,23 @@ export default function Jop() {
                 <td style={{ textAlign: 'center' }}>{r.gsm}</td>
                 <td className="font-semibold" style={{ textAlign: 'center' }}>{r.target}</td>
                 <td className="font-bold text-slate-900" style={{ textAlign: 'center' }}>{r.rolls}</td>
+                <td className="font-bold text-amber-600" style={{ textAlign: 'center' }}>{r.sisa}</td>
                 <td style={{ textAlign: 'center' }}>
                   <div className="flex items-center justify-center gap-2">
-                    <div className="w-full max-w-[90px] h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full max-w-[70px] h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${r.barBg}`} style={{ width: `${Math.min(r.progress, 100)}%` }} />
                     </div>
                     <span className={`text-[11px] font-bold w-9 text-right ${r.colorClass.split(' ')[1]}`}>{r.progress}%</span>
                   </div>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button 
+                    onClick={() => setSelectedJopDetail(r)}
+                    className="btn btn-secondary btn-sm flex items-center gap-1.5 mx-auto py-1 px-2"
+                  >
+                    <Eye size={13} />
+                    <span>Detail</span>
+                  </button>
                 </td>
               </tr>
             )) : (
@@ -442,6 +460,77 @@ export default function Jop() {
               </button>
               <button className="btn btn-primary text-xs px-3 py-1.5" onClick={handleSave}>
                 Save JOP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JOP Detail Modal */}
+      {selectedJopDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Rincian Hasil Produksi: {selectedJopDetail.jop}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Target: {selectedJopDetail.target} | Realisasi: {selectedJopDetail.rolls} | Sisa: {selectedJopDetail.sisa}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedJopDetail(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto bg-slate-50 flex-1">
+              <div className="card overflow-x-auto bg-white border border-slate-200">
+                <table className="data-table w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'center' }}>No</th>
+                      <th style={{ textAlign: 'left' }}>Nomor Roll</th>
+                      <th style={{ textAlign: 'center' }}>Tgl Input</th>
+                      <th style={{ textAlign: 'center' }}>Shift</th>
+                      <th style={{ textAlign: 'center' }}>Grade Aktual</th>
+                      <th style={{ textAlign: 'center' }}>GSM Aktual</th>
+                      <th style={{ textAlign: 'center' }}>Berat (kg)</th>
+                      <th style={{ textAlign: 'center' }}>Status Roll</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedJopDetail.rollsList && selectedJopDetail.rollsList.length > 0 ? (
+                      selectedJopDetail.rollsList.map((roll: any, index: number) => (
+                        <tr key={roll.no || index} className="hover:bg-slate-50">
+                          <td style={{ textAlign: 'center' }} className="text-slate-500">{index + 1}</td>
+                          <td className="font-bold text-blue-700 font-mono" style={{ textAlign: 'left' }}>{roll.no_roll || `R-${roll.no}`}</td>
+                          <td style={{ textAlign: 'center' }} className="text-slate-600">{roll.entry_date || '-'}</td>
+                          <td style={{ textAlign: 'center' }}>{roll.shift?.shift || '-'}</td>
+                          <td style={{ textAlign: 'center' }} className="font-medium text-slate-800">{roll.grade?.grade || '-'}</td>
+                          <td style={{ textAlign: 'center' }}>{roll.gsm?.gsm || roll.gsm || '-'}</td>
+                          <td style={{ textAlign: 'center' }} className="font-medium">{roll.weight}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${roll.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                              {roll.status || 'OK'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="text-center py-8 text-slate-500">
+                          Belum ada roll yang dihasilkan untuk JOP ini.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div className="p-3 border-t border-slate-100 bg-white flex justify-end">
+              <button className="btn btn-secondary text-xs px-4 py-1.5 cursor-pointer" onClick={() => setSelectedJopDetail(null)}>
+                Tutup
               </button>
             </div>
           </div>

@@ -21,6 +21,16 @@ class Roll extends Model
         return $this->belongsTo(Grade::class, 'grades_id');
     }
 
+    public function gsm()
+    {
+        return $this->belongsTo(Gsm::class, 'gsms_id');
+    }
+
+    public function rollsWidth()
+    {
+        return $this->belongsTo(RollsWidth::class, 'rolls_widths_id');
+    }
+
     public function plybond()
     {
         return $this->belongsTo(Plybond::class, 'plybonds_id');

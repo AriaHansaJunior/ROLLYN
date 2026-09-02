@@ -81,14 +81,14 @@ class DesignUiController extends Controller
         return Inertia::render('TargetOrder', ['targetOrders' => $orders]); 
     }
     public function jop() { 
-        $orders = \App\Models\Jop::with(['customer', 'grade', 'rolls'])->latest()->get();
+        $orders = \App\Models\Jop::with(['customer', 'grade', 'rolls.grade', 'rolls.gsm', 'rolls.shift'])->latest()->get();
         return Inertia::render('Jop', ['jopData' => $orders]); 
     }
     public function spkPo() { 
         $orders = \App\Models\Jop::with(['customer', 'grade', 'rolls'])->latest()->get();
         return Inertia::render('SpkPo', ['spkPoData' => $orders]); 
     }
-    public function reports()
+    public function reports(\Illuminate\Http\Request $request)
     {
         $totalRolls = Roll::count();
         $totalWeight = Roll::sum('weight');
@@ -140,25 +140,67 @@ class DesignUiController extends Controller
         // Demand forecast placeholder (actual data not available)
         $demandForecast = [];
 
-        // Outgoing shipment rolls: have JOP but no warehouse location (derived status = Shipment Plan)
-        $outgoingRolls = Roll::with(['jop.customer', 'jop.gsm', 'grade'])
-            ->whereNotNull('jops_id')
-            ->whereNull('locations_id')
+        $historyDate = $request->input('history_date');
+        $productionQuery = Roll::with('shift')
+            ->selectRaw('entry_date, shifts_id, count(*) as total_rolls, sum(weight) as total_weight')
+            ->groupBy('entry_date', 'shifts_id');
+            
+        if ($historyDate) {
+            $productionQuery->whereDate('entry_date', $historyDate);
+        }
+
+        $productionHistory = $productionQuery
             ->orderBy('entry_date', 'desc')
+            ->orderBy('shifts_id', 'asc')
+            ->limit(30)
             ->get()
-            ->map(function ($roll) {
+            ->map(function ($item) {
                 return [
-                    'id' => $roll->no,
-                    'no_roll' => $roll->no_roll ?? ('R-' . $roll->no),
-                    'jop' => $roll->jop->jop ?? '—',
-                    'customer' => $roll->jop->customer->customer ?? '—',
-                    'grade' => $roll->grade->grade ?? '—',
-                    'gsm' => $roll->jop->gsm->gsm ?? '—',
-                    'weight' => $roll->weight ?? 0,
-                    'entry_date' => $roll->entry_date ? \Carbon\Carbon::parse($roll->entry_date)->format('Y-m-d') : '—',
-                    'status' => 'Shipment Plan',
+                    'date' => $item->entry_date ? \Carbon\Carbon::parse($item->entry_date)->format('Y-m-d') : '—',
+                    'shift' => $item->shift->shift ?? '—',
+                    'total_rolls' => $item->total_rolls,
+                    'total_weight' => $item->total_weight ?? 0,
                 ];
             });
+
+        // Shipments for outgoing shipments section
+        $shipments = \App\Models\Shipment::with([
+            'customer', 
+            'admin', 
+            'qc', 
+            'shipmentRolls.roll.grade',
+            'shipmentRolls.roll.jop',
+            'shipmentRolls.roll.gsm'
+        ])
+        ->orderBy('created_at', 'desc')
+        ->limit(20)
+        ->get()
+        ->map(function ($shipment) {
+            return [
+                'id' => $shipment->id,
+                'shipment_number' => $shipment->shipment_number,
+                'customer' => $shipment->customer->customer ?? '—',
+                'admin' => $shipment->admin->username ?? '—',
+                'qc' => $shipment->qc->username ?? '—',
+                'date' => $shipment->shipment_date,
+                'status' => $shipment->status,
+                'total_rolls' => $shipment->shipmentRolls->count(),
+                'rolls' => $shipment->shipmentRolls->map(function ($sr) {
+                    $r = $sr->roll;
+                    if (!$r) return null;
+                    return [
+                        'no_roll' => $r->no_roll ?? ('R-' . $r->no),
+                        'jop' => $r->jop->jop ?? '—',
+                        'grade' => $r->grade->grade ?? '—',
+                        'gsm' => $r->gsm->gsm ?? ($r->jop->gsm->gsm ?? '—'),
+                        'weight' => $r->weight ?? 0,
+                        'entry_date' => $r->entry_date,
+                        'qc_status' => $sr->qc_status,
+                        'qc_notes' => $sr->qc_notes,
+                    ];
+                })->filter()
+            ];
+        });
 
         return Inertia::render('Reports', [
             'kpis' => $kpis,
@@ -166,7 +208,9 @@ class DesignUiController extends Controller
             'statusDistribution' => $statusDistribution,
             'ocrActivity' => $ocrActivity,
             'demandForecast' => $demandForecast,
-            'outgoingRolls' => $outgoingRolls,
+            'shipments' => $shipments,
+            'productionHistory' => $productionHistory,
+            'currentDate' => $historyDate
         ]);
     }
     public function profile() { return Inertia::render('Profile'); }

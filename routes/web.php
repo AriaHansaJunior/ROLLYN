@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/slot-status', [DesignUiController::class, 'slotStatus']);
     Route::get('/incoming-roll', [DesignUiController::class, 'incomingRoll']);
     Route::post('/incoming-roll', [IncomingRollController::class, 'store']);
+    Route::post('/incoming-roll/recommend-form', [IncomingRollController::class, 'recommendFormNumber']);
 
     Route::get('/ocr-monitoring', [DesignUiController::class, 'ocrMonitoring']);
     Route::get('/target-order', [DesignUiController::class, 'targetOrder']);

@@ -37,6 +37,7 @@ interface JopOption {
     id: number | string;
     jop: string;
     spk?: string;
+    noted_order?: string;
     grade?: { grade: string } | string;
     gsm?: { gsm: number } | number | string;
     customer?: { customer: string } | string;
@@ -63,12 +64,12 @@ export default function IncomingRoll() {
     });
 
     const [form, setForm] = useState(() => {
-        const saved = sessionStorage.getItem("incomingRoll_form");
-        return saved ? JSON.parse(saved) : {
+        const defaultState = {
             jop: "",
             grade: "",
             gsm: "",
             visual: "OK",
+            status: "OK",
             rollNumber: "",
             formNumber: "",
             plybond: "",
@@ -77,11 +78,14 @@ export default function IncomingRoll() {
             thickness: "",
             bulk: "",
             core: "76",
-            exMaterial: "OCC",
+            exMaterial: "IMPORT",
             cobb: "",
-            shift: "Shift A",
+            shift: "1",
+            entry_date: new Date().toISOString().split('T')[0],
             pic: "",
         };
+        const saved = sessionStorage.getItem("incomingRoll_form");
+        return saved ? { ...defaultState, ...JSON.parse(saved) } : defaultState;
     });
 
     useEffect(() => {
@@ -105,6 +109,23 @@ export default function IncomingRoll() {
     }, [savedRollNumber]);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (!form.jop) return;
+        
+        axios.post('/incoming-roll/recommend-form', {
+            jop: form.jop,
+            grade: form.grade,
+            width: form.width,
+            entry_date: form.entry_date
+        }).then(res => {
+            if (res.data && res.data.formNumber) {
+                setForm(f => ({ ...f, formNumber: String(res.data.formNumber) }));
+            }
+        }).catch(err => {
+            console.error("Failed to fetch recommended form number:", err);
+        });
+    }, [form.jop, form.grade, form.width, form.entry_date]);
 
     useEffect(() => {
         let list: JopOption[] = [];
@@ -218,11 +239,23 @@ export default function IncomingRoll() {
             }
         }
 
+        let widthVal = "";
+        if (found) {
+            // Because relationships can be named 'rollsWidth' or 'rolls_width' or 'width'
+            const wObj = found.rollsWidth || found.rolls_width || found.width;
+            if (typeof wObj === "object" && wObj !== null && "width" in wObj) {
+                widthVal = String(wObj.width);
+            } else if (wObj !== undefined && wObj !== null) {
+                widthVal = String(wObj);
+            }
+        }
+
         setForm((f) => ({
             ...f,
             jop: selectedJop,
             grade: gradeVal,
             gsm: gsmVal,
+            width: widthVal,
         }));
 
         setErrors((err) => ({
@@ -255,6 +288,7 @@ export default function IncomingRoll() {
             errs.exMaterial = "Ex material is required.";
         if (!form.cobb.trim()) errs.cobb = "Cobb is required.";
         if (!form.shift.trim()) errs.shift = "Shift is required.";
+        if (!form.entry_date.trim()) errs.entry_date = "Production Date is required.";
         if (!form.pic.trim()) errs.pic = "PIC (Petugas) is required.";
 
         setErrors(errs);
@@ -292,6 +326,8 @@ export default function IncomingRoll() {
             cobb: form.cobb,
             exMaterial: form.exMaterial,
             visual: form.visual,
+            status: form.status,
+            entry_date: form.entry_date,
             pic: form.pic,
             weight:
                 weight.value ||
@@ -322,6 +358,15 @@ export default function IncomingRoll() {
             const errorMsg =
                 err.response?.data?.message ||
                 "Failed to save roll data to database.";
+                
+            if (err.response?.status === 422) {
+                if (errorMsg.includes("Roll Number")) {
+                    setErrors({ rollNumber: errorMsg });
+                } else if (errorMsg.includes("Form Number")) {
+                    setErrors({ formNumber: errorMsg });
+                }
+            }
+
             SystemUI.toast({ message: errorMsg, type: "error" });
         }
     }
@@ -485,9 +530,14 @@ export default function IncomingRoll() {
                                             {errors.jop}
                                         </p>
                                     )}
+                                    {form.jop && jops.find((j) => j.jop === form.jop || String(j.id) === form.jop)?.noted_order && (
+                                        <div className="mt-2 p-2 bg-yellow-50 text-yellow-800 text-[11px] rounded border border-yellow-200 shadow-sm leading-snug">
+                                            <strong>Note:</strong> {jops.find((j) => j.jop === form.jop || String(j.id) === form.jop)?.noted_order}
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Grade (Auto-filled & Disabled) */}
+                                {/* Grade (Editable) */}
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
                                         <span>
@@ -500,10 +550,12 @@ export default function IncomingRoll() {
                                     <input
                                         type="text"
                                         value={form.grade}
-                                        readOnly
-                                        disabled
-                                        placeholder="Select JOP first"
-                                        className={`form-input w-full bg-slate-100 text-slate-700 font-semibold cursor-not-allowed ${errors.grade ? "border-red-500" : ""}`}
+                                        onChange={(e) => {
+                                            setForm((f) => ({ ...f, grade: e.target.value }));
+                                            if (errors.grade) setErrors((err) => ({ ...err, grade: undefined }));
+                                        }}
+                                        placeholder="Enter Grade"
+                                        className={`form-input w-full ${errors.grade ? "border-red-500" : ""}`}
                                     />
                                     {errors.grade && (
                                         <p className="text-red-600 text-[11px] mt-1">
@@ -525,10 +577,12 @@ export default function IncomingRoll() {
                                     <input
                                         type="text"
                                         value={form.gsm}
-                                        readOnly
-                                        disabled
-                                        placeholder="Select JOP first"
-                                        className={`form-input w-full bg-slate-100 text-slate-700 font-semibold cursor-not-allowed ${errors.gsm ? "border-red-500" : ""}`}
+                                        onChange={(e) => {
+                                            setForm((f) => ({ ...f, gsm: e.target.value }));
+                                            if (errors.gsm) setErrors((err) => ({ ...err, gsm: undefined }));
+                                        }}
+                                        placeholder="Enter GSM"
+                                        className={`form-input w-full ${errors.gsm ? "border-red-500" : ""}`}
                                     />
                                     {errors.gsm && (
                                         <p className="text-red-600 text-[11px] mt-1">
@@ -559,8 +613,8 @@ export default function IncomingRoll() {
                                         className={`form-input w-full ${errors.visual ? "border-red-500" : ""}`}
                                     >
                                         <option value="OK">OK</option>
-                                        <option value="REJ">REJ</option>
-                                        <option value="C/S">C/S</option>
+                                        <option value="PKP">PKP</option>
+                                        <option value="Reject">Reject</option>
                                     </select>
                                     {errors.visual && (
                                         <p className="text-red-600 text-[11px] mt-1">
@@ -836,7 +890,7 @@ export default function IncomingRoll() {
                                         }}
                                         className={`form-input w-full ${errors.exMaterial ? "border-red-500" : ""}`}
                                     >
-                                        {["OCC", "NDLKP", "DIP", "Mixed"].map(
+                                        {["IMPORT", "LOCAL", "MIX"].map(
                                             (o) => (
                                                 <option key={o} value={o}>
                                                     {o}
@@ -890,7 +944,26 @@ export default function IncomingRoll() {
                                     Shift & Operations
                                 </h3>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1">
+                                        Production Date{" "}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={form.entry_date}
+                                        onChange={(e) => {
+                                            setForm((f) => ({ ...f, entry_date: e.target.value }));
+                                            if (errors.entry_date) setErrors((err) => ({ ...err, entry_date: undefined }));
+                                        }}
+                                        className={`form-input w-full ${errors.entry_date ? "border-red-500" : ""}`}
+                                    />
+                                    {errors.entry_date && (
+                                        <p className="text-red-600 text-[11px] mt-1">{errors.entry_date}</p>
+                                    )}
+                                </div>
+
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1">
                                         Shift{" "}
@@ -911,15 +984,32 @@ export default function IncomingRoll() {
                                         }}
                                         className={`form-input w-full ${errors.shift ? "border-red-500" : ""}`}
                                     >
-                                        <option value="Shift A">Shift A</option>
-                                        <option value="Shift B">Shift B</option>
-                                        <option value="Shift C">Shift C</option>
+                                        <option value="1">Shift 1</option>
+                                        <option value="2">Shift 2</option>
+                                        <option value="3">Shift 3</option>
                                     </select>
                                     {errors.shift && (
                                         <p className="text-red-600 text-[11px] mt-1">
                                             {errors.shift}
                                         </p>
                                     )}
+                                </div>
+
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1">
+                                        Roll Status{" "}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={form.status}
+                                        onChange={(e) => {
+                                            setForm((f) => ({ ...f, status: e.target.value }));
+                                        }}
+                                        className="form-input w-full"
+                                    >
+                                        <option value="OK">OK</option>
+                                        <option value="HOLD">HOLD</option>
+                                    </select>
                                 </div>
 
                                 <div>
@@ -991,7 +1081,11 @@ export default function IncomingRoll() {
                                         ? `${form.gsm} g/m²`
                                         : "(not entered)",
                                 ],
-                                ["Visual Status", form.visual],
+                                ["Visual Status", form.visual || "(not entered)"],
+                                [
+                                    "Roll Status",
+                                    form.status || "(not entered)",
+                                ],
                                 [
                                     "Roll Number",
                                     form.rollNumber || "(not entered)",
@@ -1022,8 +1116,9 @@ export default function IncomingRoll() {
                                 ],
                                 ["Core", `${form.core} mm`],
                                 ["Cobb", form.cobb || "(not entered)"],
-                                ["Ex Material", form.exMaterial],
-                                ["Shift", form.shift],
+                                ["Ex Material", form.exMaterial || "(not entered)"],
+                                ["Production Date", form.entry_date || "(not entered)"],
+                                ["Shift", form.shift || "(not entered)"],
                                 ["PIC (Petugas)", form.pic || "(not entered)"],
                             ].map(([label, value]) => (
                                 <div
@@ -1034,7 +1129,7 @@ export default function IncomingRoll() {
                                         {label}
                                     </span>
                                     <span
-                                        className={`font-semibold text-right ${value.includes("(not entered)") ? "text-amber-600" : "text-slate-900"}`}
+                                        className={`font-semibold text-right ${typeof value === 'string' && value.includes("(not entered)") ? "text-amber-600" : "text-slate-900"}`}
                                     >
                                         {value}
                                     </span>
@@ -1347,6 +1442,12 @@ export default function IncomingRoll() {
                         </div>
 
                         {/* Action buttons */}
+                        {form.status === 'HOLD' && (
+                            <div className="w-full bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center justify-center gap-2">
+                                <Clock size={18} className="text-amber-600" />
+                                <span className="font-semibold text-sm">Status Roll saat ini adalah HOLD. Label final hanya dapat dicetak setelah spesifikasi dikonfirmasi oleh QC.</span>
+                            </div>
+                        )}
                         <div className="flex flex-wrap gap-3 justify-center pt-2">
                             <button
                                 className="btn btn-secondary btn-md flex items-center gap-2 px-6 py-2.5 font-semibold cursor-pointer"
@@ -1355,8 +1456,9 @@ export default function IncomingRoll() {
                                 <ArrowLeft size={16} /> <span>Edit Data</span>
                             </button>
                             <button
-                                className="btn btn-primary btn-md flex items-center gap-2 px-6 py-2.5 font-bold cursor-pointer"
+                                className="btn btn-primary btn-md flex items-center gap-2 px-6 py-2.5 font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => window.print()}
+                                disabled={form.status === 'HOLD'}
                             >
                                 <Printer size={16} /> <span>Print Label</span>
                             </button>

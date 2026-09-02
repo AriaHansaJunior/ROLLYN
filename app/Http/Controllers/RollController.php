@@ -38,9 +38,10 @@ class RollController extends Controller
                     'date' => $roll->entry_date ? \Carbon\Carbon::parse($roll->entry_date)->format('Y-m-d') : '—',
                     'grade' => $roll->grade->grade ?? 'N/A',
                     'grades_id' => $roll->grades_id,
-                    'gsm' => $roll->gsm ?? 150,
+                    'gsm' => $roll->gsm->gsm ?? ($roll->jop->gsm->gsm ?? 150),
+                    'gsms_id' => $roll->gsms_id ?? ($roll->jop->gsms_id ?? null),
                     'weight' => $roll->weight ?? 0,
-                    'width' => 1650,
+                    'width' => $roll->rollsWidth->width ?? ($roll->jop->rollsWidth->width ?? 1650),
                     'location' => $roll->location->location ?? '',
                     'locations_id' => $roll->locations_id,
                     'jop' => $roll->jop->jop ?? '—',
@@ -53,6 +54,7 @@ class RollController extends Controller
                     'shipment_queue_qc_status' => $activeShipmentRoll?->qc_status,
                     'exMaterial' => $roll->exmaterial ?? 'IMPORT',
                     'visual' => $roll->visual ?? 'OK',
+                    'roll_status' => $roll->status ?? 'OK',
                     'plybond' => $roll->plybond->plybonds ?? 0,
                     'thickness' => $roll->thickness->thickness ?? 0,
                     'bulk' => $roll->bulk ?? 0,
@@ -151,17 +153,19 @@ class RollController extends Controller
             'date' => $roll->entry_date ? \Carbon\Carbon::parse($roll->entry_date)->format('Y-m-d') : '—',
             'grade' => $roll->grade?->grade ?? 'N/A',
             'grades_id' => $roll->grades_id,
-            'gsm' => $roll->gsm ?? 150,
+            'gsm' => $roll->gsm->gsm ?? ($roll->jop->gsm->gsm ?? 150),
+            'gsms_id' => $roll->gsms_id ?? ($roll->jop->gsms_id ?? null),
             'plybond' => $roll->plybond?->plybonds ?? 1.8,
             'thickness' => $roll->thickness?->thickness ?? 0.22,
             'bulk' => $roll->bulk ?? 1.47,
-            'width' => 1650,
+            'width' => $roll->rollsWidth->width ?? ($roll->jop->rollsWidth->width ?? 1650),
             'diameter' => 1120,
             'core' => $roll->core?->core ?? 76,
             'weight' => $roll->weight ?? 0,
             'cobb' => $roll->cobb?->cobb ?? '68',
             'exMaterial' => $roll->exmaterial ?? 'IMPORT',
             'visual' => $roll->visual ?? 'OK',
+            'roll_status' => $roll->status ?? 'OK',
             'location' => $roll->location?->location ?? 'Unallocated',
             'locations_id' => $roll->locations_id,
             'jop' => $roll->jop?->jop ?? '—',
@@ -214,12 +218,32 @@ class RollController extends Controller
             'shifts_id' => 'required|exists:shifts,id',
             'entry_date' => 'required|date',
             'grades_id' => 'required|exists:grades,id',
+            'gsms_id' => 'nullable|exists:gsms,id',
+            'status' => 'nullable|in:OK,HOLD',
             'weight' => 'nullable|integer',
             'locations_id' => 'nullable|exists:locations,id',
             'jops_id' => 'nullable|exists:jops,id',
-            'exmaterial' => 'nullable|in:IMPORT,LOCAL',
+            'exmaterial' => 'nullable|in:IMPORT,LOCAL,MIX',
             'visual' => 'nullable|string',
         ]);
+
+        $newStatus = $request->input('status');
+        if ($roll->status === 'HOLD' && $newStatus === 'OK') {
+            if (Auth::user()->role !== 'qc') {
+                return redirect()->back()->with('error', 'Only QC can change Roll status from HOLD to OK.');
+            }
+        }
+
+        $changes = [];
+        if (isset($validated['grades_id']) && $validated['grades_id'] != $roll->grades_id) {
+            $changes['grades_id'] = ['old' => $roll->grades_id, 'new' => $validated['grades_id']];
+        }
+        if (array_key_exists('gsms_id', $validated) && $validated['gsms_id'] != $roll->gsms_id) {
+            $changes['gsms_id'] = ['old' => $roll->gsms_id, 'new' => $validated['gsms_id']];
+        }
+        if (isset($validated['status']) && $validated['status'] != $roll->status) {
+            $changes['status'] = ['old' => $roll->status, 'new' => $validated['status']];
+        }
 
         DB::beginTransaction(); // ensure atomic slot reallocation
         try {
@@ -263,6 +287,16 @@ class RollController extends Controller
             }
 
             $roll->update($validated);
+
+            foreach ($changes as $field => $data) {
+                \App\Models\RollAuditLog::create([
+                    'rolls_no' => $roll->no,
+                    'users_id' => Auth::id() ?? 1,
+                    'field_name' => $field,
+                    'old_value' => $data['old'],
+                    'new_value' => $data['new'],
+                ]);
+            }
 
             // Sync stack counts and statuses for affected slots
             if ($oldLocationId != $newLocationId) {

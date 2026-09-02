@@ -31,6 +31,7 @@ interface RollItem {
   jops_id?: number
   pic: string
   status: string
+  roll_status?: string
   in_shipment_queue?: boolean
   shipment_queue_number?: string | null
   shipment_queue_status?: string | null
@@ -111,28 +112,20 @@ export default function RollInventory({
   const userRole = (authUser?.role ?? '').toLowerCase()
   const isQC = userRole === 'qc'
 
-  // URL tab handling: QC is forced to 'shipments'
-  const initialTab = isQC
+  // URL tab handling: QC is now allowed to switch views
+  const initialTab = (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'shipments')
     ? 'shipments'
-    : ((typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'shipments')
-      ? 'shipments'
-      : 'inventory')
+    : 'inventory'
 
   const [viewMode, setViewMode] = useState<'inventory' | 'shipments'>(initialTab)
-
-  // Enforce QC mode
-  useEffect(() => {
-    if (isQC && viewMode !== 'shipments') {
-      setViewMode('shipments')
-    }
-  }, [isQC, viewMode])
 
   // ----------------------------------------------------
   // STORAGE (INVENTORY) TAB STATE
   // ----------------------------------------------------
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
-  const [queueFilter, setQueueFilter] = useState<'all' | 'queued' | 'not_queued'>('all')
+  const [queueFilter, setQueueFilter] = useState('All') // 'All' | 'queued' | 'not_queued'
+  const [qcStatusFilter, setQcStatusFilter] = useState('All') // 'All' | 'OK' | 'HOLD'
   const [sortKey, setSortKey] = useState<string>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
@@ -164,7 +157,8 @@ export default function RollInventory({
     locations_id: '',
     jops_id: '',
     exmaterial: 'IMPORT',
-    visual: 'OK'
+    visual: 'OK',
+    status: 'OK'
   })
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
 
@@ -351,7 +345,9 @@ export default function RollInventory({
     if (queueFilter === 'queued') matchQueue = Boolean(r.in_shipment_queue)
     if (queueFilter === 'not_queued') matchQueue = !r.in_shipment_queue
 
-    return matchSearch && matchStatus && matchQueue
+    const matchQcStatus = qcStatusFilter === 'All' || r.roll_status === qcStatusFilter
+
+    return matchSearch && matchStatus && matchQueue && matchQcStatus
   }).sort((a, b) => {
     const key = sortKey as keyof RollItem
     const va = a[key] ?? ''
@@ -450,7 +446,8 @@ export default function RollInventory({
       locations_id: r.locations_id ? String(r.locations_id) : '',
       jops_id: r.jops_id ? String(r.jops_id) : '',
       exmaterial: r.exMaterial || 'IMPORT',
-      visual: r.visual || 'OK'
+      visual: r.visual || 'OK',
+      status: r.roll_status || 'OK'
     })
     setEditErrors({})
     setShowEditModal(true)
@@ -787,14 +784,8 @@ export default function RollInventory({
         </div>
 
         <div className="flex gap-2 items-center">
-          {/* Mode Switcher: Hidden for QC, Pill toggle for Admin/PPIC */}
-          {isQC ? (
-            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xs">
-              <Truck size={14} className="text-blue-600" />
-              QC Inspection Station
-            </div>
-          ) : (
-            <div className="relative flex items-center bg-slate-100 border border-slate-200 rounded-full p-1 shadow-inner gap-0">
+          {/* Mode Switcher: Pill toggle for all roles */}
+          <div className="relative flex items-center bg-slate-100 border border-slate-200 rounded-full p-1 shadow-inner gap-0">
               <span
                 className="absolute top-1 bottom-1 rounded-full bg-blue-600 shadow transition-all duration-300 ease-in-out"
                 style={{
@@ -818,7 +809,7 @@ export default function RollInventory({
                 onClick={() => { setViewMode('shipments'); }}
               >
                 <Truck size={13} />
-                Shipments
+                {isQC ? 'QC Station' : 'Shipments'}
                 {pendingShipmentsCount > 0 && (
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${viewMode === 'shipments' ? 'bg-white text-blue-700' : 'bg-amber-500 text-white'}`}>
                     {pendingShipmentsCount}
@@ -826,7 +817,6 @@ export default function RollInventory({
                 )}
               </button>
             </div>
-          )}
 
           {viewMode === 'inventory' && !isQC && (
             <button className="btn btn-secondary btn-sm cursor-pointer" onClick={handleExport}>
@@ -839,7 +829,7 @@ export default function RollInventory({
       {/* ========================================================================= */}
       {/* VIEW MODE 1: STORAGE (INVENTORY) TAB */}
       {/* ========================================================================= */}
-      {viewMode === 'inventory' && !isQC && (
+      {viewMode === 'inventory' && (
         <div className="space-y-4">
           {/* Filter Card */}
           <div className="card p-3 sm:p-4 space-y-3">
@@ -867,8 +857,17 @@ export default function RollInventory({
                     className="form-input text-xs py-1.5 min-w-[130px] w-auto"
                   >
                     {statuses.map(s => (
-                      <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>
+                      <option key={s} value={s}>{s === 'All' ? 'All Storage Status' : s}</option>
                     ))}
+                  </select>
+                  <select
+                    value={qcStatusFilter}
+                    onChange={e => { setQcStatusFilter(e.target.value); setPage(1) }}
+                    className="form-input text-xs py-1.5 min-w-[110px] w-auto"
+                  >
+                    <option value="All">All QC Status</option>
+                    <option value="OK">OK</option>
+                    <option value="HOLD">HOLD</option>
                   </select>
                 </div>
               </div>
@@ -925,7 +924,7 @@ export default function RollInventory({
           <div className="card overflow-x-auto relative">
             <table className="data-table w-full min-w-[1250px] table-fixed border-collapse text-xs">
               <colgroup>
-                <col className="w-[45px]" />  {/* Checkbox */}
+                {!isQC && <col className="w-[45px]" />}  {/* Checkbox */}
                 <col className="w-[85px]" />  {/* SHIFT */}
                 <col className="w-[105px]" /> {/* ENTRY DATE */}
                 <col className="w-[140px]" /> {/* GRADE */}
@@ -940,6 +939,7 @@ export default function RollInventory({
               </colgroup>
               <thead>
                 <tr>
+                  {!isQC && (
                   <th style={{ textAlign: 'center' }} className="py-2.5">
                     <input
                       type="checkbox"
@@ -949,6 +949,7 @@ export default function RollInventory({
                       className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
                     />
                   </th>
+                  )}
                   {cols.map(col => (
                     <th
                       key={col.key}
@@ -988,6 +989,7 @@ export default function RollInventory({
                             : 'hover:bg-slate-50/80'
                       }`}
                     >
+                      {!isQC && (
                       <td style={{ textAlign: 'center' }}>
                         {isQueued ? (
                           <input
@@ -1006,6 +1008,7 @@ export default function RollInventory({
                           />
                         )}
                       </td>
+                      )}
                       <td style={{ textAlign: 'center' }}>
                         <span className="inline-flex flex-col items-center justify-center bg-slate-100/90 text-slate-700 px-2.5 py-0.5 rounded border border-slate-200">
                           <span className="text-[10px] text-slate-500 font-semibold leading-none">Shift</span>
@@ -1052,6 +1055,7 @@ export default function RollInventory({
                       </td>
                       <td style={{ textAlign: 'center' }} className="whitespace-nowrap px-2 py-2">
                         <div className="flex gap-1.5 justify-center items-center">
+                          {!isQC && (
                           <button
                             className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
                             onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
@@ -1059,6 +1063,7 @@ export default function RollInventory({
                           >
                             <Eye size={14} />
                           </button>
+                          )}
                           <button
                             className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
                             onClick={() => openEdit(r)}
@@ -1066,20 +1071,24 @@ export default function RollInventory({
                           >
                             <Edit size={14} />
                           </button>
-                          <button
-                            className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
-                            onClick={() => handleAssignClick(r, isSlotted ? 'move' : 'assign')}
-                            title={isSlotted ? `Move Roll Location (Current: ${r.location})` : 'Assign Location Slot'}
-                          >
-                            <MapPin size={14} />
-                          </button>
-                          <button
-                            className="p-1.5 rounded bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer shadow-xs"
-                            onClick={() => handleDelete(r)}
-                            title="Delete Roll"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {!isQC && (
+                            <>
+                              <button
+                                className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                                onClick={() => handleAssignClick(r, isSlotted ? 'move' : 'assign')}
+                                title={isSlotted ? `Move Roll Location (Current: ${r.location})` : 'Assign Location Slot'}
+                              >
+                                <MapPin size={14} />
+                              </button>
+                              <button
+                                className="p-1.5 rounded bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer shadow-xs"
+                                onClick={() => handleDelete(r)}
+                                title="Delete Roll"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1118,7 +1127,7 @@ export default function RollInventory({
           </div>
 
           {/* Floating Confirm Shipment Bar */}
-          {checkedRollIds.length > 0 && (
+          {!isQC && checkedRollIds.length > 0 && (
             <div className="sticky bottom-4 z-30 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-sm shadow-inner">
@@ -1914,11 +1923,33 @@ export default function RollInventory({
 
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Visual</label>
-                <input
+                <select
+                  className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm"
                   value={editForm.visual}
                   onChange={e => setEditForm(f => ({ ...f, visual: e.target.value }))}
-                  className="form-input w-full"
-                />
+                >
+                  <option value="OK">OK</option>
+                  <option value="PKP">PKP</option>
+                  <option value="Reject">Reject</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Roll Status</label>
+                <select
+                  className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
+                  value={editForm.status}
+                  onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+                  disabled={!isQC && editingRoll?.roll_status === 'HOLD'}
+                >
+                  <option value="OK">OK</option>
+                  <option value="HOLD">HOLD</option>
+                </select>
+                {!isQC && editingRoll?.roll_status === 'HOLD' && (
+                  <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                    Only QC can release HOLD status
+                  </p>
+                )}
               </div>
             </div>
 

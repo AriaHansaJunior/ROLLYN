@@ -19,7 +19,7 @@ import {
     Tag,
     Maximize2,
 } from "lucide-react";
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
 import { SystemUI } from "@/Utils/SystemUI";
 import SpectrumSlotSelectorModal from "@/Components/SpectrumSlotSelectorModal";
 import QRCodeSVG from "@/Components/QRCodeSVG";
@@ -52,6 +52,7 @@ interface RollDetailItem {
     jops_id?: number;
     pic: string;
     status: string;
+    roll_status?: string;
     customer: string;
     po: string;
     spk: string;
@@ -117,6 +118,9 @@ export default function RollDetail({
     locations = [],
     jops = [],
 }: Props) {
+    const { props } = usePage();
+    const isQC = ((props.auth as any)?.user?.role ?? "").toLowerCase() === "qc";
+
     const currentRoll = roll || {
         id: "R-10421",
         raw_id: 1,
@@ -173,6 +177,7 @@ export default function RollDetail({
         jops_id: currentRoll.jops_id ? String(currentRoll.jops_id) : "",
         exmaterial: currentRoll.exMaterial || "IMPORT",
         visual: currentRoll.visual || "OK",
+        status: currentRoll.roll_status || "OK",
     });
     const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
@@ -321,6 +326,7 @@ export default function RollDetail({
             jops_id: currentRoll.jops_id ? String(currentRoll.jops_id) : "",
             exmaterial: currentRoll.exMaterial || "IMPORT",
             visual: currentRoll.visual || "OK",
+            status: currentRoll.roll_status || "OK",
         });
         setShowEditModal(true);
     }
@@ -888,7 +894,7 @@ export default function RollDetail({
                                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
                                     Visual
                                 </label>
-                                <input
+                                <select
                                     value={editForm.visual}
                                     onChange={(e) =>
                                         setEditForm((f) => ({
@@ -896,8 +902,37 @@ export default function RollDetail({
                                             visual: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full"
-                                />
+                                    className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm"
+                                >
+                                    <option value="OK">OK</option>
+                                    <option value="PKP">PKP</option>
+                                    <option value="Reject">Reject</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
+                                    Roll Status
+                                </label>
+                                <select
+                                    className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
+                                    value={editForm.status}
+                                    onChange={(e) =>
+                                        setEditForm((f) => ({
+                                            ...f,
+                                            status: e.target.value,
+                                        }))
+                                    }
+                                    disabled={!isQC && currentRoll?.roll_status === "HOLD"}
+                                >
+                                    <option value="OK">OK</option>
+                                    <option value="HOLD">HOLD</option>
+                                </select>
+                                {!isQC && currentRoll?.roll_status === "HOLD" && (
+                                    <p className="text-[10px] text-amber-600 font-semibold mt-1 leading-tight">
+                                        Only QC can release HOLD status
+                                    </p>
+                                )}
                             </div>
                         </div>
 

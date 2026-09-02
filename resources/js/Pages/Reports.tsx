@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts'
-import { usePage } from '@inertiajs/react'
-import { Search, Filter, Package, Download } from 'lucide-react'
+import { usePage, router } from '@inertiajs/react'
+import { Search, Filter, Package, Download, Eye, X, Calendar } from 'lucide-react'
 import { SystemUI } from '@/Utils/SystemUI'
 
 interface OutgoingRoll {
@@ -23,44 +23,46 @@ export default function Reports() {
     statusDistribution = [],
     ocrActivity = [],
     kpis = [],
-    outgoingRolls = []
+    shipments = [],
+    productionHistory = [],
+    currentDate = null
   } = usePage<any>().props;
+
+  const [historyDate, setHistoryDate] = useState(currentDate || '')
+  const [selectedShipmentDetail, setSelectedShipmentDetail] = useState<any>(null)
 
   const [outgoingSearch, setOutgoingSearch] = useState('')
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
 
-  const filteredOutgoing = (outgoingRolls as OutgoingRoll[]).filter(r => {
+  const filteredShipments = (shipments || []).filter((s: any) => {
     if (!outgoingSearch) return true
     const q = outgoingSearch.toLowerCase()
     return (
-      r.no_roll.toLowerCase().includes(q) ||
-      r.jop.toLowerCase().includes(q) ||
-      r.customer.toLowerCase().includes(q) ||
-      r.grade.toLowerCase().includes(q)
+      (s.shipment_number || '').toLowerCase().includes(q) ||
+      (s.customer || '').toLowerCase().includes(q)
     )
   })
 
   function exportOutgoingCSV() {
-    const dataToExport = filteredOutgoing.length > 0 ? filteredOutgoing : (outgoingRolls as OutgoingRoll[])
+    const dataToExport = filteredShipments.length > 0 ? filteredShipments : (shipments || [])
     if (dataToExport.length === 0) {
-      SystemUI.toast({ message: 'No outgoing rolls to export.', type: 'warning' })
+      SystemUI.toast({ message: 'No outgoing shipments to export.', type: 'warning' })
       return
     }
 
-    const headers = ['Roll Number', 'JOP', 'Customer', 'Grade', 'GSM', 'Weight (kg)', 'Entry Date', 'Status']
+    const headers = ['Shipment Number', 'Customer', 'Date', 'Admin', 'QC', 'Total Rolls', 'Status']
     const rows = [
       'sep=,',
       headers.join(','),
-      ...dataToExport.map(r => [
-        `"${(r.no_roll || '').replace(/"/g, '""')}"`,
-        `"${(r.jop || '').replace(/"/g, '""')}"`,
-        `"${(r.customer || '').replace(/"/g, '""')}"`,
-        `"${(r.grade || '').replace(/"/g, '""')}"`,
-        r.gsm,
-        r.weight,
-        `"${r.entry_date || ''}"`,
-        `"${(r.status || '').replace(/"/g, '""')}"`
+      ...dataToExport.map((s: any) => [
+        `"${(s.shipment_number || '').replace(/"/g, '""')}"`,
+        `"${(s.customer || '').replace(/"/g, '""')}"`,
+        `"${(s.date || '').replace(/"/g, '""')}"`,
+        `"${(s.admin || '').replace(/"/g, '""')}"`,
+        `"${(s.qc || '').replace(/"/g, '""')}"`,
+        s.total_rolls || 0,
+        `"${(s.status || '').replace(/"/g, '""')}"`
       ].join(','))
     ]
 
@@ -77,8 +79,8 @@ export default function Reports() {
     SystemUI.toast({ message: `Exported ${dataToExport.length} outgoing roll records to CSV.`, type: 'success' })
   }
 
-  const totalPages = Math.ceil(filteredOutgoing.length / perPage)
-  const pagedOutgoing = filteredOutgoing.slice((page - 1) * perPage, page * perPage)
+  const totalPages = Math.ceil(filteredShipments.length / perPage)
+  const pagedShipments = filteredShipments.slice((page - 1) * perPage, page * perPage)
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
@@ -168,6 +170,79 @@ export default function Reports() {
         </div>
       </div>
 
+      {/* Production History Section */}
+      <div className="space-y-3 mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+              <Package size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Riwayat Produksi Harian</h3>
+              <p className="text-[11px] text-slate-500">Agregasi hasil input roll berdasarkan tanggal dan shift</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
+              <Calendar size={14} className="text-slate-500" />
+              <input 
+                type="date" 
+                value={historyDate}
+                onChange={(e) => {
+                  setHistoryDate(e.target.value)
+                  router.get('/reports', { history_date: e.target.value }, { preserveState: true, preserveScroll: true, replace: true })
+                }}
+                className="bg-transparent border-none outline-none text-xs text-slate-700"
+              />
+              {historyDate && (
+                <button 
+                  onClick={() => {
+                    setHistoryDate('')
+                    router.get('/reports', { history_date: '' }, { preserveState: true, preserveScroll: true, replace: true })
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="card overflow-x-auto">
+          <table className="data-table w-full min-w-[500px] table-fixed border-collapse text-xs">
+            <colgroup>
+              <col className="w-[120px]" />
+              <col className="w-[100px]" />
+              <col className="w-[120px]" />
+              <col className="w-[150px]" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'center' }}>Tanggal Produksi</th>
+                <th style={{ textAlign: 'center' }}>Shift</th>
+                <th style={{ textAlign: 'center' }}>Jumlah Roll</th>
+                <th style={{ textAlign: 'center' }}>Total Berat (kg)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productionHistory && productionHistory.length > 0 ? productionHistory.map((h: any, i: number) => (
+                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                  <td className="font-semibold text-slate-900" style={{ textAlign: 'center' }}>{h.date}</td>
+                  <td className="font-mono text-slate-600" style={{ textAlign: 'center' }}>{h.shift}</td>
+                  <td className="font-medium text-blue-700" style={{ textAlign: 'center' }}>{h.total_rolls} Roll</td>
+                  <td className="font-medium" style={{ textAlign: 'center' }}>{h.total_weight.toLocaleString('id-ID')}</td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={4} className="text-center py-8 text-slate-500">No production history data found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Outgoing Shipment Section */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -180,7 +255,7 @@ export default function Reports() {
               <p className="text-[11px] text-slate-500">Rolls with Shipment Plan status — linked to JOP orders, not yet assigned to warehouse slots</p>
             </div>
           </div>
-          <span className="text-xs font-semibold text-slate-500">{filteredOutgoing.length} rolls</span>
+          <span className="text-xs font-semibold text-slate-500">{filteredShipments.length} shipments</span>
         </div>
 
         {/* Search & Export */}
@@ -208,61 +283,67 @@ export default function Reports() {
         <div className="card overflow-x-auto">
           <table className="data-table w-full min-w-[900px] table-fixed border-collapse text-xs">
             <colgroup>
-              <col className="w-[130px]" />
               <col className="w-[140px]" />
               <col className="w-[160px]" />
-              <col className="w-[120px]" />
-              <col className="w-[70px]" />
-              <col className="w-[100px]" />
               <col className="w-[110px]" />
+              <col className="w-[110px]" />
+              <col className="w-[110px]" />
+              <col className="w-[100px]" />
+              <col className="w-[100px]" />
               <col className="w-[110px]" />
             </colgroup>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left' }}>Roll Number</th>
-                <th style={{ textAlign: 'center' }}>JOP</th>
+                <th style={{ textAlign: 'left' }}>Shipment Number</th>
                 <th style={{ textAlign: 'center' }}>Customer</th>
-                <th style={{ textAlign: 'center' }}>Grade</th>
-                <th style={{ textAlign: 'center' }}>GSM</th>
-                <th style={{ textAlign: 'center' }}>Weight (kg)</th>
-                <th style={{ textAlign: 'center' }}>Entry Date</th>
+                <th style={{ textAlign: 'center' }}>Date</th>
+                <th style={{ textAlign: 'center' }}>Admin</th>
+                <th style={{ textAlign: 'center' }}>QC</th>
+                <th style={{ textAlign: 'center' }}>Total Rolls</th>
                 <th style={{ textAlign: 'center' }}>Status</th>
+                <th style={{ textAlign: 'center' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {pagedOutgoing.length > 0 ? pagedOutgoing.map((r: OutgoingRoll) => (
-                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.no_roll}</td>
-                  <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.jop}</td>
-                  <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{r.customer}</td>
-                  <td className="font-semibold text-slate-800" style={{ textAlign: 'center' }}>{r.grade}</td>
-                  <td style={{ textAlign: 'center' }}>{r.gsm}</td>
-                  <td className="font-medium" style={{ textAlign: 'center' }}>{typeof r.weight === 'number' ? r.weight.toLocaleString('id-ID') : r.weight}</td>
-                  <td className="text-slate-600" style={{ textAlign: 'center' }}>{r.entry_date}</td>
+              {pagedShipments.length > 0 ? pagedShipments.map((s: any) => (
+                <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{s.shipment_number}</td>
+                  <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{s.customer}</td>
+                  <td className="text-slate-600" style={{ textAlign: 'center' }}>{s.date}</td>
+                  <td className="font-semibold text-slate-800" style={{ textAlign: 'center' }}>{s.admin}</td>
+                  <td className="font-semibold text-slate-800" style={{ textAlign: 'center' }}>{s.qc}</td>
+                  <td className="font-medium" style={{ textAlign: 'center' }}>{s.total_rolls} Roll</td>
                   <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
-                      <span className="badge inline-flex justify-center px-2.5 py-1 text-xs font-semibold whitespace-nowrap rounded-md" style={{ backgroundColor: '#d4edda', color: '#3C763D' }}>
-                        {r.status}
+                      <span className="badge inline-flex justify-center px-2.5 py-1 text-xs font-semibold whitespace-nowrap rounded-md uppercase" style={{ backgroundColor: '#d4edda', color: '#3C763D' }}>
+                        {s.status}
                       </span>
                     </div>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button 
+                      onClick={() => setSelectedShipmentDetail(s)}
+                      className="btn btn-secondary btn-sm flex items-center gap-1.5 mx-auto py-1 px-2"
+                    >
+                      <Eye size={13} />
+                      <span>Detail</span>
+                    </button>
                   </td>
                 </tr>
               )) : (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                    No outgoing shipment records found.
+                    No shipments found.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Pagination */}
+        </div>        {/* Pagination */}
         <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500">
-              Showing {filteredOutgoing.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filteredOutgoing.length)} of {filteredOutgoing.length}
+              Showing {filteredShipments.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filteredShipments.length)} of {filteredShipments.length}
             </span>
             <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
               <span className="text-xs text-slate-500">Rows per page:</span>
@@ -285,8 +366,78 @@ export default function Reports() {
             <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
           </div>
         </div>
-
       </div>
+
+      {/* Shipment Detail Modal */}
+      {selectedShipmentDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Rincian Pengiriman: {selectedShipmentDetail.shipment_number}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Customer: <span className="font-semibold text-slate-700">{selectedShipmentDetail.customer}</span> | Tanggal: {selectedShipmentDetail.date}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedShipmentDetail(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto bg-slate-50 flex-1">
+              <div className="card overflow-x-auto bg-white border border-slate-200">
+                <table className="data-table w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'center' }}>No</th>
+                      <th style={{ textAlign: 'left' }}>Nomor Roll</th>
+                      <th style={{ textAlign: 'center' }}>JOP</th>
+                      <th style={{ textAlign: 'center' }}>Grade</th>
+                      <th style={{ textAlign: 'center' }}>GSM</th>
+                      <th style={{ textAlign: 'center' }}>Berat (kg)</th>
+                      <th style={{ textAlign: 'center' }}>Tgl Input</th>
+                      <th style={{ textAlign: 'center' }}>Status QC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedShipmentDetail.rolls && selectedShipmentDetail.rolls.length > 0 ? (
+                      selectedShipmentDetail.rolls.map((roll: any, index: number) => (
+                        <tr key={index} className="hover:bg-slate-50">
+                          <td style={{ textAlign: 'center' }} className="text-slate-500">{index + 1}</td>
+                          <td className="font-bold text-blue-700 font-mono" style={{ textAlign: 'left' }}>{roll.no_roll}</td>
+                          <td style={{ textAlign: 'center' }} className="font-mono text-slate-600">{roll.jop}</td>
+                          <td style={{ textAlign: 'center' }} className="font-medium text-slate-800">{roll.grade}</td>
+                          <td style={{ textAlign: 'center' }}>{roll.gsm}</td>
+                          <td style={{ textAlign: 'center' }} className="font-medium">{roll.weight}</td>
+                          <td style={{ textAlign: 'center' }} className="text-slate-600">{roll.entry_date}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${roll.qc_status === 'passed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                              {roll.qc_status || 'pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="text-center py-8 text-slate-500">
+                          Tidak ada roll dalam shipment ini.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div className="p-3 border-t border-slate-100 bg-white flex justify-end">
+              <button className="btn btn-secondary text-xs px-4 py-1.5 cursor-pointer" onClick={() => setSelectedShipmentDetail(null)}>
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

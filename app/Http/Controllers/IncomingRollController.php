@@ -31,6 +31,37 @@ class IncomingRollController extends Controller
         return response()->json(['weight' => session('incoming_roll_weight')]);
     }
 
+    public function recommendFormNumber(Request $request)
+    {
+        $jopCode = $request->input('jop');
+        $gradeName = $request->input('grade');
+        $widthVal = $request->input('width');
+        $entryDate = $request->input('entry_date');
+
+        if ($jopCode && $gradeName && $widthVal && $entryDate) {
+            $jop = Jop::where('jop', trim($jopCode))->first();
+            $grade = Grade::where('grade', trim($gradeName))->first();
+            $width = RollsWidth::where('width', floatval($widthVal))->first();
+
+            if ($jop && $grade && $width) {
+                $existingRoll = Roll::where('jops_id', $jop->id)
+                    ->where('grades_id', $grade->id)
+                    ->where('rolls_widths_id', $width->id)
+                    ->where('entry_date', $entryDate)
+                    ->whereNotNull('form')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if ($existingRoll) {
+                    return response()->json(['formNumber' => $existingRoll->form]);
+                }
+            }
+        }
+
+        $maxForm = Roll::max('form') ?? 0;
+        return response()->json(['formNumber' => $maxForm + 1]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -49,6 +80,8 @@ class IncomingRollController extends Controller
             'cobb'       => 'nullable|string',
             'exMaterial' => 'nullable|string',
             'visual'     => 'nullable|string',
+            'status'     => 'nullable|string',
+            'entry_date' => 'nullable|string',
             'pic'        => 'nullable|string',
             'weight'     => 'nullable|numeric',
         ]);
@@ -75,7 +108,7 @@ class IncomingRollController extends Controller
 
             // 2. Resolve Master Relations (firstOrCreate)
             // Shift
-            $shiftName = $request->shift ? trim($request->shift) : 'Shift A';
+            $shiftName = $request->shift ? trim($request->shift) : '1';
             $shift = Shift::firstOrCreate(['shift' => $shiftName]);
 
             // Grade
@@ -119,9 +152,11 @@ class IncomingRollController extends Controller
             }
 
             // Width
+            $widthId = null;
             if ($request->width) {
                 $wVal = floatval($request->width);
-                RollsWidth::firstOrCreate(['width' => $wVal]);
+                $width = RollsWidth::firstOrCreate(['width' => $wVal]);
+                $widthId = $width->id;
             }
 
             // Diameter
@@ -174,11 +209,34 @@ class IncomingRollController extends Controller
                 $exMat = 'IMPORT';
             }
 
-            // Form number
+            $entryDate = $request->entry_date ? trim($request->entry_date) : now()->toDateString();
             $formNum = $request->formNumber ? intval(preg_replace('/[^0-9]/', '', $request->formNumber)) : 1;
+
+            // Form Serah Terima Cross-Contamination Validation
+            if ($formNum) {
+                $existingFormRoll = Roll::where('form', $formNum)->first();
+                if ($existingFormRoll) {
+                    if ($existingFormRoll->jops_id !== $jopId ||
+                        $existingFormRoll->grades_id !== $grade->id ||
+                        $existingFormRoll->rolls_widths_id !== $widthId ||
+                        $existingFormRoll->entry_date !== $entryDate) {
+                        DB::rollBack();
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => "Form Number {$formNum} sudah digunakan untuk spesifikasi (Jumbo/Grade/Width/Date) yang berbeda. Silakan gunakan Form Number lain."
+                        ], 422);
+                    }
+                }
+            }
 
             // Weight
             $weightVal = $request->weight ? intval($request->weight) : 0;
+
+            // Status and Entry Date
+            $statusVal = strtoupper(trim($request->status ?? 'OK'));
+            if (!in_array($statusVal, ['OK', 'HOLD'])) $statusVal = 'OK';
+
+            $entryDate = $request->entry_date ? trim($request->entry_date) : now()->toDateString();
 
             // 3. Create or Update Roll
             if ($existingRoll && $isUpdate) {
@@ -190,13 +248,17 @@ class IncomingRollController extends Controller
                     'thicknesses_id'     => $thicknessId,
                     'bulk'               => $bulkVal,
                     'rolls_diameters_id' => $diameterId,
+                    'rolls_widths_id'    => $widthId,
                     'weight'             => $weightVal,
                     'cores_id'           => $coreId,
                     'cobbs_id'           => $cobbId,
                     'exmaterial'         => $exMat,
                     'visual'             => $request->visual ?? 'OK',
+                    'status'             => $statusVal,
+                    'entry_date'         => $entryDate,
                     'users_id'           => $userId,
                     'jops_id'            => $jopId,
+                    'gsms_id'            => $gsm->id,
                 ]);
                 $roll = $existingRoll;
             } else {
@@ -211,13 +273,16 @@ class IncomingRollController extends Controller
                     'thicknesses_id'     => $thicknessId,
                     'bulk'               => $bulkVal,
                     'rolls_diameters_id' => $diameterId,
+                    'rolls_widths_id'    => $widthId,
                     'weight'             => $weightVal,
                     'cores_id'           => $coreId,
                     'cobbs_id'           => $cobbId,
                     'exmaterial'         => $exMat,
                     'visual'             => $request->visual ?? 'OK',
+                    'status'             => $statusVal,
                     'users_id'           => $userId,
                     'jops_id'            => $jopId,
+                    'gsms_id'            => $gsm->id,
                 ]);
             }
 
