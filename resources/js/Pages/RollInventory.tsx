@@ -833,8 +833,8 @@ export default function RollInventory({
         <div className="space-y-4">
           {/* Filter Card */}
           <div className="card p-3 sm:p-4 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-between">
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:max-w-md min-w-0">
                 <Search size={16} className="text-slate-400 shrink-0" />
                 <input
                   value={search}

@@ -68,12 +68,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
           flexDirection: 'column',
           minWidth: 0,
           width: '100%',
-          maxWidth: '100%',
-          marginLeft: isMobile || hideSidebar ? 0 : sidebarWidth,
-          transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          paddingLeft: isMobile || hideSidebar ? 0 : sidebarWidth,
+          transition: 'padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
         }}
-        className={!hideSidebar ? "max-sm:ml-0!" : ""}
+        className={!hideSidebar ? "max-sm:pl-0" : ""}
       >
         <Header
           activePage={activePage}
@@ -86,7 +85,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <div
             style={{
               width: '100%',
-              maxWidth: 1420,
               minHeight: '100%',
               padding: isMobile ? '0 12px 24px' : '0 28px 28px',
             }}

@@ -638,8 +638,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
           </div>
 
           {/* Grid Area */}
-          <div className="w-full overflow-x-auto">
-            <div className="flex gap-4 pt-12 pb-6 px-2 overflow-x-auto custom-scrollbar flex-nowrap min-w-min">
+          <div className="w-full overflow-x-auto custom-scrollbar">
+            <div className="flex gap-4 pt-12 pb-6 px-2 flex-nowrap min-w-min">
               {currentConfig.map(config => renderRack(config))}
             </div>
           </div>
