@@ -17,7 +17,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const authUser = (props.auth as any)?.user
   const userRole = (authUser?.role ?? 'admin').toLowerCase()
-  const hideSidebar = userRole === 'production' || userRole === 'qc'
+  const hideSidebar = false
 
   const activePage = url === '/' ? 'dashboard' : url.split('/')[1] || 'dashboard'
 

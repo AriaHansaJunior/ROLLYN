@@ -1481,6 +1481,7 @@ export default function IncomingRoll() {
                                         grade: "",
                                         gsm: "",
                                         visual: "OK",
+                                        status: "OK",
                                         rollNumber: "",
                                         formNumber: "",
                                         plybond: "",
@@ -1489,9 +1490,10 @@ export default function IncomingRoll() {
                                         thickness: "",
                                         bulk: "",
                                         core: "76",
-                                        exMaterial: "OCC",
+                                        exMaterial: "IMPORT",
                                         cobb: "",
-                                        shift: "Shift A",
+                                        shift: "1",
+                                        entry_date: new Date().toISOString().split('T')[0],
                                         pic: "",
                                     });
                                     setErrors({});

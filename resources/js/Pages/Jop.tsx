@@ -29,6 +29,7 @@ export default function Jop() {
     grades_id: '',
     gsms_id: '',
     quantity: '1',
+    noted_order: '',
   })
 
   // Custom manual input states
@@ -81,7 +82,7 @@ export default function Jop() {
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
 
   function openAddModal() {
-    setForm({ spk: '', jop: '', po: '', customers_id: '', grades_id: '', gsms_id: '', quantity: '1' })
+    setForm({ spk: '', jop: '', po: '', customers_id: '', grades_id: '', gsms_id: '', quantity: '1', noted_order: '' })
     setCustomCustomer('')
     setCustomGrade('')
     setCustomGsm('')
@@ -136,6 +137,7 @@ export default function Jop() {
       jop: form.jop,
       po: form.po,
       quantity: Number(form.quantity) || 1,
+      noted_order: form.noted_order,
     }
 
     if (form.customers_id === 'NEW_CUSTOM') {
@@ -451,6 +453,17 @@ export default function Jop() {
                   placeholder="e.g. 10"
                 />
                 {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
+              </div>
+
+              {/* Notes Input */}
+              <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Notes (Optional)</label>
+                <textarea
+                  value={form.noted_order}
+                  onChange={e => setForm(f => ({ ...f, noted_order: e.target.value }))}
+                  className="form-input w-full min-h-[60px]"
+                  placeholder="Any special instructions or notes..."
+                />
               </div>
             </div>
 
