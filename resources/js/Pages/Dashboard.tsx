@@ -15,10 +15,11 @@ interface DashboardProps {
   warehouseData: any[];
   alerts: any[];
   demandForecast: any[];
+  insights?: Array<{ icon: string; text: string }>;
 }
 
 export default function Dashboard() {
-  const { stats, warehouseData, alerts, demandForecast } = usePage<any>().props as unknown as DashboardProps;
+  const { stats, warehouseData, alerts, demandForecast, insights = [] } = usePage<any>().props as unknown as DashboardProps;
 
   const kpis = [
     { label: 'Total Rolls', value: stats.total_rolls.toLocaleString(), sub: 'in inventory', color: '#3b82f6', bg: 'bg-blue-50', text: 'text-blue-600', icon: Package },
@@ -267,12 +268,12 @@ const alertBg: Record<string, string> = {
           </div>
 
           <div className="space-y-2 text-xs">
-            {[
+            {(insights && insights.length > 0 ? insights : [
               { icon: '📈', text: 'Demand is trending upward over the current period. An average 8.2% month-over-month increase has been observed since Q1.' },
               { icon: '👥', text: 'Customer order activity is increasing compared with the same period last year. Three key accounts are driving higher volume.' },
               { icon: '⚠️', text: 'Inventory pressure may increase over the next 60 days if current demand continues. Consider reviewing slot capacity for WH-C.' },
               { icon: '📦', text: 'Peak demand is projected in December. Production planning should account for a 22% volume increase vs current capacity.' },
-            ].map((insight, i) => (
+            ]).map((insight, i) => (
               <motion.div 
                 whileHover={{ y: -1 }}
                 key={i} 

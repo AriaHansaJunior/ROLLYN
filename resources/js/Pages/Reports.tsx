@@ -25,11 +25,23 @@ export default function Reports() {
     kpis = [],
     shipments = [],
     productionHistory = [],
-    currentDate = null
+    currentDate = null,
+    currentShift = '',
+    shifts = []
   } = usePage<any>().props;
 
   const [historyDate, setHistoryDate] = useState(currentDate || '')
+  const [historyShift, setHistoryShift] = useState(currentShift || '')
   const [selectedShipmentDetail, setSelectedShipmentDetail] = useState<any>(null)
+
+  function applyHistoryFilter(newDate: string, newShift: string) {
+    setHistoryDate(newDate);
+    setHistoryShift(newShift);
+    const params: Record<string, string> = {};
+    if (newDate) params.history_date = newDate;
+    if (newShift && newShift !== 'all' && newShift !== '') params.history_shift = newShift;
+    router.get('/reports', params, { preserveState: true, preserveScroll: true, replace: true });
+  }
 
   const [outgoingSearch, setOutgoingSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -182,30 +194,55 @@ export default function Reports() {
               <p className="text-[11px] text-slate-500">Agregasi hasil input roll berdasarkan tanggal dan shift</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Shift Filter Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+              <Filter size={13} className="text-slate-500 shrink-0" />
+              <select
+                value={historyShift}
+                onChange={(e) => applyHistoryFilter(historyDate, e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-slate-700 font-medium cursor-pointer"
+              >
+                <option value="">Semua Shift (All)</option>
+                {shifts && shifts.map((s: any) => (
+                  <option key={s.id} value={s.id}>
+                    Shift: {s.shift}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date Filter */}
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
-              <Calendar size={14} className="text-slate-500" />
+              <Calendar size={14} className="text-slate-500 shrink-0" />
               <input 
                 type="date" 
                 value={historyDate}
-                onChange={(e) => {
-                  setHistoryDate(e.target.value)
-                  router.get('/reports', { history_date: e.target.value }, { preserveState: true, preserveScroll: true, replace: true })
-                }}
-                className="bg-transparent border-none outline-none text-xs text-slate-700"
+                onChange={(e) => applyHistoryFilter(e.target.value, historyShift)}
+                className="bg-transparent border-none outline-none text-xs text-slate-700 cursor-pointer"
               />
               {historyDate && (
                 <button 
-                  onClick={() => {
-                    setHistoryDate('')
-                    router.get('/reports', { history_date: '' }, { preserveState: true, preserveScroll: true, replace: true })
-                  }}
+                  onClick={() => applyHistoryFilter('', historyShift)}
                   className="text-slate-400 hover:text-slate-600"
+                  title="Hapus filter tanggal"
                 >
                   <X size={14} />
                 </button>
               )}
             </div>
+
+            {/* Reset All Filters Button */}
+            {(historyDate || historyShift) && (
+              <button
+                onClick={() => applyHistoryFilter('', '')}
+                className="btn btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1 text-slate-600 hover:text-red-600 cursor-pointer"
+                title="Reset semua filter tanggal & shift"
+              >
+                <X size={13} />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
 

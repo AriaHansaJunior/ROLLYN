@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/slot-status', [DesignUiController::class, 'slotStatus']);
         Route::get('/target-order', [DesignUiController::class, 'targetOrder']);
         Route::get('/jop', [DesignUiController::class, 'jop']);
+        Route::get('/jop/export-excel', [\App\Http\Controllers\JopController::class, 'exportExcel']);
         Route::post('/jop', [\App\Http\Controllers\JopController::class, 'store']);
         Route::get('/jop-master-data', [\App\Http\Controllers\JopController::class, 'masterData']);
         Route::get('/spk-po', [DesignUiController::class, 'spkPo']);

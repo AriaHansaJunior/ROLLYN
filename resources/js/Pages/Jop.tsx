@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Filter, Plus, X, Eye, Printer } from 'lucide-react'
+import { Search, Filter, Plus, X, Eye, Printer, FileSpreadsheet } from 'lucide-react'
 import { usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import axios from 'axios'
@@ -20,6 +20,7 @@ export default function Jop() {
   const [gsmsList, setGsmsList] = useState<GsmItem[]>([])
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [selectedJopDetail, setSelectedJopDetail] = useState<any>(null)
+  const [selectedRollPopup, setSelectedRollPopup] = useState<any>(null)
 
   const [form, setForm] = useState({
     spk: '',
@@ -178,41 +179,161 @@ export default function Jop() {
   }
 
   function printSerahTerima(jop: any) {
-    const today = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const rolls = jop.rollsList || []
-    const totalWeight = rolls.reduce((s: number, r: any) => s + (parseFloat(r.weight) || 0), 0)
-    const productionDate = rolls[0]?.entry_date || today
-    const gsm = jop.gsm || '-'
+    const allRolls: any[] = jop.rollsList || []
 
-    // Up to 16 rows per page
-    const rows = Array.from({ length: 16 }, (_, i) => {
-      const r = rolls[i]
-      return r
-        ? `<tr>
-            <td style="text-align:center">${i + 1}</td>
-            <td>${r.no_roll || `R-${r.no}` || '-'}</td>
-            <td></td>
-            <td style="text-align:center">${r.grade?.grade || jop.grade || '-'}</td>
-            <td style="text-align:center;font-weight:600">${parseFloat(r.weight || 0).toFixed(0)}</td>
-           </tr>`
-        : `<tr><td></td><td></td><td></td><td></td><td></td></tr>`
-    }).join('')
+    // Strip "JOP-" prefix — show only numbers/separators
+    const jobOrderNo = jop.jop ? jop.jop.replace(/^JOP-/i, '') : '-'
+
+    // ── Group rolls by form number ─────────────────────────────────────────
+    const groupMap: Map<string, any[]> = new Map()
+    for (const r of allRolls) {
+      const key = r.form != null ? String(r.form) : '__none__'
+      if (!groupMap.has(key)) groupMap.set(key, [])
+      groupMap.get(key)!.push(r)
+    }
+    if (groupMap.size === 0) groupMap.set('__none__', [])
+
+    // ── Build pages: each form group → split into chunks of 16 ────────────
+    // Page counter is LOCAL to each form number (1 OF N per form, not global)
+    const ROWS_PER_PAGE = 16
+    const pages: any[] = []
+
+    for (const [formKey, groupRolls] of groupMap.entries()) {
+      const formNumber = formKey === '__none__' ? '-' : formKey
+
+      // Specs from the first roll of this form group
+      const spec = groupRolls[0]
+      const gsm        = spec?.gsm?.gsm        ?? spec?.gsm        ?? '-'
+      const ib         = spec?.plybond?.plybonds ?? spec?.plybond  ?? '-'  // IB = plybond
+      const rw         = spec?.rolls_width?.width ?? spec?.rollsWidth?.width ?? '-' // RW = roll width
+      const coreSize   = spec?.core?.core       ?? '-'
+      const thickness  = spec?.thickness?.thickness ?? '-'
+      const grade      = spec?.grade?.grade     ?? jop.grade ?? '-'
+      const shift      = spec?.shift?.shift     ?? '-'
+      const productionDate = spec?.entry_date   ?? '-'
+
+      // Split rolls into chunks of ROWS_PER_PAGE
+      const chunks: any[][] = []
+      for (let i = 0; i < groupRolls.length; i += ROWS_PER_PAGE) {
+        chunks.push(groupRolls.slice(i, i + ROWS_PER_PAGE))
+      }
+      if (chunks.length === 0) chunks.push([]) // always at least 1 page
+
+      const totalPagesForForm = chunks.length  // ← "OF N" is per form number
+
+      chunks.forEach((chunk, chunkIdx) => {
+        const pageNum = chunkIdx + 1           // ← "X OF" is per form number
+        const chunkWeight = chunk.reduce((s: number, r: any) => s + (parseFloat(r.weight) || 0), 0)
+
+        // Build row HTML for this chunk (pad to ROWS_PER_PAGE with empty rows, all rows numbered)
+        const rows = Array.from({ length: ROWS_PER_PAGE }, (_, i) => {
+          const r = chunk[i]
+          const globalRowNum = chunkIdx * ROWS_PER_PAGE + i + 1
+          return r
+            ? `<tr>
+                <td style="text-align:center">${globalRowNum}</td>
+                <td>${r.no_roll || ('R-' + r.no) || '&nbsp;'}</td>
+                <td style="text-align:center">${r.exmaterial || r.ex_material || '&nbsp;'}</td>
+                <td style="text-align:center">${r.grade?.grade ?? grade ?? '&nbsp;'}</td>
+                <td style="text-align:center;font-weight:600">${parseFloat(r.weight || 0).toFixed(0)}</td>
+               </tr>`
+            : `<tr>
+                <td style="text-align:center">${globalRowNum}</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+               </tr>`
+        }).join('')
+
+        pages.push({ formNumber, gsm, ib, rw, coreSize, thickness, grade, shift, productionDate, chunkWeight, chunk, rows, pageNum, totalPagesForForm })
+      })
+    }
+
+    const pageBlocks = pages.map(p =>
+`<div class="page">
+  <div class="header-box">
+    <div class="header-logo"><div class="logo-circle">R</div></div>
+    <div class="header-main">
+      <div class="company">PT. INDONESIA ROYAL PAPER</div>
+      <div style="font-size:8px;color:#555;margin-top:1px">FORM SERAH TERIMA ROLL FINISHGOODS</div>
+    </div>
+    <div class="header-meta">
+      <table>
+        <tr><td>Form</td><td>WP-PMR-PN-013</td></tr>
+        <tr><td>Rev</td><td>0</td></tr>
+        <tr><td>Issue Date</td><td>02.01.2025</td></tr>
+        <tr><td>Page</td><td>${p.pageNum} OF ${p.totalPagesForForm}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div style="font-size:9px; margin-bottom:5px;">
+    <div class="info-row" style="margin-bottom:2px"><span class="info-label">Form</span><span>:</span><span style="margin-left:6px">${p.formNumber}</span></div>
+    <div class="info-row" style="margin-bottom:2px"><span class="info-label">Job Order No.</span><span>:</span><span style="margin-left:6px;font-weight:700">${jobOrderNo}</span></div>
+    <div class="info-row"><span class="info-label">Job Order Date</span><span>:</span><span style="margin-left:6px"></span></div>
+  </div>
+  <div class="section-title">PT. INDONESIA ROYAL PAPER</div>
+  <div class="section-sub">DELIVERY REPORT FINISHED GOODS TO WAREHOUSE</div>
+  <div class="info-grid">
+    <div>
+      <div class="info-row"><span class="info-label">Production Date</span><span>:</span><span class="info-value" style="margin-left:6px">${p.productionDate}</span></div>
+      <div class="info-row"><span class="info-label">Delivery Date</span><span>:</span><span class="info-value" style="margin-left:6px"></span></div>
+      <div class="info-row"><span class="info-label">Grade Product</span><span>:</span><span class="info-value" style="margin-left:6px;font-weight:700">${p.grade}</span></div>
+    </div>
+    <div>
+      <div class="info-row"><span class="info-label">Product Detail</span></div>
+      <div class="product-detail">
+        <table>
+          <thead><tr><th>GSM</th><th>IB</th><th>RW</th><th>Core Size</th><th>Thickness</th></tr></thead>
+          <tbody><tr><td>${p.gsm}</td><td>${p.ib}</td><td>${p.rw}</td><td>${p.coreSize}</td><td>${p.thickness}</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="shift-row"><span style="width:100px;font-weight:600">Shift</span><span>:</span><span style="margin-left:6px">${p.shift}</span></div>
+  <table class="main-table">
+    <thead>
+      <tr>
+        <th style="width:28px">No</th>
+        <th style="width:140px;text-align:left">No. Roll</th>
+        <th style="width:90px">Ex. Material</th>
+        <th>Grade</th>
+        <th style="width:80px">Weight (kg)</th>
+      </tr>
+    </thead>
+    <tbody>${p.rows}</tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="3" style="text-align:right;font-weight:700">TOTAL</td>
+        <td style="text-align:center">Roll<br/><span style="font-size:8px">Weight (kg)</span></td>
+        <td style="text-align:center;font-weight:700">${p.chunk.length}<br/>${p.chunkWeight.toFixed(0)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <div class="sig-section">
+    <div class="sig-block"><div class="sig-title">Prepared by:</div><div class="sig-name">(Rewinder)</div></div>
+    <div class="sig-block"><div class="sig-title">Submitted by:</div><div class="sig-name">(Production)</div></div>
+    <div class="sig-block"><div class="sig-title">Controlled by:</div><div class="sig-name">(QA)</div></div>
+    <div class="sig-block"><div class="sig-title">Received by:</div><div class="sig-name">(Warehouse FGS)</div></div>
+  </div>
+</div>`
+    )
 
     const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="utf-8"/>
-<title>Form Serah Terima Roll Finishgoods</title>
+<title>Form Serah Terima — ${jop.jop}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; font-size: 10px; color: #000; background:#fff; }
-  .page { width: 210mm; min-height: 297mm; padding: 14mm 14mm 10mm; margin: 0 auto; }
+  .page { width: 210mm; min-height: 297mm; padding: 14mm 14mm 10mm; margin: 0 auto; page-break-after: always; }
+  .page:last-child { page-break-after: avoid; }
   .header-box { display: flex; justify-content: space-between; align-items: stretch; border: 1px solid #000; margin-bottom: 4px; }
   .header-logo { width: 18%; padding: 6px; display: flex; align-items: center; justify-content: center; border-right: 1px solid #000; }
   .logo-circle { width: 38px; height: 38px; border-radius: 50%; background: #1d4ed8; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 18px; }
   .header-main { flex: 1; padding: 5px 10px; text-align: center; border-right: 1px solid #000; }
   .header-main .company { font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
-  .header-main .form-title { font-size: 9px; font-weight: 700; margin-top: 2px; }
   .header-meta { width: 160px; font-size: 8.5px; }
   .header-meta table { width: 100%; border-collapse: collapse; }
   .header-meta td { padding: 2px 4px; border-bottom: 1px solid #ddd; }
@@ -228,11 +349,12 @@ export default function Jop() {
   .product-detail th, .product-detail td { border: 1px solid #000; padding: 2px 5px; text-align: center; font-size: 9px; }
   .product-detail th { background: #f0f0f0; font-weight: 700; }
   .shift-row { display: flex; gap: 4px; font-size: 9.5px; margin-bottom: 8px; }
-  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-  .main-table th, .main-table td { border: 1px solid #000; padding: 2.5px 5px; font-size: 9px; }
-  .main-table th { background: #e8e8e8; font-weight: 700; text-align: center; }
-  .main-table td { min-height: 14px; }
-  .total-row td { font-weight: 700; background: #f5f5f5; }
+  .main-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; table-layout: fixed; }
+  .main-table th, .main-table td { border: 1px solid #000; padding: 2px 5px; font-size: 9px; box-sizing: border-box; }
+  .main-table th { background: #e8e8e8; font-weight: 700; text-align: center; height: 22px; }
+  .main-table tbody tr { height: 22px; }
+  .main-table tbody td { height: 22px; vertical-align: middle; }
+  .total-row td { font-weight: 700; background: #f5f5f5; height: 26px; vertical-align: middle; }
   .sig-section { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0; margin-top: 16px; }
   .sig-block { text-align: center; border: 1px solid #000; padding: 6px 4px; }
   .sig-block .sig-title { font-weight: 700; font-size: 9px; margin-bottom: 28px; }
@@ -244,80 +366,7 @@ export default function Jop() {
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="header-box">
-    <div class="header-logo"><div class="logo-circle">R</div></div>
-    <div class="header-main">
-      <div class="company">PT. INDONESIA ROYAL PAPER</div>
-      <div style="font-size:8px;color:#555;margin-top:1px">FORM SERAH TERIMA ROLL FINISHGOODS</div>
-    </div>
-    <div class="header-meta">
-      <table>
-        <tr><td>Form</td><td>WP-PMR-PN-013</td></tr>
-        <tr><td>Rev</td><td>0</td></tr>
-        <tr><td>Issue Date</td><td>02.01.2025</td></tr>
-        <tr><td>Page</td><td>01 OF 01</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <div style="font-size:9px; margin-bottom:5px;">
-    <div class="info-row" style="margin-bottom:2px"><span class="info-label">Form</span><span>:</span><span style="margin-left:6px">WP-PMR-PN-013</span></div>
-    <div class="info-row" style="margin-bottom:2px"><span class="info-label">Job Order No.</span><span>:</span><span style="margin-left:6px;font-weight:700">${jop.jop}</span></div>
-    <div class="info-row"><span class="info-label">Job Order Date</span><span>:</span><span style="margin-left:6px">${today}</span></div>
-  </div>
-
-  <div class="section-title">PT. INDONESIA ROYAL PAPER</div>
-  <div class="section-sub">DELIVERY REPORT FINISHED GOODS TO WAREHOUSE</div>
-
-  <div class="info-grid">
-    <div>
-      <div class="info-row"><span class="info-label">Production Date</span><span>:</span><span class="info-value" style="margin-left:6px">${productionDate}</span></div>
-      <div class="info-row"><span class="info-label">Delivery Date</span><span>:</span><span class="info-value" style="margin-left:6px">${today}</span></div>
-      <div class="info-row"><span class="info-label">Grade Product</span><span>:</span><span class="info-value" style="margin-left:6px;font-weight:700">${jop.grade}</span></div>
-    </div>
-    <div>
-      <div class="info-row"><span class="info-label">Product Detail</span></div>
-      <div class="product-detail">
-        <table>
-          <thead><tr><th>GSM</th><th>IB</th><th>RW</th><th>Core Size</th><th>Thickness</th></tr></thead>
-          <tbody><tr><td>${gsm}</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="shift-row"><span style="width:100px;font-weight:600">Shift</span><span>:</span><span style="margin-left:6px">${rolls[0]?.shift?.shift || '1'}</span></div>
-
-  <table class="main-table">
-    <thead>
-      <tr>
-        <th style="width:28px">No</th>
-        <th style="width:140px;text-align:left">No. Roll</th>
-        <th style="width:90px">Ex. Material</th>
-        <th>Grade</th>
-        <th style="width:80px">Weight (kg)</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows}
-    </tbody>
-    <tfoot>
-      <tr class="total-row">
-        <td colspan="3" style="text-align:right;font-weight:700">TOTAL</td>
-        <td style="text-align:center">Roll<br/><span style="font-size:8px">Weight (kg)</span></td>
-        <td style="text-align:center;font-weight:700">${rolls.length}<br/>${totalWeight.toFixed(0)}</td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <div class="sig-section">
-    <div class="sig-block"><div class="sig-title">Prepared by:</div><div class="sig-name">(Rewinder)</div></div>
-    <div class="sig-block"><div class="sig-title">Submitted by:</div><div class="sig-name">(Production)</div></div>
-    <div class="sig-block"><div class="sig-title">Controlled by:</div><div class="sig-name">(QA)</div></div>
-    <div class="sig-block"><div class="sig-title">Received by:</div><div class="sig-name">(Warehouse FGS)</div></div>
-  </div>
-</div>
+${pageBlocks.join('\n')}
 <script>window.onload = () => { window.print(); }<\/script>
 </body>
 </html>`
@@ -329,6 +378,7 @@ export default function Jop() {
     }
   }
 
+
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-2">
@@ -336,9 +386,19 @@ export default function Jop() {
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Job Order Production (JOP)</h2>
           <p className="text-xs text-slate-500 mt-0.5">Manufacturing execution tracking and completion status by production order</p>
         </div>
-        <button className="btn btn-primary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0 cursor-pointer" onClick={openAddModal}>
-          <Plus size={13} className="sm:w-3.5 sm:h-3.5" /> <span>Add JOP</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/jop/export-excel"
+            className="btn btn-secondary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0 flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 font-semibold cursor-pointer transition-colors shadow-xs"
+            title="Export entire JOP database to Excel"
+          >
+            <FileSpreadsheet size={15} className="text-emerald-600" />
+            <span>Export Excel</span>
+          </a>
+          <button className="btn btn-primary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0 cursor-pointer" onClick={openAddModal}>
+            <Plus size={13} className="sm:w-3.5 sm:h-3.5" /> <span>Add JOP</span>
+          </button>
+        </div>
       </div>
 
       <div className="card p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-2.5 items-center">
@@ -661,6 +721,7 @@ export default function Jop() {
                       <th style={{ textAlign: 'center' }}>GSM Aktual</th>
                       <th style={{ textAlign: 'center' }}>Berat (kg)</th>
                       <th style={{ textAlign: 'center' }}>Status Roll</th>
+                      <th style={{ textAlign: 'center' }}>Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -668,7 +729,16 @@ export default function Jop() {
                       selectedJopDetail.rollsList.map((roll: any, index: number) => (
                         <tr key={roll.no || index} className="hover:bg-slate-50">
                           <td style={{ textAlign: 'center' }} className="text-slate-500">{index + 1}</td>
-                          <td className="font-bold text-blue-700 font-mono" style={{ textAlign: 'left' }}>{roll.no_roll || `R-${roll.no}`}</td>
+                          <td className="font-bold text-blue-700 font-mono" style={{ textAlign: 'left' }}>
+                            <button
+                              onClick={() => setSelectedRollPopup(roll)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer font-bold font-mono"
+                              title="Klik untuk melihat detail lengkap roll"
+                            >
+                              <span>{roll.no_roll || `R-${roll.no}`}</span>
+                              <Eye size={12} className="opacity-60" />
+                            </button>
+                          </td>
                           <td style={{ textAlign: 'center' }} className="text-slate-600">{roll.entry_date || '-'}</td>
                           <td style={{ textAlign: 'center' }}>{roll.shift?.shift || '-'}</td>
                           <td style={{ textAlign: 'center' }} className="font-medium text-slate-800">{roll.grade?.grade || '-'}</td>
@@ -679,11 +749,21 @@ export default function Jop() {
                               {roll.status || 'OK'}
                             </span>
                           </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              onClick={() => setSelectedRollPopup(roll)}
+                              className="btn btn-secondary btn-sm py-1 px-2.5 text-[11px] flex items-center gap-1 mx-auto cursor-pointer"
+                              title="Lihat Detail Roll"
+                            >
+                              <Eye size={12} />
+                              <span>Detail</span>
+                            </button>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={8} className="text-center py-8 text-slate-500">
+                        <td colSpan={9} className="text-center py-8 text-slate-500">
                           Belum ada roll yang dihasilkan untuk JOP ini.
                         </td>
                       </tr>
@@ -703,6 +783,117 @@ export default function Jop() {
               </button>
               <button className="btn btn-secondary text-xs px-4 py-1.5 cursor-pointer" onClick={() => setSelectedJopDetail(null)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Roll Detail Popup Modal (Without leaving the JOP page) */}
+      {selectedRollPopup && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                  {selectedRollPopup.form ? `F-${selectedRollPopup.form}` : 'R'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-slate-900">
+                      Roll Detail — {selectedRollPopup.no_roll || `R-${selectedRollPopup.no}`}
+                    </h3>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${selectedRollPopup.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                      {selectedRollPopup.status || 'OK'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Spesifikasi teknis & inspeksi roll tanpa meninggalkan halaman JOP
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedRollPopup(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 bg-slate-50/40 flex-1 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* 1. Roll Information */}
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+                  <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5 flex items-center justify-between">
+                    <span>Informasi Roll</span>
+                    <span className="text-slate-400 text-[10px] font-normal">ID: {selectedRollPopup.no}</span>
+                  </div>
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Nomor Roll</span><span className="font-bold text-slate-800 font-mono">{selectedRollPopup.no_roll || `R-${selectedRollPopup.no}`}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Form Number</span><span className="font-semibold text-slate-800">{selectedRollPopup.form ? `F-${selectedRollPopup.form}` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Shift</span><span className="font-semibold text-slate-800">{selectedRollPopup.shift?.shift || '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Tanggal Input</span><span className="font-semibold text-slate-800">{selectedRollPopup.entry_date || '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Operator (PIC)</span><span className="font-semibold text-slate-800">{selectedRollPopup.user?.username || selectedRollPopup.user?.name || 'ADMIN'}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-slate-500">Status Alokasi</span><span className="font-semibold text-slate-800">{selectedRollPopup.locations_id ? 'Slotted' : 'Shipment Plan'}</span></div>
+                  </div>
+                </div>
+
+                {/* 2. Specification */}
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+                  <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5">
+                    Spesifikasi Teknis
+                  </div>
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Grade</span><span className="font-bold text-slate-800">{selectedRollPopup.grade?.grade || selectedJopDetail?.grade || '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">GSM</span><span className="font-bold text-slate-800">{selectedRollPopup.gsm?.gsm || selectedRollPopup.gsm || selectedJopDetail?.gsm || '—'} g/m²</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Plybond (IB)</span><span className="font-semibold text-slate-800">{selectedRollPopup.plybond?.plybonds ?? '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Thickness</span><span className="font-semibold text-slate-800">{selectedRollPopup.thickness?.thickness ? `${selectedRollPopup.thickness.thickness} mm` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Bulk</span><span className="font-semibold text-slate-800">{selectedRollPopup.bulk ?? '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Lebar Roll (RW)</span><span className="font-semibold text-slate-800">{(selectedRollPopup.rolls_width?.width || selectedRollPopup.rollsWidth?.width) ? `${selectedRollPopup.rolls_width?.width || selectedRollPopup.rollsWidth?.width} mm` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Diameter Roll</span><span className="font-semibold text-slate-800">{(selectedRollPopup.rolls_diameter?.diameter || selectedRollPopup.rollsDiameter?.diameter) ? `${selectedRollPopup.rolls_diameter?.diameter || selectedRollPopup.rollsDiameter?.diameter} mm` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Core Size</span><span className="font-semibold text-slate-800">{selectedRollPopup.core?.core ? `${selectedRollPopup.core.core} mm` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Berat Aktual</span><span className="font-bold text-blue-700">{selectedRollPopup.weight ? `${selectedRollPopup.weight} kg` : '—'}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-slate-500">Cobb</span><span className="font-semibold text-slate-800">{selectedRollPopup.cobb?.cobb ?? '—'}</span></div>
+                  </div>
+                </div>
+
+                {/* 3. Inspection & Warehouse */}
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+                  <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5">
+                    Inspeksi & Gudang
+                  </div>
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Ex Material</span><span className="font-semibold text-slate-800">{selectedRollPopup.exmaterial || 'IMPORT'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Visual</span><span className="font-semibold text-slate-800">{selectedRollPopup.visual || 'OK'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Lokasi Gudang</span><span className="font-bold text-slate-800">{selectedRollPopup.location?.location || 'Not Assigned'}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-slate-500">Status Roll</span><span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${selectedRollPopup.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{selectedRollPopup.status || 'OK'}</span></div>
+                  </div>
+                </div>
+
+                {/* 4. Order Information */}
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+                  <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5">
+                    Informasi Order
+                  </div>
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Job Order Production</span><span className="font-bold text-blue-700 font-mono">{selectedJopDetail?.jop || '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">SPK</span><span className="font-semibold text-slate-800">{selectedJopDetail?.spk || '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">PO</span><span className="font-semibold text-slate-800">{selectedJopDetail?.po || '—'}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-slate-500">Customer</span><span className="font-semibold text-slate-800">{selectedJopDetail?.customer || '—'}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 border-t border-slate-100 bg-white flex justify-end">
+              <button
+                className="btn btn-secondary text-xs px-4 py-1.5 cursor-pointer"
+                onClick={() => setSelectedRollPopup(null)}
+              >
+                Tutup Detail
               </button>
             </div>
           </div>

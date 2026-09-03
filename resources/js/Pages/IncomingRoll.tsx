@@ -12,6 +12,9 @@ import {
     Lock,
     Printer,
     RefreshCw,
+    Search,
+    AlertCircle,
+    Check,
 } from "lucide-react";
 import WeightDetectionEngine from "../SPECTRUM/SpectrumWeightDetectionEngine";
 import QRCodeSVG from "@/Components/QRCodeSVG";
@@ -58,6 +61,7 @@ export default function IncomingRoll() {
         };
     });
     const [jops, setJops] = useState<JopOption[]>([]);
+    const [jopSearch, setJopSearch] = useState("");
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [savedRollNumber, setSavedRollNumber] = useState(() => {
         return sessionStorage.getItem("incomingRoll_savedId") || "";
@@ -418,10 +422,192 @@ export default function IncomingRoll() {
 
             {/* Step 0: Weight Detection */}
             {step === 0 && (
-                <WeightDetectionEngine
-                    onWeightConfirmed={handleWeightConfirmed}
-                    roi={SCALE_ROI}
-                />
+                <div className="space-y-4">
+                    <WeightDetectionEngine
+                        onWeightConfirmed={handleWeightConfirmed}
+                        roi={SCALE_ROI}
+                    />
+
+                    {/* Active Incomplete JOPs Target Tracker */}
+                    <div className="card p-4 space-y-3 bg-white border border-slate-200 shadow-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 font-bold shrink-0">
+                                    <Layers size={16} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                                            Daftar JOP Belum Selesai (Target Produksi)
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                                            {
+                                                (jopList || []).filter((j: any) => (Number(j.quantity) || 1) > (j.rolls ? j.rolls.length : 0)).length
+                                            } JOP Aktif
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500">
+                                        Memantau sisa roll yang masih dibutuhkan untuk melengkapi setiap Job Order Production
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs w-full sm:w-64">
+                                    <Search size={14} className="text-slate-400 shrink-0" />
+                                    <input
+                                        type="text"
+                                        value={jopSearch}
+                                        onChange={(e) => setJopSearch(e.target.value)}
+                                        placeholder="Cari JOP, SPK, Customer..."
+                                        className="bg-transparent border-none outline-none text-xs w-full text-slate-800 placeholder:text-slate-400"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Incomplete JOPs Table */}
+                        <div className="overflow-x-auto">
+                            <table className="data-table w-full text-xs">
+                                <thead>
+                                    <tr>
+                                        <th style={{ textAlign: "left" }}>JOP Number</th>
+                                        <th style={{ textAlign: "center" }}>SPK</th>
+                                        <th style={{ textAlign: "center" }}>Customer</th>
+                                        <th style={{ textAlign: "center" }}>Grade / GSM</th>
+                                        <th style={{ textAlign: "center" }}>Target</th>
+                                        <th style={{ textAlign: "center" }}>Realisasi</th>
+                                        <th style={{ textAlign: "center" }}>Kurang (Sisa Butuh)</th>
+                                        <th style={{ textAlign: "center" }}>Progress</th>
+                                        <th style={{ textAlign: "center" }}>Pilih JOP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(() => {
+                                        const incomplete = (jopList || [])
+                                            .map((j: any) => {
+                                                const target = Number(j.quantity) || 1;
+                                                const completed = j.rolls ? j.rolls.length : 0;
+                                                const remaining = Math.max(0, target - completed);
+                                                const progress = Math.min(100, Math.round((completed / target) * 100));
+                                                return {
+                                                    ...j,
+                                                    target,
+                                                    completed,
+                                                    remaining,
+                                                    progress,
+                                                    isCompleted: completed >= target,
+                                                };
+                                            })
+                                            .filter((j: any) => !j.isCompleted)
+                                            .filter((j: any) => {
+                                                if (!jopSearch.trim()) return true;
+                                                const q = jopSearch.toLowerCase();
+                                                return (
+                                                    (j.jop || "").toLowerCase().includes(q) ||
+                                                    (j.spk || "").toLowerCase().includes(q) ||
+                                                    (j.po || "").toLowerCase().includes(q) ||
+                                                    (j.customer?.customer || "").toLowerCase().includes(q) ||
+                                                    (j.grade?.grade || "").toLowerCase().includes(q)
+                                                );
+                                            });
+
+                                        if (incomplete.length === 0) {
+                                            return (
+                                                <tr>
+                                                    <td colSpan={9} className="text-center py-6 text-slate-400">
+                                                        {jopSearch ? "Tidak ada JOP yang cocok dengan pencarian." : "Semua target JOP telah selesai 100%!"}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }
+
+                                        return incomplete.map((j: any) => {
+                                            const isSelected = form.jop === j.jop;
+                                            return (
+                                                <tr
+                                                    key={j.id || j.jop}
+                                                    className={`hover:bg-slate-50 transition-colors ${
+                                                        isSelected ? "bg-blue-50/60 font-semibold" : ""
+                                                    }`}
+                                                >
+                                                    <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: "left" }}>
+                                                        {j.jop}
+                                                    </td>
+                                                    <td className="font-mono text-slate-600" style={{ textAlign: "center" }}>
+                                                        {j.spk || "-"}
+                                                    </td>
+                                                    <td className="text-slate-800" style={{ textAlign: "center" }}>
+                                                        {j.customer?.customer || j.customer || "-"}
+                                                    </td>
+                                                    <td style={{ textAlign: "center" }}>
+                                                        <span className="font-medium text-slate-900">
+                                                            {j.grade?.grade || j.grade || "-"}
+                                                        </span>
+                                                        <span className="text-slate-400 mx-1">/</span>
+                                                        <span className="text-slate-600">
+                                                            {j.gsm?.gsm || j.gsm || "-"} g/m²
+                                                        </span>
+                                                    </td>
+                                                    <td className="font-semibold text-slate-700" style={{ textAlign: "center" }}>
+                                                        {j.target} Roll
+                                                    </td>
+                                                    <td className="font-bold text-slate-900" style={{ textAlign: "center" }}>
+                                                        {j.completed} Roll
+                                                    </td>
+                                                    <td style={{ textAlign: "center" }}>
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-amber-100 text-amber-800 border border-amber-200">
+                                                            Kurang {j.remaining} Roll
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ textAlign: "center" }}>
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-blue-600 rounded-full"
+                                                                    style={{ width: `${j.progress}%` }}
+                                                                />
+                                                            </div>
+                                                            <span className="text-[11px] font-bold text-slate-700 w-8 text-right">
+                                                                {j.progress}%
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ textAlign: "center" }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                handleJopSelect(j.jop);
+                                                                SystemUI.toast({
+                                                                    message: `JOP ${j.jop} dipilih untuk input roll!`,
+                                                                    type: "success",
+                                                                });
+                                                            }}
+                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${
+                                                                isSelected
+                                                                    ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
+                                                                    : "btn-primary"
+                                                            }`}
+                                                            title="Pilih JOP ini untuk diisi di Form Data"
+                                                        >
+                                                            {isSelected ? (
+                                                                <>
+                                                                    <Check size={12} />
+                                                                    <span>Terpilih</span>
+                                                                </>
+                                                            ) : (
+                                                                <span>Pilih</span>
+                                                            )}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        });
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Step 1: Form Data */}

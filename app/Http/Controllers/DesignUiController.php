@@ -50,7 +50,7 @@ class DesignUiController extends Controller
     }
 
     public function incomingRoll() { 
-        $jops = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])->latest()->get();
+        $jops = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'rolls'])->latest()->get();
 
         // Auto-start SPECTRUM Engine if it's not running
         $connection = @fsockopen('127.0.0.1', 8001, $errno, $errstr, 1);
@@ -81,7 +81,22 @@ class DesignUiController extends Controller
         return Inertia::render('TargetOrder', ['targetOrders' => $orders]); 
     }
     public function jop() { 
-        $orders = \App\Models\Jop::with(['customer', 'grade', 'rolls.grade', 'rolls.gsm', 'rolls.shift'])->latest()->get();
+        $orders = \App\Models\Jop::with([
+            'customer',
+            'grade',
+            'gsm',
+            'rolls.grade',
+            'rolls.gsm',
+            'rolls.shift',
+            'rolls.thickness',
+            'rolls.core',
+            'rolls.rollsWidth',
+            'rolls.rollsDiameter',
+            'rolls.plybond',
+            'rolls.cobb',
+            'rolls.location',
+            'rolls.user',
+        ])->latest()->get();
         return Inertia::render('Jop', ['jopData' => $orders]); 
     }
     public function spkPo() { 
@@ -141,6 +156,7 @@ class DesignUiController extends Controller
         $demandForecast = [];
 
         $historyDate = $request->input('history_date');
+        $historyShift = $request->input('history_shift');
         $productionQuery = Roll::with('shift')
             ->selectRaw('entry_date, shifts_id, count(*) as total_rolls, sum(weight) as total_weight')
             ->groupBy('entry_date', 'shifts_id');
@@ -149,15 +165,22 @@ class DesignUiController extends Controller
             $productionQuery->whereDate('entry_date', $historyDate);
         }
 
+        if ($historyShift && $historyShift !== 'all') {
+            $productionQuery->where('shifts_id', $historyShift);
+        }
+
+        $allShifts = \App\Models\Shift::select('id', 'shift')->orderBy('shift')->get();
+
         $productionHistory = $productionQuery
             ->orderBy('entry_date', 'desc')
             ->orderBy('shifts_id', 'asc')
-            ->limit(30)
+            ->limit(50)
             ->get()
             ->map(function ($item) {
                 return [
                     'date' => $item->entry_date ? \Carbon\Carbon::parse($item->entry_date)->format('Y-m-d') : '—',
                     'shift' => $item->shift->shift ?? '—',
+                    'shifts_id' => $item->shifts_id,
                     'total_rolls' => $item->total_rolls,
                     'total_weight' => $item->total_weight ?? 0,
                 ];
@@ -210,7 +233,9 @@ class DesignUiController extends Controller
             'demandForecast' => $demandForecast,
             'shipments' => $shipments,
             'productionHistory' => $productionHistory,
-            'currentDate' => $historyDate
+            'currentDate' => $historyDate,
+            'currentShift' => $historyShift ?: '',
+            'shifts' => $allShifts,
         ]);
     }
     public function profile() { return Inertia::render('Profile'); }

@@ -31,6 +31,11 @@ class Roll extends Model
         return $this->belongsTo(RollsWidth::class, 'rolls_widths_id');
     }
 
+    public function rollsDiameter()
+    {
+        return $this->belongsTo(RollsDiameter::class, 'rolls_diameters_id');
+    }
+
     public function plybond()
     {
         return $this->belongsTo(Plybond::class, 'plybonds_id');
