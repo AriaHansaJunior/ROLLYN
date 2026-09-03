@@ -53,6 +53,10 @@ export default function ProductionSchedule() {
     const [formErrors, setFormErrors] = useState<Record<string, string>>({})
     const [selectedJop, setSelectedJop] = useState<JopOption | null>(null)
     const [saving, setSaving] = useState(false)
+    
+    // Pagination state
+    const [page, setPage] = useState(1)
+    const [perPage, setPerPage] = useState(10)
 
     const previewProductionHours = (() => {
         const t = parseFloat(form.tonnage)
@@ -155,7 +159,13 @@ export default function ProductionSchedule() {
     }
 
     async function handleDelete(id: number) {
-        if (!confirm('Are you sure you want to delete this schedule?')) return
+        const confirmed = await SystemUI.confirm({
+            title: "Delete Schedule",
+            message: "Are you sure you want to delete this schedule?",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+        })
+        if (!confirmed) return
         try {
             await axios.delete(`/production-schedule/${id}`)
             SystemUI.toast({ message: 'Schedule deleted.', type: 'success' })
@@ -173,6 +183,10 @@ export default function ProductionSchedule() {
     }
 
     const rows: ScheduleRow[] = schedules as ScheduleRow[]
+    
+    // Pagination logic
+    const totalPages = Math.ceil(rows.length / perPage)
+    const pagedRows = rows.slice((page - 1) * perPage, page * perPage)
 
     return (
         <div className="py-4 px-2.5 sm:px-6 space-y-5">
@@ -245,7 +259,7 @@ export default function ProductionSchedule() {
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.length > 0 ? rows.map(r => (
+                        {pagedRows.length > 0 ? pagedRows.map(r => (
                             <tr key={r.id} className="hover:bg-slate-50 transition-colors">
                                 <td className="font-bold text-blue-700 font-mono" style={{ textAlign: 'left' }}>{r.spk || '-'}</td>
                                 <td className="font-mono text-slate-600" style={{ textAlign: 'center' }}>{r.po || '-'}</td>
@@ -308,6 +322,34 @@ export default function ProductionSchedule() {
                         </tfoot>
                     )}
                 </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
+                <div className="flex items-center gap-3">
+                    <span className="text-xs text-slate-500">
+                        Showing {rows.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, rows.length)} of {rows.length}
+                    </span>
+                    <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                        <span className="text-xs text-slate-500">Rows per page:</span>
+                        <select
+                            value={perPage}
+                            onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
+                            className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                        >
+                            {[5, 10, 25, 50].map(n => (
+                                <option key={n} value={n}>{n}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                <div className="flex gap-1">
+                    <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                        <button key={p} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-secondary'} min-w-[30px] justify-center`} onClick={() => setPage(p)}>{p}</button>
+                    ))}
+                    <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
+                </div>
             </div>
 
             {/* Add / Edit Modal */}
