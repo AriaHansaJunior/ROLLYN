@@ -313,6 +313,8 @@ export default function IncomingRoll() {
         }
     }
 
+    // Removed handleUpdateTph from here since it's moved/removed as requested
+
     async function handleSave() {
         const payload = {
             rollNumber: form.rollNumber,
@@ -438,16 +440,16 @@ export default function IncomingRoll() {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                                            Daftar JOP Belum Selesai (Target Produksi)
+                                            Incomplete JOP List (Production Target)
                                         </h3>
                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
                                             {
                                                 (jopList || []).filter((j: any) => (Number(j.quantity) || 1) > (j.rolls ? j.rolls.length : 0)).length
-                                            } JOP Aktif
+                                            } Active JOPs
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-slate-500">
-                                        Memantau sisa roll yang masih dibutuhkan untuk melengkapi setiap Job Order Production
+                                        Monitor the remaining rolls needed to complete each Job Order Production
                                     </p>
                                 </div>
                             </div>
@@ -459,7 +461,7 @@ export default function IncomingRoll() {
                                         type="text"
                                         value={jopSearch}
                                         onChange={(e) => setJopSearch(e.target.value)}
-                                        placeholder="Cari JOP, SPK, Customer..."
+                                        placeholder="Search JOP, SPK, Customer..."
                                         className="bg-transparent border-none outline-none text-xs w-full text-slate-800 placeholder:text-slate-400"
                                     />
                                 </div>
@@ -472,31 +474,27 @@ export default function IncomingRoll() {
                                 <thead>
                                     <tr>
                                         <th style={{ textAlign: "left" }}>JOP Number</th>
-                                        <th style={{ textAlign: "center" }}>SPK</th>
                                         <th style={{ textAlign: "center" }}>Customer</th>
                                         <th style={{ textAlign: "center" }}>Grade / GSM</th>
-                                        <th style={{ textAlign: "center" }}>Target</th>
-                                        <th style={{ textAlign: "center" }}>Realisasi</th>
-                                        <th style={{ textAlign: "center" }}>Kurang (Sisa Butuh)</th>
-                                        <th style={{ textAlign: "center" }}>Progress</th>
-                                        <th style={{ textAlign: "center" }}>Pilih JOP</th>
+                                        <th style={{ textAlign: "center" }}>Target Tonnage</th>
+                                        <th style={{ textAlign: "center" }}>Actual Prod</th>
+                                        <th style={{ textAlign: "center" }}>Remaining</th>
+                                        <th style={{ textAlign: "center" }}>TPH</th>
+                                        <th style={{ textAlign: "center" }}>Est. Duration</th>
+                                        <th style={{ textAlign: "center" }}>Est. Finish</th>
+                                        <th style={{ textAlign: "center" }}>Est. COP/GSM</th>
+                                        <th style={{ textAlign: "center" }}>Select JOP</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(() => {
                                         const incomplete = (jopList || [])
                                             .map((j: any) => {
-                                                const target = Number(j.quantity) || 1;
-                                                const completed = j.rolls ? j.rolls.length : 0;
-                                                const remaining = Math.max(0, target - completed);
-                                                const progress = Math.min(100, Math.round((completed / target) * 100));
+                                                const est = j.production_estimation || {};
                                                 return {
                                                     ...j,
-                                                    target,
-                                                    completed,
-                                                    remaining,
-                                                    progress,
-                                                    isCompleted: completed >= target,
+                                                    est,
+                                                    isCompleted: est.is_completed || false,
                                                 };
                                             })
                                             .filter((j: any) => !j.isCompleted)
@@ -516,7 +514,7 @@ export default function IncomingRoll() {
                                             return (
                                                 <tr>
                                                     <td colSpan={9} className="text-center py-6 text-slate-400">
-                                                        {jopSearch ? "Tidak ada JOP yang cocok dengan pencarian." : "Semua target JOP telah selesai 100%!"}
+                                                        {jopSearch ? "No JOPs matched your search." : "All JOP targets have been completed 100%!"}
                                                     </td>
                                                 </tr>
                                             );
@@ -550,35 +548,34 @@ export default function IncomingRoll() {
                                                         </span>
                                                     </td>
                                                     <td className="font-semibold text-slate-700" style={{ textAlign: "center" }}>
-                                                        {j.target} Roll
+                                                        {j.est?.target_tonnage ?? "-"} Ton
                                                     </td>
                                                     <td className="font-bold text-slate-900" style={{ textAlign: "center" }}>
-                                                        {j.completed} Roll
+                                                        {j.est?.actual_tonnage ?? "-"} Ton
                                                     </td>
                                                     <td style={{ textAlign: "center" }}>
                                                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-amber-100 text-amber-800 border border-amber-200">
-                                                            Kurang {j.remaining} Roll
+                                                            Remaining {j.est?.remaining_tonnage ?? "-"} Ton
                                                         </span>
                                                     </td>
-                                                    <td style={{ textAlign: "center" }}>
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                                <div
-                                                                    className="h-full bg-blue-600 rounded-full"
-                                                                    style={{ width: `${j.progress}%` }}
-                                                                />
-                                                            </div>
-                                                            <span className="text-[11px] font-bold text-slate-700 w-8 text-right">
-                                                                {j.progress}%
-                                                            </span>
-                                                        </div>
+                                                    <td className="font-semibold text-slate-700" style={{ textAlign: "center" }}>
+                                                        {j.est?.tph ?? "-"}
+                                                    </td>
+                                                    <td className="font-mono text-slate-700" style={{ textAlign: "center" }}>
+                                                        {j.est?.estimated_duration_formatted ?? "N/A"}
+                                                    </td>
+                                                    <td className="font-mono text-slate-900 text-[11px]" style={{ textAlign: "center" }}>
+                                                        {j.est?.estimated_finish_time ?? "N/A"}
+                                                    </td>
+                                                    <td className="font-mono text-slate-600 text-[11px]" style={{ textAlign: "center" }}>
+                                                        {j.est?.cop_gsm_change_estimate ?? "N/A"}
                                                     </td>
                                                     <td style={{ textAlign: "center" }}>
                                                         <button
                                                             onClick={() => {
                                                                 handleJopSelect(j.jop);
                                                                 SystemUI.toast({
-                                                                    message: `JOP ${j.jop} dipilih untuk input roll!`,
+                                                                    message: `JOP ${j.jop} selected for roll input!`,
                                                                     type: "success",
                                                                 });
                                                             }}
@@ -587,15 +584,15 @@ export default function IncomingRoll() {
                                                                     ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
                                                                     : "btn-primary"
                                                             }`}
-                                                            title="Pilih JOP ini untuk diisi di Form Data"
+                                                            title="Select this JOP to fill in Form Data"
                                                         >
                                                             {isSelected ? (
                                                                 <>
                                                                     <Check size={12} />
-                                                                    <span>Terpilih</span>
+                                                                    <span>Selected</span>
                                                                 </>
                                                             ) : (
-                                                                <span>Pilih</span>
+                                                                <span>Select</span>
                                                             )}
                                                         </button>
                                                     </td>

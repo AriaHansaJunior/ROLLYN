@@ -3,6 +3,7 @@ import { Search, Filter, Plus, X, Eye, Printer, FileSpreadsheet } from 'lucide-r
 import { usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import axios from 'axios'
+import { router } from '@inertiajs/react'
 
 interface CustomerItem { id: number; customer: string }
 interface GradeItem { id: number; grade: string }
@@ -39,6 +40,7 @@ export default function Jop() {
   const [customGsm, setCustomGsm] = useState('')
 
   const processedJop = jopData.map((r: any) => {
+    const est = r.production_estimation || {};
     const target = r.quantity || 1
     const completed = r.rolls ? r.rolls.length : 0
     const progress = Math.round((completed / target) * 100)
@@ -63,7 +65,7 @@ export default function Jop() {
       progress,
       status,
       colorClass,
-      barBg
+      barBg,
     }
   })
 
@@ -81,6 +83,7 @@ export default function Jop() {
 
   const totalPages = Math.ceil(filtered.length / perPage)
   const paged = filtered.slice((page - 1) * perPage, page * perPage)
+
 
   function openAddModal() {
     setForm({ spk: '', jop: '', po: '', customers_id: '', grades_id: '', gsms_id: '', quantity: '1', noted_order: '' })
@@ -138,6 +141,7 @@ export default function Jop() {
       jop: form.jop,
       po: form.po,
       quantity: Number(form.quantity) || 1,
+      tph: form.tph ? Number(form.tph) : null,
       noted_order: form.noted_order,
     }
 
@@ -436,13 +440,12 @@ ${pageBlocks.join('\n')}
           <colgroup>
             <col className="w-[140px] lg:w-[130px]" />
             <col className="w-[140px] lg:w-[130px]" />
-            <col className="w-[140px] lg:w-[130px]" />
             <col className="w-[160px] lg:w-[140px]" />
             <col className="w-[90px] lg:w-[80px]" />
             <col className="w-[70px] lg:w-[60px]" />
             <col className="w-[85px] lg:w-[80px]" />
             <col className="w-[85px] lg:w-[80px]" />
-            <col className="w-[85px] lg:w-[80px]" />
+            <col className="w-[100px] lg:w-[90px]" />
             <col className="w-[140px] lg:w-[130px]" />
             <col className="w-[90px] lg:w-[80px]" />
           </colgroup>
@@ -455,10 +458,9 @@ ${pageBlocks.join('\n')}
               <th style={{ textAlign: 'center' }}>Grade</th>
               <th style={{ textAlign: 'center' }}>GSM</th>
               <th style={{ textAlign: 'center' }}>Target</th>
-              <th style={{ textAlign: 'center' }}>Realisasi</th>
-              <th style={{ textAlign: 'center' }}>Sisa</th>
+              <th style={{ textAlign: 'center' }}>Actual</th>
               <th style={{ textAlign: 'center' }}>Progress</th>
-              <th style={{ textAlign: 'center' }}>Aksi</th>
+              <th style={{ textAlign: 'center' }}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -472,7 +474,6 @@ ${pageBlocks.join('\n')}
                 <td style={{ textAlign: 'center' }}>{r.gsm}</td>
                 <td className="font-semibold" style={{ textAlign: 'center' }}>{r.target}</td>
                 <td className="font-bold text-slate-900" style={{ textAlign: 'center' }}>{r.rolls}</td>
-                <td className="font-bold text-amber-600" style={{ textAlign: 'center' }}>{r.sisa}</td>
                 <td style={{ textAlign: 'center' }}>
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-full max-w-[70px] h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -493,7 +494,7 @@ ${pageBlocks.join('\n')}
               </tr>
             )) : (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                   No JOP records found.
                 </td>
               </tr>
@@ -654,17 +655,33 @@ ${pageBlocks.join('\n')}
               </div>
 
               {/* Target Rolls Input */}
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Target Rolls <span className="text-red-500">*</span></label>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.quantity}
-                  onChange={e => { setForm(f => ({ ...f, quantity: e.target.value })); if (formErrors.quantity) setFormErrors(err => ({ ...err, quantity: '' })) }}
-                  className={`form-input w-full ${formErrors.quantity ? 'border-red-500 focus:ring-red-200' : ''}`}
-                  placeholder="e.g. 10"
-                />
-                {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
+              <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Target Rolls <span className="text-red-500">*</span></label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={form.quantity}
+                      onChange={e => { setForm(f => ({ ...f, quantity: e.target.value })); if (formErrors.quantity) setFormErrors(err => ({ ...err, quantity: '' })) }}
+                      className={`form-input w-full ${formErrors.quantity ? 'border-red-500 focus:ring-red-200' : ''}`}
+                      placeholder="e.g. 10"
+                    />
+                    {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">TPH Target</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={form.tph}
+                      onChange={e => { setForm(f => ({ ...f, tph: e.target.value })); if (formErrors.tph) setFormErrors(err => ({ ...err, tph: '' })) }}
+                      className={`form-input w-full ${formErrors.tph ? 'border-red-500 focus:ring-red-200' : ''}`}
+                      placeholder="e.g. 5.00"
+                    />
+                    {formErrors.tph && <p className="text-red-600 text-[11px] mt-1">{formErrors.tph}</p>}
+                  </div>
               </div>
 
               {/* Notes Input */}
@@ -694,7 +711,7 @@ ${pageBlocks.join('\n')}
       {/* JOP Detail Modal */}
       {selectedJopDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Production Results: {selectedJopDetail.jop}</h3>
@@ -707,6 +724,48 @@ ${pageBlocks.join('\n')}
                 <X size={18} />
               </button>
             </div>
+
+            <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="block text-slate-500 mb-1">Target Tonnage</span>
+                    <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.target_tonnage ?? "-"} Ton</strong>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="block text-slate-500 mb-1">Actual Tonnage</span>
+                    <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.actual_tonnage ?? "-"} Ton</strong>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="block text-slate-500 mb-1">Remaining Ton</span>
+                    <strong className="text-amber-700 text-xs">{selectedJopDetail.est?.remaining_tonnage ?? "-"} Ton</strong>
+                </div>
+                <div className="p-2.5 rounded-lg bg-blue-50/50 border border-blue-100">
+                    <span className="block text-blue-600 font-semibold mb-1">TPH Input</span>
+                    <input
+                        type="number"
+                        step="0.01"
+                        defaultValue={selectedJopDetail.est?.tph ?? ""}
+                        placeholder="5.00"
+                        className="form-input text-xs w-full text-center p-1 h-6"
+                        onBlur={(e) => {
+                            if (e.target.value && e.target.value !== String(selectedJopDetail.est?.tph)) {
+                                handleUpdateTph(selectedJopDetail.id, e.target.value);
+                            }
+                        }}
+                    />
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="block text-slate-500 mb-1">Est. Duration</span>
+                    <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.estimated_duration_formatted ?? "N/A"}</strong>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="block text-slate-500 mb-1">Est. Finish</span>
+                    <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.estimated_finish_time ?? "N/A"}</strong>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="block text-slate-500 mb-1">COP/GSM Change</span>
+                    <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.cop_gsm_change_estimate ?? "N/A"}</strong>
+                </div>
+            </div>
             
             <div className="p-4 overflow-y-auto bg-slate-50 flex-1">
               <div className="card overflow-x-auto bg-white border border-slate-200">
@@ -714,14 +773,14 @@ ${pageBlocks.join('\n')}
                   <thead>
                     <tr>
                       <th style={{ textAlign: 'center' }}>No</th>
-                      <th style={{ textAlign: 'left' }}>Nomor Roll</th>
-                      <th style={{ textAlign: 'center' }}>Tgl Input</th>
+                      <th style={{ textAlign: 'left' }}>Roll Number</th>
+                      <th style={{ textAlign: 'center' }}>Entry Date</th>
                       <th style={{ textAlign: 'center' }}>Shift</th>
-                      <th style={{ textAlign: 'center' }}>Grade Aktual</th>
-                      <th style={{ textAlign: 'center' }}>GSM Aktual</th>
-                      <th style={{ textAlign: 'center' }}>Berat (kg)</th>
-                      <th style={{ textAlign: 'center' }}>Status Roll</th>
-                      <th style={{ textAlign: 'center' }}>Aksi</th>
+                      <th style={{ textAlign: 'center' }}>Actual Grade</th>
+                      <th style={{ textAlign: 'center' }}>Actual GSM</th>
+                      <th style={{ textAlign: 'center' }}>Weight (kg)</th>
+                      <th style={{ textAlign: 'center' }}>Status</th>
+                      <th style={{ textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -733,7 +792,7 @@ ${pageBlocks.join('\n')}
                             <button
                               onClick={() => setSelectedRollPopup(roll)}
                               className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer font-bold font-mono"
-                              title="Klik untuk melihat detail lengkap roll"
+                              title="Click to view full roll details"
                             >
                               <span>{roll.no_roll || `R-${roll.no}`}</span>
                               <Eye size={12} className="opacity-60" />
@@ -753,7 +812,7 @@ ${pageBlocks.join('\n')}
                             <button
                               onClick={() => setSelectedRollPopup(roll)}
                               className="btn btn-secondary btn-sm py-1 px-2.5 text-[11px] flex items-center gap-1 mx-auto cursor-pointer"
-                              title="Lihat Detail Roll"
+                              title="View Roll Details"
                             >
                               <Eye size={12} />
                               <span>Detail</span>
@@ -764,7 +823,7 @@ ${pageBlocks.join('\n')}
                     ) : (
                       <tr>
                         <td colSpan={9} className="text-center py-8 text-slate-500">
-                          Belum ada roll yang dihasilkan untuk JOP ini.
+                          No rolls generated for this JOP yet.
                         </td>
                       </tr>
                     )}

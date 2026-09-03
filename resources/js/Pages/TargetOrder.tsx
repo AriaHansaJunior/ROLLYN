@@ -52,8 +52,10 @@ export default function TargetOrder() {
             <col className="w-[110px] lg:w-[90px]" />
             <col className="w-[80px] lg:w-[60px]" />
             <col className="w-[90px] lg:w-[70px]" />
-            <col className="w-[90px] lg:w-[70px]" />
             <col className="w-[100px] lg:w-[80px]" />
+            <col className="w-[100px] lg:w-[80px]" />
+            <col className="w-[80px] lg:w-[70px]" />
+            <col className="w-[120px] lg:w-[100px]" />
             <col className="w-[100px] lg:w-[80px]" />
             <col className="w-[150px] lg:w-[120px]" />
           </colgroup>
@@ -67,7 +69,9 @@ export default function TargetOrder() {
               <th style={{ textAlign: 'center' }}>GSM</th>
               <th style={{ textAlign: 'center' }}>RW (mm)</th>
               <th style={{ textAlign: 'center' }}>Qty Roll</th>
-              <th style={{ textAlign: 'center' }}>Weight (kg)</th>
+              <th style={{ textAlign: 'center' }}>Target (kg)</th>
+              <th style={{ textAlign: 'center' }}>TPH</th>
+              <th style={{ textAlign: 'center' }}>Est. Finish</th>
               <th style={{ textAlign: 'center' }}>Container</th>
               <th style={{ textAlign: 'center' }}>Notes</th>
             </tr>
@@ -84,12 +88,14 @@ export default function TargetOrder() {
                 <td style={{ textAlign: 'center' }}>{r.rolls_width?.width || r.rollsWidth?.width || '-'}</td>
                 <td className="font-bold" style={{ textAlign: 'center' }}>{r.quantity || 0}</td>
                 <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{(r.weight || 0).toLocaleString('id-ID')}</td>
+                <td style={{ textAlign: 'center' }}>{r.production_estimation?.tph ?? '-'}</td>
+                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.production_estimation?.estimated_finish_time ?? 'N/A'}</td>
                 <td style={{ textAlign: 'center' }}>{r.container || '-'}</td>
                 <td className={`text-xs ${r.noted_order ? 'text-slate-700' : 'text-slate-400 italic'}`} style={{ textAlign: 'center' }}>{r.noted_order || 'No notes'}</td>
               </tr>
             )) : (
               <tr>
-                <td colSpan={11} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={13} className="px-4 py-8 text-center text-slate-500">
                   No target orders found in the database.
                 </td>
               </tr>

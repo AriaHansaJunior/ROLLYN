@@ -17,6 +17,7 @@ import {
     Layers,
     Sparkles,
     History,
+    Calendar,
 } from "lucide-react";
 import { Link, usePage } from "@inertiajs/react";
 
@@ -37,6 +38,7 @@ const navSections = [
         label: "Production",
         items: [
             { id: "incoming-roll", label: "Incoming Roll", icon: TruckIcon },
+            { id: "production-schedule", label: "Production Schedule", icon: Calendar },
             { id: "ocr-monitoring", label: "OCR Monitoring", icon: Eye },
         ],
     },

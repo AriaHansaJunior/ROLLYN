@@ -59,6 +59,12 @@ Route::middleware('auth')->group(function () {
 
         Route::put('/locations/bulk-update', [\App\Http\Controllers\LocationController::class, 'bulkUpdate']);
         Route::put('/locations/{id}', [\App\Http\Controllers\LocationController::class, 'update']);
+
+        // Production Schedule — Admin + PPIC only
+        Route::get('/production-schedule', [\App\Http\Controllers\ProductionScheduleController::class, 'index']);
+        Route::post('/production-schedule', [\App\Http\Controllers\ProductionScheduleController::class, 'store']);
+        Route::put('/production-schedule/{id}', [\App\Http\Controllers\ProductionScheduleController::class, 'update']);
+        Route::delete('/production-schedule/{id}', [\App\Http\Controllers\ProductionScheduleController::class, 'destroy']);
     });
 
     // 4. ADMIN + PRODUCTION
@@ -69,7 +75,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/api/spectrum/recommend-location', [SpectrumEngineController::class, 'recommendLocation']);
     });
 
-    // 5. ADMIN + QC
+
+
+    // 6. ADMIN + QC
     Route::middleware('role:admin,qc')->group(function () {
         Route::post('/shipments/qc/scan', [ShipmentController::class, 'qcScan']);
         Route::post('/shipments/qc/reject', [ShipmentController::class, 'qcReject']);

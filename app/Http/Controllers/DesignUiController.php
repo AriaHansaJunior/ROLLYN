@@ -77,7 +77,7 @@ class DesignUiController extends Controller
     }
     public function ocrMonitoring() { return Inertia::render('OcrMonitoring'); }
     public function targetOrder() { 
-        $orders = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])->latest()->get();
+        $orders = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'rolls'])->latest()->get();
         return Inertia::render('TargetOrder', ['targetOrders' => $orders]); 
     }
     public function jop() { 

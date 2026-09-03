@@ -118,6 +118,7 @@ class JopController extends Controller
         return response()->json($jop);
     }
 
+
     public function exportExcel()
     {
         $rolls = \App\Models\Roll::with([
