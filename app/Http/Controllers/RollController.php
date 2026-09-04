@@ -6,6 +6,7 @@ use App\Models\Roll;
 use App\Models\Location;
 use App\Models\Shift;
 use App\Models\Grade;
+use App\Models\Gsm;
 use App\Models\Jop;
 use App\Models\LocationRecommendationLog;
 use Illuminate\Http\Request;
@@ -123,6 +124,7 @@ class RollController extends Controller
             'rolls' => $rolls,
             'shifts' => $shifts,
             'grades' => $grades,
+            'gsms' => Gsm::all(),
             'locations' => $locations,
             'jops' => $jops,
             'customers' => $customers,
@@ -229,8 +231,9 @@ class RollController extends Controller
 
         $newStatus = $request->input('status');
         if ($roll->status === 'HOLD' && $newStatus === 'OK') {
-            if (Auth::user()->role !== 'qc') {
-                return redirect()->back()->with('error', 'Only QC can change Roll status from HOLD to OK.');
+            $userRole = strtolower(Auth::user()->role ?? '');
+            if (!in_array($userRole, ['qc', 'admin'])) {
+                return redirect()->back()->with('error', 'Only QC and Admin can change Roll status from HOLD to OK.');
             }
         }
 

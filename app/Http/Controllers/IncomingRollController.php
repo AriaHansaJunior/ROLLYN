@@ -31,6 +31,35 @@ class IncomingRollController extends Controller
         return response()->json(['weight' => session('incoming_roll_weight')]);
     }
 
+    public function checkRollNumber(Request $request)
+    {
+        $rollNumber = trim($request->input('rollNumber', ''));
+        if (!$rollNumber) {
+            return response()->json(['exists' => false]);
+        }
+
+        $roll = Roll::where('no_roll', $rollNumber)
+            ->with(['grade', 'gsm', 'shift', 'jop'])
+            ->first();
+
+        if ($roll) {
+            return response()->json([
+                'exists' => true,
+                'message' => "Nomor Roll '{$rollNumber}' sudah terdaftar di database!",
+                'roll' => [
+                    'no_roll' => $roll->no_roll,
+                    'grade' => $roll->grade?->grade ?? '-',
+                    'gsm' => $roll->gsm?->gsm ?? '-',
+                    'shift' => $roll->shift?->shift ?? '-',
+                    'entry_date' => $roll->entry_date,
+                    'status' => $roll->status ?? 'OK',
+                ]
+            ]);
+        }
+
+        return response()->json(['exists' => false]);
+    }
+
     public function recommendFormNumber(Request $request)
     {
         $jopCode = $request->input('jop');
@@ -38,19 +67,22 @@ class IncomingRollController extends Controller
         $widthVal = $request->input('width');
         $entryDate = $request->input('entry_date');
 
-        if ($jopCode && $gradeName && $widthVal && $entryDate) {
+        if ($jopCode && $gradeName && $widthVal) {
             $jop = Jop::where('jop', trim($jopCode))->first();
             $grade = Grade::where('grade', trim($gradeName))->first();
             $width = RollsWidth::where('width', floatval($widthVal))->first();
 
             if ($jop && $grade && $width) {
-                $existingRoll = Roll::where('jops_id', $jop->id)
+                $query = Roll::where('jops_id', $jop->id)
                     ->where('grades_id', $grade->id)
                     ->where('rolls_widths_id', $width->id)
-                    ->where('entry_date', $entryDate)
-                    ->whereNotNull('form')
-                    ->orderBy('created_at', 'desc')
-                    ->first();
+                    ->whereNotNull('form');
+
+                if ($entryDate) {
+                    $query->where('entry_date', $entryDate);
+                }
+
+                $existingRoll = $query->orderBy('created_at', 'desc')->first();
 
                 if ($existingRoll) {
                     return response()->json(['formNumber' => $existingRoll->form]);
@@ -267,7 +299,7 @@ class IncomingRollController extends Controller
                     'no_roll'            => $rollNumber,
                     'form'               => $formNum,
                     'shifts_id'          => $shift->id,
-                    'entry_date'         => now()->toDateString(),
+                    'entry_date'         => $entryDate,
                     'grades_id'          => $grade->id,
                     'plybonds_id'        => $plybondId,
                     'thicknesses_id'     => $thicknessId,

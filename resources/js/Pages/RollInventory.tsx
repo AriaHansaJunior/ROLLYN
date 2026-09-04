@@ -23,6 +23,7 @@ interface RollItem {
   grade: string
   grades_id?: number
   gsm: number
+  gsms_id?: number
   weight: number
   width: number
   location: string
@@ -82,6 +83,7 @@ interface Props {
   rolls?: RollItem[]
   shifts?: OptionItem[]
   grades?: OptionItem[]
+  gsms?: { id: number; gsm: number }[]
   locations?: OptionItem[]
   jops?: OptionItem[]
   customers?: { id: number, customer: string }[]
@@ -101,6 +103,7 @@ export default function RollInventory({
   rolls = [],
   shifts = [],
   grades = [],
+  gsms = [],
   locations = [],
   jops = [],
   customers = [],
@@ -153,6 +156,7 @@ export default function RollInventory({
     shifts_id: 1,
     entry_date: '',
     grades_id: 1,
+    gsms_id: '',
     weight: 0,
     locations_id: '',
     jops_id: '',
@@ -442,6 +446,7 @@ export default function RollInventory({
       shifts_id: r.shifts_id || (shifts[0]?.id ?? 1),
       entry_date: r.date && r.date !== '—' ? r.date : new Date().toISOString().slice(0, 10),
       grades_id: r.grades_id || (grades[0]?.id ?? 1),
+      gsms_id: r.gsms_id ? String(r.gsms_id) : '',
       weight: r.weight || 0,
       locations_id: r.locations_id ? String(r.locations_id) : '',
       jops_id: r.jops_id ? String(r.jops_id) : '',
@@ -753,6 +758,7 @@ export default function RollInventory({
 
   const queuedRollsCount = rolls.filter(r => r.in_shipment_queue).length
   const unqueuedRollsCount = rolls.filter(r => !r.in_shipment_queue).length
+  const holdRollsCount = rolls.filter(r => r.roll_status === 'HOLD').length
 
   const cols: { key: string; label: string }[] = [
     { key: 'shift', label: 'SHIFT' },
@@ -863,11 +869,11 @@ export default function RollInventory({
                   <select
                     value={qcStatusFilter}
                     onChange={e => { setQcStatusFilter(e.target.value); setPage(1) }}
-                    className="form-input text-xs py-1.5 min-w-[110px] w-auto"
+                    className="form-input text-xs py-1.5 min-w-[125px] w-auto font-medium"
                   >
-                    <option value="All">All QC Status</option>
-                    <option value="OK">OK</option>
-                    <option value="HOLD">HOLD</option>
+                    <option value="All">All Label Status</option>
+                    <option value="OK">OK (Released)</option>
+                    <option value="HOLD">HOLD (Verification)</option>
                   </select>
                 </div>
               </div>
@@ -904,6 +910,21 @@ export default function RollInventory({
                 >
                   <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                   Shipment Queued ({queuedRollsCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQcStatusFilter(qcStatusFilter === 'HOLD' ? 'All' : 'HOLD');
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    qcStatusFilter === 'HOLD'
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  HOLD Verification ({holdRollsCount})
                 </button>
               </div>
 
@@ -1042,6 +1063,18 @@ export default function RollInventory({
                           >
                             {r.status}
                           </span>
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              r.roll_status === 'HOLD'
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            }`}
+                          >
+                            Label: {r.roll_status || 'OK'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            Visual: {r.visual || 'OK'}
+                          </span>
                           {isQueued && (
                             <span
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full"
@@ -1065,9 +1098,13 @@ export default function RollInventory({
                           </button>
                           )}
                           <button
-                            className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                            className={`p-1.5 rounded transition-colors cursor-pointer border ${
+                              r.roll_status === 'HOLD'
+                                ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 shadow-xs'
+                                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 border-slate-200'
+                            }`}
                             onClick={() => openEdit(r)}
-                            title="Edit Roll Data"
+                            title={r.roll_status === 'HOLD' ? 'Verifikasi & Rilis HOLD Roll' : 'Edit Roll Data'}
                           >
                             <Edit size={14} />
                           </button>
@@ -1872,6 +1909,20 @@ export default function RollInventory({
               </div>
 
               <div>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">GSM (g/m²)</label>
+                <select
+                  value={editForm.gsms_id}
+                  onChange={e => setEditForm(f => ({ ...f, gsms_id: e.target.value }))}
+                  className="form-input w-full"
+                >
+                  <option value="">Default from JOP</option>
+                  {gsms.map(g => (
+                    <option key={g.id} value={g.id}>{g.gsm} g/m²</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Weight (kg)</label>
                 <input
                   type="number"
@@ -1935,21 +1986,25 @@ export default function RollInventory({
               </div>
               
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Roll Status</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Label Status (Roll Status)</label>
                 <select
-                  className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed font-semibold"
                   value={editForm.status}
                   onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
-                  disabled={!isQC && editingRoll?.roll_status === 'HOLD'}
+                  disabled={!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD'}
                 >
-                  <option value="OK">OK</option>
-                  <option value="HOLD">HOLD</option>
+                  <option value="OK">OK (Released / Passed)</option>
+                  <option value="HOLD">HOLD (Pending QC Verification)</option>
                 </select>
-                {!isQC && editingRoll?.roll_status === 'HOLD' && (
+                {!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD' ? (
                   <p className="text-[10px] text-amber-600 font-semibold mt-1">
-                    Only QC can release HOLD status
+                    Hanya QC dan Admin yang berwenang merilis status HOLD ke OK
                   </p>
-                )}
+                ) : editingRoll?.roll_status === 'HOLD' ? (
+                  <p className="text-[10px] text-emerald-600 font-semibold mt-1">
+                    ✓ QC/Admin: Anda dapat merilis status HOLD menjadi OK setelah memverifikasi spesifikasi aktual.
+                  </p>
+                ) : null}
               </div>
             </div>
 

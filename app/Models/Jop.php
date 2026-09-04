@@ -28,6 +28,21 @@ class Jop extends Model
         return $this->belongsTo(RollsWidth::class, 'rolls_widths_id');
     }
 
+    public function plybond()
+    {
+        return $this->belongsTo(Plybond::class, 'plybonds_id');
+    }
+
+    public function thickness()
+    {
+        return $this->belongsTo(Thickness::class, 'thicknesses_id');
+    }
+
+    public function core()
+    {
+        return $this->belongsTo(Core::class, 'cores_id');
+    }
+
     public function rolls()
     {
         return $this->hasMany(Roll::class, 'jops_id');

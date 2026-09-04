@@ -113,6 +113,36 @@ export default function IncomingRoll() {
     }, [savedRollNumber]);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [duplicateWarning, setDuplicateWarning] = useState<any>(null);
+    const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+
+    useEffect(() => {
+        const trimmed = (form.rollNumber || '').trim();
+        if (!trimmed || trimmed === savedRollNumber) {
+            setDuplicateWarning(null);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setIsCheckingDuplicate(true);
+            axios.get(`/incoming-roll/check-roll-number?rollNumber=${encodeURIComponent(trimmed)}`)
+                .then(res => {
+                    if (res.data?.exists) {
+                        setDuplicateWarning(res.data);
+                    } else {
+                        setDuplicateWarning(null);
+                    }
+                })
+                .catch(() => {
+                    setDuplicateWarning(null);
+                })
+                .finally(() => {
+                    setIsCheckingDuplicate(false);
+                });
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [form.rollNumber, savedRollNumber]);
 
     useEffect(() => {
         if (!form.jop) return;
@@ -254,12 +284,45 @@ export default function IncomingRoll() {
             }
         }
 
+        let plybondVal = "";
+        if (found) {
+            const pb = found.plybond;
+            if (typeof pb === "object" && pb !== null && "plybonds" in pb) {
+                plybondVal = String(pb.plybonds);
+            } else if (pb !== undefined && pb !== null) {
+                plybondVal = String(pb);
+            }
+        }
+
+        let thicknessVal = "";
+        if (found) {
+            const th = found.thickness;
+            if (typeof th === "object" && th !== null && "thickness" in th) {
+                thicknessVal = String(th.thickness);
+            } else if (th !== undefined && th !== null) {
+                thicknessVal = String(th);
+            }
+        }
+
+        let coreVal = "";
+        if (found) {
+            const cr = found.core;
+            if (typeof cr === "object" && cr !== null && "core" in cr) {
+                coreVal = String(cr.core);
+            } else if (cr !== undefined && cr !== null) {
+                coreVal = String(cr);
+            }
+        }
+
         setForm((f) => ({
             ...f,
             jop: selectedJop,
             grade: gradeVal,
             gsm: gsmVal,
             width: widthVal,
+            plybond: plybondVal || f.plybond,
+            thickness: thicknessVal || f.thickness,
+            core: coreVal || f.core,
         }));
 
         setErrors((err) => ({
@@ -267,6 +330,9 @@ export default function IncomingRoll() {
             jop: undefined,
             grade: undefined,
             gsm: undefined,
+            plybond: undefined,
+            thickness: undefined,
+            core: undefined,
         }));
     }
 
@@ -278,8 +344,11 @@ export default function IncomingRoll() {
             errs.grade = "Grade is required (Select JOP first).";
         if (!form.gsm.trim()) errs.gsm = "GSM is required (Select JOP first).";
         if (!form.visual.trim()) errs.visual = "Visual status is required.";
-        if (!form.rollNumber.trim())
+        if (!form.rollNumber.trim()) {
             errs.rollNumber = "Roll number is required.";
+        } else if (duplicateWarning && form.rollNumber !== savedRollNumber) {
+            errs.rollNumber = "Nomor roll sudah terdaftar di database (Anti-Salah). Harap gunakan nomor roll lain.";
+        }
         if (!form.formNumber.trim())
             errs.formNumber = "Form number is required.";
         if (!form.plybond.trim()) errs.plybond = "Plybond is required.";
@@ -429,6 +498,61 @@ export default function IncomingRoll() {
                         onWeightConfirmed={handleWeightConfirmed}
                         roi={SCALE_ROI}
                     />
+
+                    {/* Anti-Salah Quick Roll Number & Barcode Verification Card */}
+                    <div className="card p-3.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-200/80 rounded-xl shadow-xs">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                                    ✓
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-900">
+                                    Anti-Salah Double Roll Verification (Camera / Barcode Check)
+                                </h4>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-medium">
+                                Verifikasi real-time sebelum roll disimpan
+                            </span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <input
+                                type="text"
+                                value={form.rollNumber}
+                                onChange={(e) => setForm((f) => ({ ...f, rollNumber: e.target.value }))}
+                                placeholder="Scan barcode kamera / ketik nomor roll (e.g. R-10425)..."
+                                className="form-input text-xs flex-1 bg-white font-mono"
+                            />
+                            {form.rollNumber.trim() && (
+                                <div className="shrink-0 flex items-center gap-1.5">
+                                    {isCheckingDuplicate ? (
+                                        <span className="text-xs text-slate-500 flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 rounded-lg">
+                                            <RefreshCw size={12} className="animate-spin" /> Memeriksa...
+                                        </span>
+                                    ) : duplicateWarning ? (
+                                        <span className="text-xs font-bold text-red-700 flex items-center gap-1 px-2.5 py-1.5 bg-red-100 border border-red-200 rounded-lg">
+                                            <AlertCircle size={13} /> DUPLIKAT TERDETEKSI
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 border border-emerald-200 rounded-lg">
+                                            <Check size={13} /> NOMOR ROLL AMAN
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        {duplicateWarning && (
+                            <div className="mt-2 text-[11px] text-red-700 bg-white/95 p-2.5 rounded-lg border border-red-200 flex items-start gap-1.5">
+                                <AlertCircle size={14} className="shrink-0 mt-0.5 text-red-600" />
+                                <div>
+                                    <strong className="block font-bold">⚠️ PERINGATAN ANTI-SALAH:</strong>
+                                    <span>{duplicateWarning.message}</span>
+                                    <div className="text-[10px] text-red-600 mt-0.5 font-medium">
+                                        Data di database: Grade {duplicateWarning.roll?.grade} | GSM {duplicateWarning.roll?.gsm} | Shift {duplicateWarning.roll?.shift} | Tgl {duplicateWarning.roll?.entry_date} | Status: {duplicateWarning.roll?.status}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Active Incomplete JOPs Target Tracker */}
                     <div className="card p-4 space-y-3 bg-white border border-slate-200 shadow-xs">
@@ -729,6 +853,9 @@ export default function IncomingRoll() {
                                                 *
                                             </span>
                                         </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Editable / Realisasi Produk Samping)
+                                        </span>
                                     </label>
                                     <input
                                         type="text"
@@ -747,7 +874,7 @@ export default function IncomingRoll() {
                                     )}
                                 </div>
 
-                                {/* GSM (Auto-filled & Disabled) */}
+                                {/* GSM (Editable) */}
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
                                         <span>
@@ -755,6 +882,9 @@ export default function IncomingRoll() {
                                             <span className="text-red-500">
                                                 *
                                             </span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Editable / Realisasi)
                                         </span>
                                     </label>
                                     <input
@@ -839,20 +969,42 @@ export default function IncomingRoll() {
                                                     rollNumber: undefined,
                                                 }));
                                         }}
-                                        className={`form-input w-full ${errors.rollNumber ? "border-red-500" : ""}`}
+                                        className={`form-input w-full font-mono ${errors.rollNumber || duplicateWarning ? "border-red-500 bg-red-50/20" : ""}`}
                                         placeholder="e.g. R-10425"
                                     />
+                                    {isCheckingDuplicate && (
+                                        <p className="text-slate-400 text-[11px] mt-1 flex items-center gap-1">
+                                            <RefreshCw size={11} className="animate-spin" /> Memeriksa nomor roll...
+                                        </p>
+                                    )}
                                     {errors.rollNumber && (
                                         <p className="text-red-600 text-[11px] mt-1">
                                             {errors.rollNumber}
                                         </p>
                                     )}
+                                    {duplicateWarning && (
+                                        <div className="mt-1.5 p-2 rounded bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-1.5 animate-in fade-in">
+                                            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                                            <div>
+                                                <strong className="block font-bold">⚠️ Anti-Salah: Nomor Roll Duplikat!</strong>
+                                                <span>{duplicateWarning.message}</span>
+                                                <div className="text-[10px] text-red-600 mt-0.5">
+                                                    Spek: {duplicateWarning.roll?.grade} | GSM: {duplicateWarning.roll?.gsm} | Shift: {duplicateWarning.roll?.shift} | Status: {duplicateWarning.roll?.status}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Form Number{" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Form Number{" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 font-normal">
+                                            (Jumbo + Grade + RW)
+                                        </span>
                                     </label>
                                     <input
                                         value={form.formNumber}
@@ -878,9 +1030,14 @@ export default function IncomingRoll() {
                                 </div>
 
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Plybond{" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Plybond{" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Rekomendasi PPIC)
+                                        </span>
                                     </label>
                                     <input
                                         type="text"
@@ -908,9 +1065,14 @@ export default function IncomingRoll() {
 
                                 {/* Row 2 */}
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Roll Diameter (mm){" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Roll Diameter (RD) (mm){" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            (Diisi Produksi)
+                                        </span>
                                     </label>
                                     <input
                                         type="number"
@@ -937,9 +1099,14 @@ export default function IncomingRoll() {
                                 </div>
 
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Roll Width (mm){" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Roll Width (RW) (mm){" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            (Diisi Produksi)
+                                        </span>
                                     </label>
                                     <input
                                         type="number"
@@ -966,9 +1133,14 @@ export default function IncomingRoll() {
                                 </div>
 
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Thickness (mm){" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Thickness (mm){" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Rekomendasi PPIC)
+                                        </span>
                                     </label>
                                     <input
                                         type="text"
@@ -996,9 +1168,14 @@ export default function IncomingRoll() {
 
                                 {/* Row 3 */}
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Bulk{" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Bulk{" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            (Diisi Produksi)
+                                        </span>
                                     </label>
                                     <input
                                         type="text"
@@ -1025,12 +1202,17 @@ export default function IncomingRoll() {
                                 </div>
 
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Core (mm){" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Core (mm / &quot;){" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Rekomendasi PPIC)
+                                        </span>
                                     </label>
                                     <input
-                                        type="number"
+                                        type="text"
                                         value={form.core}
                                         onChange={(e) => {
                                             setForm((f) => ({
@@ -1044,7 +1226,7 @@ export default function IncomingRoll() {
                                                 }));
                                         }}
                                         className={`form-input w-full ${errors.core ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 76"
+                                        placeholder="e.g. 3 or 76"
                                     />
                                     {errors.core && (
                                         <p className="text-red-600 text-[11px] mt-1">
@@ -1089,9 +1271,14 @@ export default function IncomingRoll() {
                                 </div>
 
                                 <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Cobb{" "}
-                                        <span className="text-red-500">*</span>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Cobb{" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            (Diisi Produksi)
+                                        </span>
                                     </label>
                                     <input
                                         type="text"
@@ -1180,7 +1367,7 @@ export default function IncomingRoll() {
 
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1">
-                                        Roll Status{" "}
+                                        Label Status (Roll Status){" "}
                                         <span className="text-red-500">*</span>
                                     </label>
                                     <select
@@ -1188,11 +1375,14 @@ export default function IncomingRoll() {
                                         onChange={(e) => {
                                             setForm((f) => ({ ...f, status: e.target.value }));
                                         }}
-                                        className="form-input w-full"
+                                        className="form-input w-full font-semibold"
                                     >
-                                        <option value="OK">OK</option>
-                                        <option value="HOLD">HOLD</option>
+                                        <option value="OK">OK (Standard Passed)</option>
+                                        <option value="HOLD">HOLD (Waiting for QC Spec Verification)</option>
                                     </select>
+                                    <p className="text-slate-400 text-[10px] mt-1">
+                                        Pilih HOLD jika terdapat deviasi spesifikasi yang memerlukan verifikasi QC di gudang.
+                                    </p>
                                 </div>
 
                                 <div>

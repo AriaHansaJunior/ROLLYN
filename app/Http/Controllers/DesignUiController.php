@@ -50,7 +50,7 @@ class DesignUiController extends Controller
     }
 
     public function incomingRoll() { 
-        $jops = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'rolls'])->latest()->get();
+        $jops = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls'])->latest()->get();
 
         // Auto-start SPECTRUM Engine if it's not running
         $connection = @fsockopen('127.0.0.1', 8001, $errno, $errstr, 1);
@@ -77,7 +77,7 @@ class DesignUiController extends Controller
     }
     public function ocrMonitoring() { return Inertia::render('OcrMonitoring'); }
     public function targetOrder() { 
-        $orders = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'rolls'])->latest()->get();
+        $orders = \App\Models\Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls'])->latest()->get();
         return Inertia::render('TargetOrder', ['targetOrders' => $orders]); 
     }
     public function jop() { 
@@ -85,6 +85,10 @@ class DesignUiController extends Controller
             'customer',
             'grade',
             'gsm',
+            'plybond',
+            'thickness',
+            'core',
+            'rollsWidth',
             'rolls.grade',
             'rolls.gsm',
             'rolls.shift',

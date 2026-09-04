@@ -92,7 +92,7 @@ export default function Sidebar({
     // PPIC: operational minus OCR & User Management (dashboard, warehouse-map, roll-inventory, slot-status, target-order, jop, reports, profile)
     const roleAllowedItems: Record<string, string[] | null> = {
         admin: null, // null = all items visible
-        production: ["incoming-roll"],
+        production: ["incoming-roll", "roll-inventory", "jop"],
         qc: ["roll-inventory"], // Removed 'reports' and 'profile'
         ppic: [
             "dashboard",

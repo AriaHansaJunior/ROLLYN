@@ -6,22 +6,28 @@ use App\Models\Jop;
 use App\Models\Customer;
 use App\Models\Grade;
 use App\Models\Gsm;
+use App\Models\Plybond;
+use App\Models\Thickness;
+use App\Models\Core;
 use Illuminate\Http\Request;
 
 class JopController extends Controller
 {
     public function index()
     {
-        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])->get();
+        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core'])->get();
         return response()->json($jops);
     }
 
     public function masterData()
     {
         return response()->json([
-            'customers' => Customer::select('id', 'customer')->orderBy('customer')->get(),
-            'grades'    => Grade::select('id', 'grade')->orderBy('grade')->get(),
-            'gsms'      => Gsm::select('id', 'gsm')->orderBy('gsm')->get(),
+            'customers'   => Customer::select('id', 'customer')->orderBy('customer')->get(),
+            'grades'      => Grade::select('id', 'grade')->orderBy('grade')->get(),
+            'gsms'        => Gsm::select('id', 'gsm')->orderBy('gsm')->get(),
+            'plybonds'    => Plybond::select('id', 'plybonds')->orderBy('plybonds')->get(),
+            'thicknesses' => Thickness::select('id', 'thickness')->orderBy('thickness')->get(),
+            'cores'       => Core::select('id', 'core')->orderBy('core')->get(),
         ]);
     }
 
@@ -40,6 +46,18 @@ class JopController extends Controller
             $gsm = Gsm::firstOrCreate(['gsm' => floatval($request->custom_gsm)]);
             $request->merge(['gsms_id' => $gsm->id]);
         }
+        if ($request->filled('custom_plybond')) {
+            $pb = Plybond::firstOrCreate(['plybonds' => intval($request->custom_plybond)]);
+            $request->merge(['plybonds_id' => $pb->id]);
+        }
+        if ($request->filled('custom_thickness')) {
+            $th = Thickness::firstOrCreate(['thickness' => intval($request->custom_thickness)]);
+            $request->merge(['thicknesses_id' => $th->id]);
+        }
+        if ($request->filled('custom_core')) {
+            $cr = Core::firstOrCreate(['core' => trim($request->custom_core)]);
+            $request->merge(['cores_id' => $cr->id]);
+        }
 
         $validated = $request->validate([
             'spk' => 'required|string|max:45|unique:jops,spk',
@@ -49,6 +67,9 @@ class JopController extends Controller
             'grades_id' => 'required|exists:grades,id',
             'gsms_id' => 'required|exists:gsms,id',
             'rolls_widths_id' => 'nullable|exists:rolls_widths,id',
+            'plybonds_id' => 'nullable|exists:plybonds,id',
+            'thicknesses_id' => 'nullable|exists:thicknesses,id',
+            'cores_id' => 'nullable|exists:cores,id',
             'quantity' => 'nullable|integer',
             'weight' => 'nullable|integer',
             'container' => 'nullable|integer',
@@ -56,7 +77,7 @@ class JopController extends Controller
         ]);
 
         $jop = Jop::create($validated);
-        $jop->load(['customer', 'grade', 'gsm']);
+        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core']);
 
         return response()->json([
             'status' => 'success',
@@ -81,6 +102,18 @@ class JopController extends Controller
             $gsm = Gsm::firstOrCreate(['gsm' => floatval($request->custom_gsm)]);
             $request->merge(['gsms_id' => $gsm->id]);
         }
+        if ($request->filled('custom_plybond')) {
+            $pb = Plybond::firstOrCreate(['plybonds' => intval($request->custom_plybond)]);
+            $request->merge(['plybonds_id' => $pb->id]);
+        }
+        if ($request->filled('custom_thickness')) {
+            $th = Thickness::firstOrCreate(['thickness' => intval($request->custom_thickness)]);
+            $request->merge(['thicknesses_id' => $th->id]);
+        }
+        if ($request->filled('custom_core')) {
+            $cr = Core::firstOrCreate(['core' => trim($request->custom_core)]);
+            $request->merge(['cores_id' => $cr->id]);
+        }
 
         $validated = $request->validate([
             'spk' => 'required|string|max:45|unique:jops,spk,' . $id,
@@ -90,6 +123,9 @@ class JopController extends Controller
             'grades_id' => 'required|exists:grades,id',
             'gsms_id' => 'required|exists:gsms,id',
             'rolls_widths_id' => 'nullable|exists:rolls_widths,id',
+            'plybonds_id' => 'nullable|exists:plybonds,id',
+            'thicknesses_id' => 'nullable|exists:thicknesses,id',
+            'cores_id' => 'nullable|exists:cores,id',
             'quantity' => 'nullable|integer',
             'weight' => 'nullable|integer',
             'container' => 'nullable|integer',
@@ -97,6 +133,7 @@ class JopController extends Controller
         ]);
 
         $jop->update($validated);
+        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core']);
         return response()->json(['message' => 'JOP updated successfully', 'data' => $jop]);
     }
 
@@ -114,7 +151,7 @@ class JopController extends Controller
 
     public function getDetails($id)
     {
-        $jop = Jop::with(['grade', 'gsm', 'rollsWidth'])->findOrFail($id);
+        $jop = Jop::with(['grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core'])->findOrFail($id);
         return response()->json($jop);
     }
 

@@ -8,9 +8,14 @@ import { router } from '@inertiajs/react'
 interface CustomerItem { id: number; customer: string }
 interface GradeItem { id: number; grade: string }
 interface GsmItem { id: number; gsm: number }
+interface PlybondItem { id: number; plybonds: number }
+interface ThicknessItem { id: number; thickness: number }
+interface CoreItem { id: number; core: string }
 
 export default function Jop() {
-  const { jopData = [] } = usePage<any>().props;
+  const { jopData = [], auth } = usePage<any>().props;
+  const currentUserName = auth?.user?.name || auth?.user?.username || '';
+  const currentUserRole = (auth?.user?.role || '').toLowerCase();
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [page, setPage] = useState(1)
@@ -19,6 +24,9 @@ export default function Jop() {
   const [customers, setCustomers] = useState<CustomerItem[]>([])
   const [gradesList, setGradesList] = useState<GradeItem[]>([])
   const [gsmsList, setGsmsList] = useState<GsmItem[]>([])
+  const [plybondsList, setPlybondsList] = useState<PlybondItem[]>([])
+  const [thicknessesList, setThicknessesList] = useState<ThicknessItem[]>([])
+  const [coresList, setCoresList] = useState<CoreItem[]>([])
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [selectedJopDetail, setSelectedJopDetail] = useState<any>(null)
   const [selectedRollPopup, setSelectedRollPopup] = useState<any>(null)
@@ -30,7 +38,11 @@ export default function Jop() {
     customers_id: '',
     grades_id: '',
     gsms_id: '',
+    plybonds_id: '',
+    thicknesses_id: '',
+    cores_id: '',
     quantity: '1',
+    tph: '',
     noted_order: '',
   })
 
@@ -38,6 +50,9 @@ export default function Jop() {
   const [customCustomer, setCustomCustomer] = useState('')
   const [customGrade, setCustomGrade] = useState('')
   const [customGsm, setCustomGsm] = useState('')
+  const [customPlybond, setCustomPlybond] = useState('')
+  const [customThickness, setCustomThickness] = useState('')
+  const [customCore, setCustomCore] = useState('')
 
   const processedJop = jopData.map((r: any) => {
     const est = r.production_estimation || {};
@@ -58,6 +73,9 @@ export default function Jop() {
       customer: r.customer?.customer || '-',
       grade: r.grade?.grade || '-',
       gsm: r.gsm?.gsm || '-',
+      plybond: r.plybond?.plybonds ?? '-',
+      thickness: r.thickness?.thickness ?? '-',
+      core: r.core?.core ?? '-',
       target: target,
       rolls: completed,
       sisa: sisa,
@@ -66,6 +84,8 @@ export default function Jop() {
       status,
       colorClass,
       barBg,
+      est,
+      noted_order: r.noted_order || '',
     }
   })
 
@@ -86,20 +106,42 @@ export default function Jop() {
 
 
   function openAddModal() {
-    setForm({ spk: '', jop: '', po: '', customers_id: '', grades_id: '', gsms_id: '', quantity: '1', noted_order: '' })
+    setForm({ 
+      spk: '', 
+      jop: '', 
+      po: '', 
+      customers_id: '', 
+      grades_id: '', 
+      gsms_id: '', 
+      plybonds_id: '',
+      thicknesses_id: '',
+      cores_id: '',
+      quantity: '1', 
+      tph: '', 
+      noted_order: '' 
+    })
     setCustomCustomer('')
     setCustomGrade('')
     setCustomGsm('')
+    setCustomPlybond('')
+    setCustomThickness('')
+    setCustomCore('')
     setFormErrors({})
 
     axios.get('/jop-master-data').then(res => {
       if (res.data?.customers) setCustomers(res.data.customers)
       if (res.data?.grades) setGradesList(res.data.grades)
       if (res.data?.gsms) setGsmsList(res.data.gsms)
+      if (res.data?.plybonds) setPlybondsList(res.data.plybonds)
+      if (res.data?.thicknesses) setThicknessesList(res.data.thicknesses)
+      if (res.data?.cores) setCoresList(res.data.cores)
     }).catch(() => {
       axios.get('/api/v1/customers').then(res => setCustomers(res.data?.data || [])).catch(() => {})
       axios.get('/api/v1/grades').then(res => setGradesList(res.data?.data || [])).catch(() => {})
       axios.get('/api/v1/gsms').then(res => setGsmsList(res.data?.data || [])).catch(() => {})
+      axios.get('/api/v1/plybonds').then(res => setPlybondsList(res.data?.data || [])).catch(() => {})
+      axios.get('/api/v1/thicknesses').then(res => setThicknessesList(res.data?.data || [])).catch(() => {})
+      axios.get('/api/v1/cores').then(res => setCoresList(res.data?.data || [])).catch(() => {})
     })
 
     setShowModal(true)
@@ -161,6 +203,24 @@ export default function Jop() {
       payload.custom_gsm = customGsm.trim()
     } else {
       payload.gsms_id = Number(form.gsms_id)
+    }
+
+    if (form.plybonds_id === 'NEW_CUSTOM') {
+      if (customPlybond.trim()) payload.custom_plybond = customPlybond.trim()
+    } else if (form.plybonds_id) {
+      payload.plybonds_id = Number(form.plybonds_id)
+    }
+
+    if (form.thicknesses_id === 'NEW_CUSTOM') {
+      if (customThickness.trim()) payload.custom_thickness = customThickness.trim()
+    } else if (form.thicknesses_id) {
+      payload.thicknesses_id = Number(form.thicknesses_id)
+    }
+
+    if (form.cores_id === 'NEW_CUSTOM') {
+      if (customCore.trim()) payload.custom_core = customCore.trim()
+    } else if (form.cores_id) {
+      payload.cores_id = Number(form.cores_id)
     }
 
     axios.post('/jop', payload).then(() => {
@@ -316,9 +376,9 @@ export default function Jop() {
   </table>
   <div class="sig-section">
     <div class="sig-block"><div class="sig-title">Prepared by:</div><div class="sig-name">(Rewinder)</div></div>
-    <div class="sig-block"><div class="sig-title">Submitted by:</div><div class="sig-name">(Production)</div></div>
+    <div class="sig-block"><div class="sig-title">Submitted by:</div><div class="sig-name">${currentUserRole === 'production' ? (currentUserName || 'Production') : '(Production)'}</div></div>
     <div class="sig-block"><div class="sig-title">Controlled by:</div><div class="sig-name">(QA)</div></div>
-    <div class="sig-block"><div class="sig-title">Received by:</div><div class="sig-name">(Warehouse FGS)</div></div>
+    <div class="sig-block"><div class="sig-title">Received by:</div><div class="sig-name">${currentUserRole === 'ppic' || currentUserRole === 'admin' ? `${currentUserName || 'PPIC'} (PPIC)` : '(Warehouse / PPIC)'}</div></div>
   </div>
 </div>`
     )
@@ -469,7 +529,14 @@ ${pageBlocks.join('\n')}
                 <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: 'left' }}>{r.jop}</td>
                 <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.spk}</td>
                 <td className="font-mono text-xs text-slate-600" style={{ textAlign: 'center' }}>{r.po}</td>
-                <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>{r.customer}</td>
+                <td className="font-medium text-slate-900" style={{ textAlign: 'center' }}>
+                  <div>{r.customer}</div>
+                  {r.noted_order && (
+                    <div className="text-[10px] text-amber-700 font-normal italic truncate max-w-[140px] mx-auto" title={r.noted_order}>
+                      Note: {r.noted_order}
+                    </div>
+                  )}
+                </td>
                 <td style={{ textAlign: 'center' }}>{r.grade}</td>
                 <td style={{ textAlign: 'center' }}>{r.gsm}</td>
                 <td className="font-semibold" style={{ textAlign: 'center' }}>{r.target}</td>
@@ -534,9 +601,12 @@ ${pageBlocks.join('\n')}
       {/* Add JOP Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-md p-5 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="card w-full max-w-lg p-5 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Add Job Order Production</h3>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Add Job Order Production</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">Input order PPIC dan rekomendasi spesifikasi produksi</p>
+              </div>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
                 <X size={18} />
               </button>
@@ -602,56 +672,145 @@ ${pageBlocks.join('\n')}
                 {formErrors.customers_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.customers_id}</p>}
               </div>
 
-              {/* Grade Dropdown + Custom Manual Input Option */}
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Grade <span className="text-red-500">*</span></label>
-                <select
-                  value={form.grades_id}
-                  onChange={e => { setForm(f => ({ ...f, grades_id: e.target.value })); if (formErrors.grades_id) setFormErrors(err => ({ ...err, grades_id: '' })) }}
-                  className={`form-input w-full ${formErrors.grades_id ? 'border-red-500 focus:ring-red-200' : ''}`}
-                >
-                  <option value="">Select Grade</option>
-                  {gradesList.map(g => (
-                    <option key={g.id} value={g.id}>{g.grade}</option>
-                  ))}
-                  <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Input Manual...</option>
-                </select>
-                {form.grades_id === 'NEW_CUSTOM' && (
-                  <input
-                    type="text"
-                    value={customGrade}
-                    onChange={e => { setCustomGrade(e.target.value); if (formErrors.grades_id) setFormErrors(err => ({ ...err, grades_id: '' })) }}
-                    className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
-                    placeholder="Type new grade name (e.g. SPECTA - TK5)..."
-                  />
-                )}
-                {formErrors.grades_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.grades_id}</p>}
-              </div>
+              {/* Rekomendasi Spesifikasi Roll (PPIC) */}
+              <div className="pt-3 pb-1 border-t border-slate-200/80">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
+                    Rekomendasi Spesifikasi Roll (PPIC)
+                  </span>
+                  <span className="text-[10px] text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    Otomatis direkomendasikan ke Produksi
+                  </span>
+                </div>
 
-              {/* GSM Dropdown + Custom Manual Input Option */}
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">GSM <span className="text-red-500">*</span></label>
-                <select
-                  value={form.gsms_id}
-                  onChange={e => { setForm(f => ({ ...f, gsms_id: e.target.value })); if (formErrors.gsms_id) setFormErrors(err => ({ ...err, gsms_id: '' })) }}
-                  className={`form-input w-full ${formErrors.gsms_id ? 'border-red-500 focus:ring-red-200' : ''}`}
-                >
-                  <option value="">Select GSM</option>
-                  {gsmsList.map(g => (
-                    <option key={g.id} value={g.id}>{g.gsm} g/m²</option>
-                  ))}
-                  <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Input Manual...</option>
-                </select>
-                {form.gsms_id === 'NEW_CUSTOM' && (
-                  <input
-                    type="number"
-                    value={customGsm}
-                    onChange={e => { setCustomGsm(e.target.value); if (formErrors.gsms_id) setFormErrors(err => ({ ...err, gsms_id: '' })) }}
-                    className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
-                    placeholder="Type new GSM value (e.g. 180)..."
-                  />
-                )}
-                {formErrors.gsms_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.gsms_id}</p>}
+                {/* Grade & GSM */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Grade <span className="text-red-500">*</span></label>
+                    <select
+                      value={form.grades_id}
+                      onChange={e => { setForm(f => ({ ...f, grades_id: e.target.value })); if (formErrors.grades_id) setFormErrors(err => ({ ...err, grades_id: '' })) }}
+                      className={`form-input w-full ${formErrors.grades_id ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    >
+                      <option value="">Select Grade</option>
+                      {gradesList.map(g => (
+                        <option key={g.id} value={g.id}>{g.grade}</option>
+                      ))}
+                      <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Input Manual...</option>
+                    </select>
+                    {form.grades_id === 'NEW_CUSTOM' && (
+                      <input
+                        type="text"
+                        value={customGrade}
+                        onChange={e => { setCustomGrade(e.target.value); if (formErrors.grades_id) setFormErrors(err => ({ ...err, grades_id: '' })) }}
+                        className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                        placeholder="Type new grade name (e.g. SPECTA - TK5)..."
+                      />
+                    )}
+                    {formErrors.grades_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.grades_id}</p>}
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">GSM <span className="text-red-500">*</span></label>
+                    <select
+                      value={form.gsms_id}
+                      onChange={e => { setForm(f => ({ ...f, gsms_id: e.target.value })); if (formErrors.gsms_id) setFormErrors(err => ({ ...err, gsms_id: '' })) }}
+                      className={`form-input w-full ${formErrors.gsms_id ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    >
+                      <option value="">Select GSM</option>
+                      {gsmsList.map(g => (
+                        <option key={g.id} value={g.id}>{g.gsm} g/m²</option>
+                      ))}
+                      <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Input Manual...</option>
+                    </select>
+                    {form.gsms_id === 'NEW_CUSTOM' && (
+                      <input
+                        type="number"
+                        value={customGsm}
+                        onChange={e => { setCustomGsm(e.target.value); if (formErrors.gsms_id) setFormErrors(err => ({ ...err, gsms_id: '' })) }}
+                        className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                        placeholder="Type new GSM value (e.g. 180)..."
+                      />
+                    )}
+                    {formErrors.gsms_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.gsms_id}</p>}
+                  </div>
+                </div>
+
+                {/* Plybond, Thickness, Core */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Plybond</label>
+                    <select
+                      value={form.plybonds_id}
+                      onChange={e => { setForm(f => ({ ...f, plybonds_id: e.target.value })); if (formErrors.plybonds_id) setFormErrors(err => ({ ...err, plybonds_id: '' })) }}
+                      className="form-input w-full text-xs"
+                    >
+                      <option value="">Select Plybond</option>
+                      {plybondsList.map(p => (
+                        <option key={p.id} value={p.id}>{p.plybonds}</option>
+                      ))}
+                      <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Manual...</option>
+                    </select>
+                    {form.plybonds_id === 'NEW_CUSTOM' && (
+                      <input
+                        type="number"
+                        value={customPlybond}
+                        onChange={e => setCustomPlybond(e.target.value)}
+                        className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                        placeholder="e.g. 400..."
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Thickness</label>
+                    <select
+                      value={form.thicknesses_id}
+                      onChange={e => { setForm(f => ({ ...f, thicknesses_id: e.target.value })); if (formErrors.thicknesses_id) setFormErrors(err => ({ ...err, thicknesses_id: '' })) }}
+                      className="form-input w-full text-xs"
+                    >
+                      <option value="">Select Thickness</option>
+                      {thicknessesList.map(t => (
+                        <option key={t.id} value={t.id}>{t.thickness}</option>
+                      ))}
+                      <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Manual...</option>
+                    </select>
+                    {form.thicknesses_id === 'NEW_CUSTOM' && (
+                      <input
+                        type="number"
+                        value={customThickness}
+                        onChange={e => setCustomThickness(e.target.value)}
+                        className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                        placeholder="e.g. 600..."
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Core</label>
+                    <select
+                      value={form.cores_id}
+                      onChange={e => { setForm(f => ({ ...f, cores_id: e.target.value })); if (formErrors.cores_id) setFormErrors(err => ({ ...err, cores_id: '' })) }}
+                      className="form-input w-full text-xs"
+                    >
+                      <option value="">Select Core</option>
+                      {coresList.map(c => (
+                        <option key={c.id} value={c.id}>{c.core}&quot;</option>
+                      ))}
+                      <option value="NEW_CUSTOM" className="font-bold text-blue-600 bg-blue-50">+ Add New / Manual...</option>
+                    </select>
+                    {form.cores_id === 'NEW_CUSTOM' && (
+                      <input
+                        type="text"
+                        value={customCore}
+                        onChange={e => setCustomCore(e.target.value)}
+                        className="form-input w-full mt-1.5 text-xs border-blue-300 focus:border-blue-500 bg-blue-50/40"
+                        placeholder="e.g. 3 or 76..."
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Target Rolls Input */}
@@ -686,12 +845,12 @@ ${pageBlocks.join('\n')}
 
               {/* Notes Input */}
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Notes (Optional)</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Catatan / Notes (Optional)</label>
                 <textarea
                   value={form.noted_order}
                   onChange={e => setForm(f => ({ ...f, noted_order: e.target.value }))}
                   className="form-input w-full min-h-[60px]"
-                  placeholder="Any special instructions or notes..."
+                  placeholder="Instruksi khusus / catatan kombinasi target roll..."
                 />
               </div>
             </div>
@@ -723,6 +882,25 @@ ${pageBlocks.join('\n')}
               >
                 <X size={18} />
               </button>
+            </div>
+
+            {selectedJopDetail.noted_order && (
+              <div className="px-4 py-2 bg-amber-50/90 border-b border-amber-200/80 flex items-start gap-2 text-xs text-amber-900">
+                <span className="font-bold shrink-0">Catatan / Notes:</span>
+                <span className="font-medium">{selectedJopDetail.noted_order}</span>
+              </div>
+            )}
+
+            {/* Target Specifications from PPIC */}
+            <div className="px-4 py-2 bg-blue-50/70 border-b border-blue-100 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-blue-900">
+              <span className="font-bold uppercase tracking-wider text-[10px] text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded">
+                Target Specs (PPIC)
+              </span>
+              <span><strong>Grade:</strong> {selectedJopDetail.grade}</span>
+              <span><strong>GSM:</strong> {selectedJopDetail.gsm} g/m²</span>
+              <span><strong>Plybond:</strong> {selectedJopDetail.plybond}</span>
+              <span><strong>Thickness:</strong> {selectedJopDetail.thickness}</span>
+              <span><strong>Core:</strong> {selectedJopDetail.core}&quot;</span>
             </div>
 
             <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-[11px]">

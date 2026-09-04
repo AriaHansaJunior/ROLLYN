@@ -42,10 +42,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/warehouse-map', [DesignUiController::class, 'warehouseMap']);
         Route::get('/slot-status', [DesignUiController::class, 'slotStatus']);
         Route::get('/target-order', [DesignUiController::class, 'targetOrder']);
-        Route::get('/jop', [DesignUiController::class, 'jop']);
-        Route::get('/jop/export-excel', [\App\Http\Controllers\JopController::class, 'exportExcel']);
         Route::post('/jop', [\App\Http\Controllers\JopController::class, 'store']);
-        Route::get('/jop-master-data', [\App\Http\Controllers\JopController::class, 'masterData']);
         Route::get('/spk-po', [DesignUiController::class, 'spkPo']);
         Route::get('/reports', [DesignUiController::class, 'reports']);
         Route::get('/notifications', [DesignUiController::class, 'notifications']);
@@ -71,11 +68,17 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,production')->group(function () {
         Route::get('/incoming-roll', [DesignUiController::class, 'incomingRoll']);
         Route::post('/incoming-roll', [IncomingRollController::class, 'store']);
+        Route::get('/incoming-roll/check-roll-number', [IncomingRollController::class, 'checkRollNumber']);
         Route::post('/incoming-roll/recommend-form', [IncomingRollController::class, 'recommendFormNumber']);
         Route::post('/api/spectrum/recommend-location', [SpectrumEngineController::class, 'recommendLocation']);
     });
 
-
+    // 5. PRODUCTION ACCESSIBLE JOP VIEW & EXPORT
+    Route::middleware('role:admin,ppic,production')->group(function () {
+        Route::get('/jop', [DesignUiController::class, 'jop']);
+        Route::get('/jop/export-excel', [\App\Http\Controllers\JopController::class, 'exportExcel']);
+        Route::get('/jop-master-data', [\App\Http\Controllers\JopController::class, 'masterData']);
+    });
 
     // 6. ADMIN + QC
     Route::middleware('role:admin,qc')->group(function () {
@@ -83,10 +86,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/shipments/qc/reject', [ShipmentController::class, 'qcReject']);
     });
 
-    // 6. ADMIN + PPIC + QC
-    Route::middleware('role:admin,ppic,qc')->group(function () {
+    // 7. ADMIN + PPIC + QC + PRODUCTION (Roll History & Inventory)
+    Route::middleware('role:admin,ppic,qc,production')->group(function () {
         Route::get('/roll-inventory', [RollController::class, 'index']);
         Route::get('/roll-detail/{id?}', [RollController::class, 'show']);
+    });
+
+    Route::middleware('role:admin,ppic,qc')->group(function () {
         Route::put('/rolls/{id}', [RollController::class, 'update']);
         Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
         Route::post('/rolls/ship', [RollController::class, 'confirmShipments']);
