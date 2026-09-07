@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Calendar, PackageCheck, FileText, X } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Calendar, PackageCheck, FileText, X, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { router } from '@inertiajs/react'
 
 interface Roll {
@@ -41,125 +41,325 @@ interface Shipment {
 interface Props {
   shipments: Shipment[]
   selectedDate: string
+  shipmentDates?: string[]
 }
 
-export default function ShipmentHistory({ shipments, selectedDate }: Props) {
+export default function ShipmentHistory({ shipments, selectedDate, shipmentDates = [] }: Props) {
   const [activeShipment, setActiveShipment] = useState<Shipment | null>(shipments[0] || null)
   const [date, setDate] = useState(selectedDate)
   const [selectedRoll, setSelectedRoll] = useState<Roll | null>(null)
+  const [currentMonth, setCurrentMonth] = useState(() => new Date(selectedDate || new Date().toISOString().slice(0, 10)))
+
+  // Sync active shipment when shipments change
+  useEffect(() => {
+    if (shipments.length > 0) {
+      setActiveShipment(shipments[0])
+    } else {
+      setActiveShipment(null)
+    }
+  }, [shipments])
+
+  // Days for locked 7-col x 6-row grid (strictly 42 cells)
+  const calendarGridDays = useMemo(() => {
+    const year = currentMonth.getFullYear()
+    const month = currentMonth.getMonth()
+    const firstDay = new Date(year, month, 1).getDay() // 0 = Sunday
+    const totalDays = new Date(year, month + 1, 0).getDate()
+
+    const days: (Date | null)[] = []
+    // Leading empty slots
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null)
+    }
+    // Days in current month
+    for (let i = 1; i <= totalDays; i++) {
+      days.push(new Date(year, month, i))
+    }
+    // Trailing empty slots to lock strictly to 42 cells (6 rows x 7 columns)
+    while (days.length < 42) {
+      days.push(null)
+    }
+    return days
+  }, [currentMonth])
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+  }
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+  }
+
+  const goToToday = () => {
+    const now = new Date()
+    const nowStr = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0')
+    ].join('-')
+    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1))
+    handleDateChange(nowStr)
+  }
 
   function handleDateChange(newDate: string) {
     setDate(newDate)
     router.get('/shipment-history', { date: newDate }, { preserveState: true })
-    setActiveShipment(null) // Reset active shipment when date changes
   }
 
-  // Effect to select first shipment if activeShipment is null and shipments exist after date change
-  if (!activeShipment && shipments.length > 0) {
-    setActiveShipment(shipments[0])
-  }
+  // Format date display (e.g., Rabu, 26 Agustus 2026)
+  const formattedSelectedDate = useMemo(() => {
+    try {
+      const [y, m, d] = date.split('-').map(Number)
+      const dObj = new Date(y, m - 1, d)
+      return dObj.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    } catch {
+      return date
+    }
+  }, [date])
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4 h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-      <div className="flex flex-wrap justify-between items-center gap-4 flex-shrink-0">
+      {/* Title Bar */}
+      <div className="flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Shipment History</h2>
-          <p className="text-xs text-slate-500 mt-0.5">View successfully completed shipments by date</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <Calendar className="text-blue-600" size={24} />
+            Shipment History
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Riwayat pengiriman roll selesai berdasarkan tanggal
+          </p>
         </div>
-        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-          <Calendar size={14} className="text-slate-500" />
-          <input 
-            type="date" 
-            className="border-none outline-none text-sm bg-transparent font-medium text-slate-700" 
-            value={date}
-            onChange={(e) => handleDateChange(e.target.value)}
-          />
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+            Terpilih: {formattedSelectedDate}
+          </span>
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 min-h-0">
-        {/* Left List: Shipments */}
-        <div className="col-span-1 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
-            <h3 className="text-sm font-bold text-slate-800">Shipments on {date}</h3>
+      {/* TOP: Fixed Grid Calendar (Locked 7 Columns across x 6 Rows down) */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs flex-shrink-0 overflow-hidden">
+        {/* Calendar Controls & Legend */}
+        <div className="px-4 py-2.5 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-2xs overflow-hidden">
+              <button
+                onClick={prevMonth}
+                className="p-1.5 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                title="Bulan Sebelumnya"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="px-3 font-bold text-slate-800 select-none min-w-[140px] text-center">
+                {currentMonth.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                onClick={nextMonth}
+                className="p-1.5 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                title="Bulan Berikutnya"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <button
+              onClick={goToToday}
+              className="px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-700 transition-colors cursor-pointer"
+            >
+              Hari Ini
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+
+          <div className="flex items-center gap-1.5 text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-red-500 inline-block ring-2 ring-red-200"></span>
+            <span className="font-medium text-[11px]">Ada Pengiriman</span>
+          </div>
+        </div>
+
+        {/* Locked Grid: 7 Columns x 6 Rows */}
+        <div className="p-3">
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400 mb-1">
+            <div>Minggu</div>
+            <div>Senin</div>
+            <div>Selasa</div>
+            <div>Rabu</div>
+            <div>Kamis</div>
+            <div>Jumat</div>
+            <div>Sabtu</div>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {calendarGridDays.map((d, i) => {
+              if (!d) return <div key={i} className="h-8 sm:h-9" />
+              const dateStr = [
+                d.getFullYear(),
+                String(d.getMonth() + 1).padStart(2, '0'),
+                String(d.getDate()).padStart(2, '0')
+              ].join('-')
+              const isSelected = dateStr === date
+              const hasShipment = shipmentDates.includes(dateStr)
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleDateChange(dateStr)}
+                  className={`h-8 sm:h-9 relative rounded-lg text-xs font-medium transition-all cursor-pointer flex flex-col items-center justify-center select-none ${
+                    isSelected
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      : 'hover:bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  <span className="leading-none">{d.getDate()}</span>
+                  {hasShipment && (
+                    <span
+                      className={`w-1 h-1 rounded-full mt-0.5 ${
+                        isSelected ? 'bg-white' : 'bg-red-500'
+                      }`}
+                    ></span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM: 2-Column Content Layout (List & Details) */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
+        {/* Left Column: Shipments List (lg:col-span-4) */}
+        <div className="lg:col-span-4 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
+          <div className="p-3 border-b border-slate-100 bg-slate-50/70 flex justify-between items-center flex-shrink-0">
+            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <PackageCheck size={14} className="text-blue-600" />
+              Pengiriman pada {date}
+            </h3>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {shipments.length} Pengiriman
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
             {shipments.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <PackageCheck size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-xs">No completed shipments found.</p>
+              <div className="text-center py-12 text-slate-400">
+                <PackageCheck size={36} className="mx-auto mb-2 opacity-40" />
+                <p className="text-xs font-medium">Tidak ada pengiriman selesai pada tanggal ini.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Pilih tanggal dengan tanda merah untuk melihat data.</p>
               </div>
             ) : (
-              shipments.map(s => (
-                <div 
-                  key={s.id} 
-                  onClick={() => setActiveShipment(s)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${activeShipment?.id === s.id ? 'bg-blue-50 border-blue-300 shadow-sm' : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50'}`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-sm font-bold text-slate-900">{s.shipment_number}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                      Completed
-                    </span>
+              shipments.map((s) => {
+                const isActive = activeShipment?.id === s.id
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => setActiveShipment(s)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                      isActive
+                        ? 'bg-blue-50/80 border-blue-400 shadow-xs ring-1 ring-blue-300'
+                        : 'bg-white border-slate-200/80 hover:border-blue-300 hover:bg-slate-50/60'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1.5">
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                        {s.shipment_number}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                        <CheckCircle2 size={10} />
+                        Completed
+                      </span>
+                    </div>
+
+                    <div className="text-xs font-semibold text-slate-700 line-clamp-1 mb-2">
+                      {s.customer?.customer}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                      <span className="flex items-center gap-1 font-medium">
+                        <FileText size={11} className="text-blue-500" />
+                        {s.shipment_rolls?.length || 0} Roll
+                      </span>
+                      <span className="text-slate-400 text-[10px]">QC: {s.qc?.username}</span>
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-600 font-medium line-clamp-1">{s.customer?.customer}</div>
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100/50">
-                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                      <FileText size={10} /> {s.shipment_rolls?.length || 0} Rolls
-                    </span>
-                    <span className="text-[10px] text-slate-400">QC: {s.qc?.username}</span>
-                  </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
 
-        {/* Right Details: Rolls in Active Shipment */}
-        <div className="col-span-1 md:col-span-2 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Right Column: Rolls in Active Shipment (lg:col-span-8) */}
+        <div className="lg:col-span-8 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
           {activeShipment ? (
             <>
-              <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex-shrink-0 flex justify-between items-start">
+              <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex-shrink-0 flex flex-wrap justify-between items-center gap-2">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 mb-1">Shipment Details: {activeShipment.shipment_number}</h3>
-                  <div className="flex gap-4 text-xs text-slate-600">
-                    <p><span className="font-semibold">Customer:</span> {activeShipment.customer?.customer}</p>
-                    <p><span className="font-semibold">Admin:</span> {activeShipment.admin?.username}</p>
-                    <p><span className="font-semibold">Total Rolls:</span> {activeShipment.shipment_rolls?.length || 0}</p>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    Detail Pengiriman:
+                    <span className="text-blue-700 font-extrabold">{activeShipment.shipment_number}</span>
+                  </h3>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 mt-1">
+                    <p>
+                      <span className="font-semibold text-slate-500">Customer:</span>{' '}
+                      <span className="font-bold text-slate-800">{activeShipment.customer?.customer}</span>
+                    </p>
+                    <p>
+                      <span className="font-semibold text-slate-500">Admin:</span>{' '}
+                      <span className="text-slate-700">{activeShipment.admin?.username}</span>
+                    </p>
+                    <p>
+                      <span className="font-semibold text-slate-500">Total Roll:</span>{' '}
+                      <span className="font-bold text-blue-600">{activeShipment.shipment_rolls?.length || 0} roll</span>
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 overflow-auto">
                 <table className="w-full text-left border-collapse text-xs">
-                  <thead className="sticky top-0 bg-white shadow-sm z-10">
-                    <tr className="border-b border-slate-200 text-slate-500 bg-slate-50/80 backdrop-blur-sm">
-                      <th className="py-2.5 px-4 font-semibold">Roll No</th>
-                      <th className="py-2.5 px-4 font-semibold">Grade</th>
-                      <th className="py-2.5 px-4 font-semibold">GSM</th>
-                      <th className="py-2.5 px-4 font-semibold text-right">Weight (kg)</th>
-                      <th className="py-2.5 px-4 font-semibold text-center">QC Status</th>
-                      <th className="py-2.5 px-4 font-semibold text-center">Action</th>
+                  <thead className="sticky top-0 bg-white shadow-xs z-10">
+                    <tr className="border-b border-slate-200 text-slate-600 bg-slate-50/90 backdrop-blur-xs">
+                      <th className="py-2.5 px-4 font-bold">No. Roll</th>
+                      <th className="py-2.5 px-4 font-bold">Grade</th>
+                      <th className="py-2.5 px-4 font-bold">GSM</th>
+                      <th className="py-2.5 px-4 font-bold text-right">Berat (kg)</th>
+                      <th className="py-2.5 px-4 font-bold text-center">Status QC</th>
+                      <th className="py-2.5 px-4 font-bold text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(activeShipment.shipment_rolls || []).map(sr => (
-                      <tr key={sr.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3 px-4 font-bold text-slate-800">{sr.roll?.no_roll || sr.roll_no}</td>
-                        <td className="py-3 px-4 text-slate-600">{sr.roll?.grade || '-'}</td>
-                        <td className="py-3 px-4 text-slate-600">{sr.roll?.gsm || '-'}</td>
-                        <td className="py-3 px-4 text-slate-600 text-right">{sr.roll?.weight || '-'}</td>
+                    {(activeShipment.shipment_rolls || []).map((sr) => (
+                      <tr
+                        key={sr.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors"
+                      >
+                        <td className="py-3 px-4 font-bold text-slate-800">
+                          {sr.roll?.no_roll || sr.roll_no}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">{sr.roll?.grade || '—'}</td>
+                        <td className="py-3 px-4 text-slate-600">{sr.roll?.gsm || '—'}</td>
+                        <td className="py-3 px-4 text-slate-700 text-right font-medium">
+                          {sr.roll?.weight ? `${Number(sr.roll.weight).toLocaleString('id-ID')} kg` : '—'}
+                        </td>
                         <td className="py-3 px-4 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sr.qc_status === 'passed' ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              sr.qc_status === 'passed'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
                             {sr.qc_status}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <button 
+                          <button
                             onClick={() => setSelectedRoll(sr.roll)}
-                            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors cursor-pointer"
+                            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                           >
-                            Details
+                            Detail
                           </button>
                         </td>
                       </tr>
@@ -170,8 +370,9 @@ export default function ShipmentHistory({ shipments, selectedDate }: Props) {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
-              <PackageCheck size={48} className="mb-3 opacity-20" />
-              <p className="text-sm font-semibold text-slate-500">Select a shipment to view details.</p>
+              <PackageCheck size={48} className="mb-3 opacity-25" />
+              <p className="text-sm font-semibold text-slate-600">Pilih pengiriman untuk melihat detail roll.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Klik pada salah satu item di daftar pengiriman di sebelah kiri.</p>
             </div>
           )}
         </div>
@@ -180,17 +381,20 @@ export default function ShipmentHistory({ shipments, selectedDate }: Props) {
       {/* Roll Detail Modal */}
       {selectedRoll && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-md p-0 bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="card w-full max-w-md p-0 bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Roll Details</h3>
+                <h3 className="text-base font-bold text-slate-900">Detail Roll</h3>
                 <p className="text-xs text-slate-500">No: {selectedRoll.no_roll}</p>
               </div>
-              <button onClick={() => setSelectedRoll(null)} className="text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-100 p-1.5 rounded-full transition-colors cursor-pointer">
+              <button
+                onClick={() => setSelectedRoll(null)}
+                className="text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-100 p-1.5 rounded-full transition-colors cursor-pointer"
+              >
                 <X size={16} />
               </button>
             </div>
-            
+
             <div className="p-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -227,10 +431,13 @@ export default function ShipmentHistory({ shipments, selectedDate }: Props) {
                 </div>
               </div>
             </div>
-            
+
             <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
-              <button className="btn btn-secondary text-xs px-4 py-2" onClick={() => setSelectedRoll(null)}>
-                Close
+              <button
+                className="btn btn-secondary text-xs px-4 py-2"
+                onClick={() => setSelectedRoll(null)}
+              >
+                Tutup
               </button>
             </div>
           </div>
@@ -239,3 +446,4 @@ export default function ShipmentHistory({ shipments, selectedDate }: Props) {
     </div>
   )
 }
+

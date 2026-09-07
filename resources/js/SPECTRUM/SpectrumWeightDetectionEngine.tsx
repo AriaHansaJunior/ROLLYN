@@ -106,7 +106,7 @@ export default function SpectrumWeightDetectionEngine({
             setEngineState("camera_active");
             try {
                 localStorage.setItem("rollyn_camera_permission", "granted");
-            } catch (e) {}
+            } catch (e) { }
             SystemUI.toast({
                 message: "Camera active. Point at display to capture weight.",
                 type: "info",
@@ -117,7 +117,7 @@ export default function SpectrumWeightDetectionEngine({
             setEngineState("camera_denied");
             try {
                 localStorage.removeItem("rollyn_camera_permission");
-            } catch (e) {}
+            } catch (e) { }
         }
     }, []);
 
@@ -137,14 +137,14 @@ export default function SpectrumWeightDetectionEngine({
                         return;
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             if (!alreadyGranted) {
                 try {
                     if (localStorage.getItem("rollyn_camera_permission") === "granted") {
                         alreadyGranted = true;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
             if (alreadyGranted) {
@@ -206,9 +206,9 @@ export default function SpectrumWeightDetectionEngine({
             const quality = analyseImageQuality(rawCanvas);
 
             const spectrumData = await detectSpectrumWeight(frames);
-            
+
             let legacyOutcome: any = null;
-            
+
             if (!spectrumData || spectrumData.weight_detected === 0 || spectrumData.confidence < 0.80) {
                 legacyOutcome = await recogniseWeight(variants, quality, expectedDigitCount);
             }
@@ -356,39 +356,12 @@ export default function SpectrumWeightDetectionEngine({
     const isSpectrumLowConf = spectrumResult && (spectrumResult.confidence < 0.80 || spectrumResult.status === "WARNING_LOW_CONFIDENCE");
 
     return (
-        <div className="w-full 2xl:max-w-7xl grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <div className="card p-4 sm:p-5">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <h3 className="section-title" style={{ margin: 0 }}>
                         Live Camera Preview
                     </h3>
-                    <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={handleAutoTeach}
-                            disabled={isRetraining}
-                            title="Update reading system from saved samples"
-                            style={{ fontSize: 11, padding: "4px 8px" }}
-                        >
-                            {isRetraining ? (
-                                <Loader size={12} style={{ animation: "spin 1s linear infinite" }} />
-                            ) : (
-                                <Sparkles size={12} style={{ color: "#2563EB" }} />
-                            )}
-                            <span>{isRetraining ? "Processing…" : "🔄 Update System"}</span>
-                        </button>
-                        <a
-                            href="/training"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-secondary btn-sm"
-                            title="Open Scale Calibration Page"
-                            style={{ fontSize: 11, padding: "4px 8px", textDecoration: "none" }}
-                        >
-                            <BookOpen size={12} style={{ color: "#7c3aed" }} />
-                            <span>Calibration</span>
-                        </a>
-                    </div>
                 </div>
 
                 <div
@@ -416,9 +389,9 @@ export default function SpectrumWeightDetectionEngine({
                             objectFit: "cover",
                             display:
                                 engineState === "camera_active" ||
-                                engineState === "processing" ||
-                                engineState === "success" ||
-                                engineState === "error"
+                                    engineState === "processing" ||
+                                    engineState === "success" ||
+                                    engineState === "error"
                                     ? "block"
                                     : "none",
                         }}
@@ -476,9 +449,6 @@ export default function SpectrumWeightDetectionEngine({
                                     animation: "spin 1s linear infinite",
                                 }}
                             />
-                            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>
-                                SPECTRUM 4.0 (Heuristic & NMS Active)…
-                            </span>
                         </div>
                     )}
 
@@ -549,9 +519,6 @@ export default function SpectrumWeightDetectionEngine({
                     <h3 className="section-title" style={{ margin: 0 }}>
                         Scale Reading Result
                     </h3>
-                    <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: "#dbeafe", color: "#1e40af", border: "1px solid #bfdbfe" }}>
-                        SPECTRUM Engine 4.0
-                    </span>
                 </div>
 
                 {(engineState === "permission_modal" || engineState === "requesting" || engineState === "camera_active" || engineState === "camera_denied") && (
@@ -586,7 +553,7 @@ export default function SpectrumWeightDetectionEngine({
                                         onChange={() => handleEngineToggle("spectrum")}
                                     />
                                     <Zap size={14} style={{ color: "#2563EB" }} />
-                                    SPECTRUM 4.0 (Heuristic & NMS)
+                                    SPECTRUM 4.0
                                 </label>
                                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: selectedEngine === "ocr" ? "#166534" : "#475569" }}>
                                     <input

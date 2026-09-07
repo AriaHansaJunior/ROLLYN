@@ -792,37 +792,35 @@ export default function RollInventory({
         <div className="flex gap-2 items-center">
           {/* Mode Switcher: Pill toggle for all roles */}
           <div className="relative flex items-center bg-slate-100 border border-slate-200 rounded-full p-1 shadow-inner gap-0">
-              <span
-                className="absolute top-1 bottom-1 rounded-full bg-blue-600 shadow transition-all duration-300 ease-in-out"
-                style={{
-                  width: 'calc(50% - 4px)',
-                  left: viewMode === 'inventory' ? '4px' : 'calc(50%)',
-                }}
-              />
-              <button
-                className={`relative z-10 px-4 py-1.5 rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                  viewMode === 'inventory' ? 'text-white' : 'text-slate-600 hover:text-slate-900'
+            <span
+              className="absolute top-1 bottom-1 rounded-full bg-blue-600 shadow transition-all duration-300 ease-in-out"
+              style={{
+                width: 'calc(50% - 4px)',
+                left: viewMode === 'inventory' ? '4px' : 'calc(50%)',
+              }}
+            />
+            <button
+              className={`relative z-10 px-4 py-1.5 rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${viewMode === 'inventory' ? 'text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
-                onClick={() => { setViewMode('inventory'); setPage(1) }}
-              >
-                <Layers size={13} />
-                Storage ({rolls.length})
-              </button>
-              <button
-                className={`relative z-10 px-4 py-1.5 rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                  viewMode === 'shipments' ? 'text-white' : 'text-slate-600 hover:text-slate-900'
+              onClick={() => { setViewMode('inventory'); setPage(1) }}
+            >
+              <Layers size={13} />
+              Storage ({rolls.length})
+            </button>
+            <button
+              className={`relative z-10 px-4 py-1.5 rounded-full text-xs font-bold transition-colors duration-200 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${viewMode === 'shipments' ? 'text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
-                onClick={() => { setViewMode('shipments'); }}
-              >
-                <Truck size={13} />
-                {isQC ? 'QC Station' : 'Shipments'}
-                {pendingShipmentsCount > 0 && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${viewMode === 'shipments' ? 'bg-white text-blue-700' : 'bg-amber-500 text-white'}`}>
-                    {pendingShipmentsCount}
-                  </span>
-                )}
-              </button>
-            </div>
+              onClick={() => { setViewMode('shipments'); }}
+            >
+              <Truck size={13} />
+              {isQC ? 'QC Station' : 'Shipments'}
+              {pendingShipmentsCount > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${viewMode === 'shipments' ? 'bg-white text-blue-700' : 'bg-amber-500 text-white'}`}>
+                  {pendingShipmentsCount}
+                </span>
+              )}
+            </button>
+          </div>
 
           {viewMode === 'inventory' && !isQC && (
             <button className="btn btn-secondary btn-sm cursor-pointer" onClick={handleExport}>
@@ -885,18 +883,16 @@ export default function RollInventory({
                 <button
                   type="button"
                   onClick={() => { setQueueFilter('all'); setPage(1) }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
-                    queueFilter === 'all' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${queueFilter === 'all' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
                 >
                   All Rolls ({rolls.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => { setQueueFilter('not_queued'); setPage(1) }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    queueFilter === 'not_queued' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${queueFilter === 'not_queued' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   Available ({unqueuedRollsCount})
@@ -904,9 +900,8 @@ export default function RollInventory({
                 <button
                   type="button"
                   onClick={() => { setQueueFilter('queued'); setPage(1) }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    queueFilter === 'queued' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${queueFilter === 'queued' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                   Shipment Queued ({queuedRollsCount})
@@ -917,11 +912,10 @@ export default function RollInventory({
                     setQcStatusFilter(qcStatusFilter === 'HOLD' ? 'All' : 'HOLD');
                     setPage(1);
                   }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    qcStatusFilter === 'HOLD'
+                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${qcStatusFilter === 'HOLD'
                       ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-bold'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                   HOLD Verification ({holdRollsCount})
@@ -961,15 +955,15 @@ export default function RollInventory({
               <thead>
                 <tr>
                   {!isQC && (
-                  <th style={{ textAlign: 'center' }} className="py-2.5">
-                    <input
-                      type="checkbox"
-                      checked={paged.length > 0 && paged.filter(r => !r.in_shipment_queue).length > 0 && paged.filter(r => !r.in_shipment_queue).every(r => checkedRollIds.includes(r.id))}
-                      onChange={toggleSelectAllVisible}
-                      title="Select all available rolls on this page"
-                      className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
-                    />
-                  </th>
+                    <th style={{ textAlign: 'center' }} className="py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={paged.length > 0 && paged.filter(r => !r.in_shipment_queue).length > 0 && paged.filter(r => !r.in_shipment_queue).every(r => checkedRollIds.includes(r.id))}
+                        onChange={toggleSelectAllVisible}
+                        title="Select all available rolls on this page"
+                        className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
+                      />
+                    </th>
                   )}
                   {cols.map(col => (
                     <th
@@ -1002,33 +996,32 @@ export default function RollInventory({
                   return (
                     <tr
                       key={r.raw_id || r.id}
-                      className={`transition-colors border-b border-slate-100 ${
-                        isQueued
+                      className={`transition-colors border-b border-slate-100 ${isQueued
                           ? 'bg-indigo-50/20 hover:bg-indigo-50/40 text-slate-600'
                           : isChecked
                             ? 'bg-blue-50/60 hover:bg-blue-50'
                             : 'hover:bg-slate-50/80'
-                      }`}
+                        }`}
                     >
                       {!isQC && (
-                      <td style={{ textAlign: 'center' }}>
-                        {isQueued ? (
-                          <input
-                            type="checkbox"
-                            disabled
-                            checked={false}
-                            title={`Roll already queued in shipment ${r.shipment_queue_number || ''}`}
-                            className="w-4 h-4 text-slate-300 rounded border-slate-200 cursor-not-allowed opacity-40"
-                          />
-                        ) : (
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleRollChecked(r.id, isQueued)}
-                            className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
-                          />
-                        )}
-                      </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {isQueued ? (
+                            <input
+                              type="checkbox"
+                              disabled
+                              checked={false}
+                              title={`Roll already queued in shipment ${r.shipment_queue_number || ''}`}
+                              className="w-4 h-4 text-slate-300 rounded border-slate-200 cursor-not-allowed opacity-40"
+                            />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleRollChecked(r.id, isQueued)}
+                              className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
+                            />
+                          )}
+                        </td>
                       )}
                       <td style={{ textAlign: 'center' }}>
                         <span className="inline-flex flex-col items-center justify-center bg-slate-100/90 text-slate-700 px-2.5 py-0.5 rounded border border-slate-200">
@@ -1064,11 +1057,10 @@ export default function RollInventory({
                             {r.status}
                           </span>
                           <span
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                              r.roll_status === 'HOLD'
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${r.roll_status === 'HOLD'
                                 ? 'bg-amber-100 text-amber-800 border border-amber-300'
                                 : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                            }`}
+                              }`}
                           >
                             Label: {r.roll_status || 'OK'}
                           </span>
@@ -1089,20 +1081,19 @@ export default function RollInventory({
                       <td style={{ textAlign: 'center' }} className="whitespace-nowrap px-2 py-2">
                         <div className="flex gap-1.5 justify-center items-center">
                           {!isQC && (
-                          <button
-                            className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
-                            onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
-                            title="View Roll Detail"
-                          >
-                            <Eye size={14} />
-                          </button>
+                            <button
+                              className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                              onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
+                              title="View Roll Detail"
+                            >
+                              <Eye size={14} />
+                            </button>
                           )}
                           <button
-                            className={`p-1.5 rounded transition-colors cursor-pointer border ${
-                              r.roll_status === 'HOLD'
+                            className={`p-1.5 rounded transition-colors cursor-pointer border ${r.roll_status === 'HOLD'
                                 ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 shadow-xs'
                                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 border-slate-200'
-                            }`}
+                              }`}
                             onClick={() => openEdit(r)}
                             title={r.roll_status === 'HOLD' ? 'Verifikasi & Rilis HOLD Roll' : 'Edit Roll Data'}
                           >
@@ -1326,25 +1317,23 @@ export default function RollInventory({
                         <div
                           key={s.id}
                           onClick={() => setActiveShipmentId(s.id)}
-                          className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                            isActive
+                          className={`p-3 rounded-xl border transition-all cursor-pointer ${isActive
                               ? 'bg-blue-50/80 border-blue-400 shadow-sm ring-1 ring-blue-300'
                               : isCanceled
                                 ? 'bg-slate-50/60 border-slate-200 opacity-75'
                                 : 'bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50'
-                          }`}
+                            }`}
                         >
                           <div className="flex justify-between items-start mb-1.5">
                             <span className="text-xs font-bold text-slate-900 font-mono flex items-center gap-1">
                               {s.shipment_number}
                             </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              isCanceled
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isCanceled
                                 ? 'bg-slate-200 text-slate-600'
                                 : isComplete
                                   ? 'bg-green-100 text-green-700'
                                   : 'bg-amber-100 text-amber-700'
-                            }`}>
+                              }`}>
                               {isCanceled ? 'Canceled' : isComplete ? 'Completed' : 'QC Pending'}
                             </span>
                           </div>
@@ -1402,13 +1391,12 @@ export default function RollInventory({
                           <h3 className="text-base font-extrabold text-slate-900 font-mono">
                             {activeShipment.shipment_number}
                           </h3>
-                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                            activeShipment.status === 'canceled'
+                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${activeShipment.status === 'canceled'
                               ? 'bg-slate-100 text-slate-700 border border-slate-200'
                               : activeShipment.status === 'completed'
                                 ? 'bg-green-100 text-green-800 border border-green-200'
                                 : 'bg-amber-100 text-amber-800 border border-amber-200'
-                          }`}>
+                            }`}>
                             {activeShipment.status === 'canceled'
                               ? '✕ Canceled'
                               : activeShipment.status === 'completed'
@@ -1984,7 +1972,7 @@ export default function RollInventory({
                   <option value="Reject">Reject</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Label Status (Roll Status)</label>
                 <select
@@ -2002,7 +1990,6 @@ export default function RollInventory({
                   </p>
                 ) : editingRoll?.roll_status === 'HOLD' ? (
                   <p className="text-[10px] text-emerald-600 font-semibold mt-1">
-                    ✓ QC/Admin: Anda dapat merilis status HOLD menjadi OK setelah memverifikasi spesifikasi aktual.
                   </p>
                 ) : null}
               </div>

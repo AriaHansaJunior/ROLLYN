@@ -106,19 +106,19 @@ export default function Jop() {
 
 
   function openAddModal() {
-    setForm({ 
-      spk: '', 
-      jop: '', 
-      po: '', 
-      customers_id: '', 
-      grades_id: '', 
-      gsms_id: '', 
+    setForm({
+      spk: '',
+      jop: '',
+      po: '',
+      customers_id: '',
+      grades_id: '',
+      gsms_id: '',
       plybonds_id: '',
       thicknesses_id: '',
       cores_id: '',
-      quantity: '1', 
-      tph: '', 
-      noted_order: '' 
+      quantity: '1',
+      tph: '',
+      noted_order: ''
     })
     setCustomCustomer('')
     setCustomGrade('')
@@ -136,12 +136,12 @@ export default function Jop() {
       if (res.data?.thicknesses) setThicknessesList(res.data.thicknesses)
       if (res.data?.cores) setCoresList(res.data.cores)
     }).catch(() => {
-      axios.get('/api/v1/customers').then(res => setCustomers(res.data?.data || [])).catch(() => {})
-      axios.get('/api/v1/grades').then(res => setGradesList(res.data?.data || [])).catch(() => {})
-      axios.get('/api/v1/gsms').then(res => setGsmsList(res.data?.data || [])).catch(() => {})
-      axios.get('/api/v1/plybonds').then(res => setPlybondsList(res.data?.data || [])).catch(() => {})
-      axios.get('/api/v1/thicknesses').then(res => setThicknessesList(res.data?.data || [])).catch(() => {})
-      axios.get('/api/v1/cores').then(res => setCoresList(res.data?.data || [])).catch(() => {})
+      axios.get('/api/v1/customers').then(res => setCustomers(res.data?.data || [])).catch(() => { })
+      axios.get('/api/v1/grades').then(res => setGradesList(res.data?.data || [])).catch(() => { })
+      axios.get('/api/v1/gsms').then(res => setGsmsList(res.data?.data || [])).catch(() => { })
+      axios.get('/api/v1/plybonds').then(res => setPlybondsList(res.data?.data || [])).catch(() => { })
+      axios.get('/api/v1/thicknesses').then(res => setThicknessesList(res.data?.data || [])).catch(() => { })
+      axios.get('/api/v1/cores').then(res => setCoresList(res.data?.data || [])).catch(() => { })
     })
 
     setShowModal(true)
@@ -267,14 +267,14 @@ export default function Jop() {
 
       // Specs from the first roll of this form group
       const spec = groupRolls[0]
-      const gsm        = spec?.gsm?.gsm        ?? spec?.gsm        ?? '-'
-      const ib         = spec?.plybond?.plybonds ?? spec?.plybond  ?? '-'  // IB = plybond
-      const rw         = spec?.rolls_width?.width ?? spec?.rollsWidth?.width ?? '-' // RW = roll width
-      const coreSize   = spec?.core?.core       ?? '-'
-      const thickness  = spec?.thickness?.thickness ?? '-'
-      const grade      = spec?.grade?.grade     ?? jop.grade ?? '-'
-      const shift      = spec?.shift?.shift     ?? '-'
-      const productionDate = spec?.entry_date   ?? '-'
+      const gsm = spec?.gsm?.gsm ?? spec?.gsm ?? '-'
+      const ib = spec?.plybond?.plybonds ?? spec?.plybond ?? '-'  // IB = plybond
+      const rw = spec?.rolls_width?.width ?? spec?.rollsWidth?.width ?? '-' // RW = roll width
+      const coreSize = spec?.core?.core ?? '-'
+      const thickness = spec?.thickness?.thickness ?? '-'
+      const grade = spec?.grade?.grade ?? jop.grade ?? '-'
+      const shift = spec?.shift?.shift ?? '-'
+      const productionDate = spec?.entry_date ?? '-'
 
       // Split rolls into chunks of ROWS_PER_PAGE
       const chunks: any[][] = []
@@ -315,7 +315,7 @@ export default function Jop() {
     }
 
     const pageBlocks = pages.map(p =>
-`<div class="page">
+      `<div class="page">
   <div class="header-box">
     <div class="header-logo"><div class="logo-circle">R</div></div>
     <div class="header-main">
@@ -550,7 +550,7 @@ ${pageBlocks.join('\n')}
                   </div>
                 </td>
                 <td style={{ textAlign: 'center' }}>
-                  <button 
+                  <button
                     onClick={() => setSelectedJopDetail(r)}
                     className="btn btn-secondary btn-sm flex items-center gap-1.5 mx-auto py-1 px-2"
                   >
@@ -675,13 +675,7 @@ ${pageBlocks.join('\n')}
               {/* Rekomendasi Spesifikasi Roll (PPIC) */}
               <div className="pt-3 pb-1 border-t border-slate-200/80">
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
-                    Rekomendasi Spesifikasi Roll (PPIC)
-                  </span>
-                  <span className="text-[10px] text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                    Otomatis direkomendasikan ke Produksi
-                  </span>
+
                 </div>
 
                 {/* Grade & GSM */}
@@ -815,32 +809,32 @@ ${pageBlocks.join('\n')}
 
               {/* Target Rolls Input */}
               <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Target Rolls <span className="text-red-500">*</span></label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={form.quantity}
-                      onChange={e => { setForm(f => ({ ...f, quantity: e.target.value })); if (formErrors.quantity) setFormErrors(err => ({ ...err, quantity: '' })) }}
-                      className={`form-input w-full ${formErrors.quantity ? 'border-red-500 focus:ring-red-200' : ''}`}
-                      placeholder="e.g. 10"
-                    />
-                    {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
-                  </div>
+                <div>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Target Rolls <span className="text-red-500">*</span></label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.quantity}
+                    onChange={e => { setForm(f => ({ ...f, quantity: e.target.value })); if (formErrors.quantity) setFormErrors(err => ({ ...err, quantity: '' })) }}
+                    className={`form-input w-full ${formErrors.quantity ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    placeholder="e.g. 10"
+                  />
+                  {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
+                </div>
 
-                  <div>
-                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">TPH Target</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={form.tph}
-                      onChange={e => { setForm(f => ({ ...f, tph: e.target.value })); if (formErrors.tph) setFormErrors(err => ({ ...err, tph: '' })) }}
-                      className={`form-input w-full ${formErrors.tph ? 'border-red-500 focus:ring-red-200' : ''}`}
-                      placeholder="e.g. 5.00"
-                    />
-                    {formErrors.tph && <p className="text-red-600 text-[11px] mt-1">{formErrors.tph}</p>}
-                  </div>
+                <div>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">TPH Target</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.tph}
+                    onChange={e => { setForm(f => ({ ...f, tph: e.target.value })); if (formErrors.tph) setFormErrors(err => ({ ...err, tph: '' })) }}
+                    className={`form-input w-full ${formErrors.tph ? 'border-red-500 focus:ring-red-200' : ''}`}
+                    placeholder="e.g. 5.00"
+                  />
+                  {formErrors.tph && <p className="text-red-600 text-[11px] mt-1">{formErrors.tph}</p>}
+                </div>
               </div>
 
               {/* Notes Input */}
@@ -876,7 +870,7 @@ ${pageBlocks.join('\n')}
                 <h3 className="text-base font-bold text-slate-900">Production Results: {selectedJopDetail.jop}</h3>
                 <p className="text-xs text-slate-500 mt-0.5">Target: {selectedJopDetail.target} | Realized: {selectedJopDetail.rolls} | Remaining: {selectedJopDetail.sisa}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedJopDetail(null)}
                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               >
@@ -904,47 +898,47 @@ ${pageBlocks.join('\n')}
             </div>
 
             <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="block text-slate-500 mb-1">Target Tonnage</span>
-                    <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.target_tonnage ?? "-"} Ton</strong>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="block text-slate-500 mb-1">Actual Tonnage</span>
-                    <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.actual_tonnage ?? "-"} Ton</strong>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="block text-slate-500 mb-1">Remaining Ton</span>
-                    <strong className="text-amber-700 text-xs">{selectedJopDetail.est?.remaining_tonnage ?? "-"} Ton</strong>
-                </div>
-                <div className="p-2.5 rounded-lg bg-blue-50/50 border border-blue-100">
-                    <span className="block text-blue-600 font-semibold mb-1">TPH Input</span>
-                    <input
-                        type="number"
-                        step="0.01"
-                        defaultValue={selectedJopDetail.est?.tph ?? ""}
-                        placeholder="5.00"
-                        className="form-input text-xs w-full text-center p-1 h-6"
-                        onBlur={(e) => {
-                            if (e.target.value && e.target.value !== String(selectedJopDetail.est?.tph)) {
-                                handleUpdateTph(selectedJopDetail.id, e.target.value);
-                            }
-                        }}
-                    />
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="block text-slate-500 mb-1">Est. Duration</span>
-                    <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.estimated_duration_formatted ?? "N/A"}</strong>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="block text-slate-500 mb-1">Est. Finish</span>
-                    <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.estimated_finish_time ?? "N/A"}</strong>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="block text-slate-500 mb-1">COP/GSM Change</span>
-                    <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.cop_gsm_change_estimate ?? "N/A"}</strong>
-                </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="block text-slate-500 mb-1">Target Tonnage</span>
+                <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.target_tonnage ?? "-"} Ton</strong>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="block text-slate-500 mb-1">Actual Tonnage</span>
+                <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.actual_tonnage ?? "-"} Ton</strong>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="block text-slate-500 mb-1">Remaining Ton</span>
+                <strong className="text-amber-700 text-xs">{selectedJopDetail.est?.remaining_tonnage ?? "-"} Ton</strong>
+              </div>
+              <div className="p-2.5 rounded-lg bg-blue-50/50 border border-blue-100">
+                <span className="block text-blue-600 font-semibold mb-1">TPH Input</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  defaultValue={selectedJopDetail.est?.tph ?? ""}
+                  placeholder="5.00"
+                  className="form-input text-xs w-full text-center p-1 h-6"
+                  onBlur={(e) => {
+                    if (e.target.value && e.target.value !== String(selectedJopDetail.est?.tph)) {
+                      handleUpdateTph(selectedJopDetail.id, e.target.value);
+                    }
+                  }}
+                />
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="block text-slate-500 mb-1">Est. Duration</span>
+                <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.estimated_duration_formatted ?? "N/A"}</strong>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="block text-slate-500 mb-1">Est. Finish</span>
+                <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.estimated_finish_time ?? "N/A"}</strong>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="block text-slate-500 mb-1">COP/GSM Change</span>
+                <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.cop_gsm_change_estimate ?? "N/A"}</strong>
+              </div>
             </div>
-            
+
             <div className="p-4 overflow-y-auto bg-slate-50 flex-1">
               <div className="card overflow-x-auto bg-white border border-slate-200">
                 <table className="data-table w-full text-xs">
@@ -1009,7 +1003,7 @@ ${pageBlocks.join('\n')}
                 </table>
               </div>
             </div>
-            
+
             <div className="p-3 border-t border-slate-100 bg-white flex items-center justify-between">
               <button
                 className="btn btn-primary text-xs px-4 py-1.5 cursor-pointer flex items-center gap-1.5"

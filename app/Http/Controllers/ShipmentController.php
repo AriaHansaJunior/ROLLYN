@@ -67,9 +67,16 @@ class ShipmentController extends Controller
                 ];
             });
             
+        $shipmentDates = Shipment::where('status', 'completed')
+            ->selectRaw('DATE(shipment_date) as date')
+            ->distinct()
+            ->pluck('date')
+            ->toArray();
+
         return Inertia::render('ShipmentHistory', [
             'shipments' => $shipments,
-            'selectedDate' => $date
+            'selectedDate' => $date,
+            'shipmentDates' => $shipmentDates
         ]);
     }
 

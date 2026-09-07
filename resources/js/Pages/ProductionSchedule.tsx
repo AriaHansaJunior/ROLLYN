@@ -53,7 +53,7 @@ export default function ProductionSchedule() {
     const [formErrors, setFormErrors] = useState<Record<string, string>>({})
     const [selectedJop, setSelectedJop] = useState<JopOption | null>(null)
     const [saving, setSaving] = useState(false)
-    
+
     // Pagination state
     const [page, setPage] = useState(1)
     const [perPage, setPerPage] = useState(10)
@@ -183,7 +183,7 @@ export default function ProductionSchedule() {
     }
 
     const rows: ScheduleRow[] = schedules as ScheduleRow[]
-    
+
     // Pagination logic
     const totalPages = Math.ceil(rows.length / perPage)
     const pagedRows = rows.slice((page - 1) * perPage, page * perPage)
@@ -516,11 +516,6 @@ export default function ProductionSchedule() {
                             </div>
 
                             {/* Status */}
-                            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800">
-                                <span className="font-bold">Status:</span>
-                                <span className="px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-green-100 text-green-700 border border-green-200">OPEN</span>
-                                <span className="text-green-600 text-[10px]">New schedules default to OPEN</span>
-                            </div>
                         </div>
 
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">

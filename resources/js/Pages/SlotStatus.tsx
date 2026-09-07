@@ -1,4 +1,5 @@
-import { usePage } from '@inertiajs/react'
+import { usePage, router } from '@inertiajs/react'
+import { useEffect } from 'react'
 
 const statusDef = [
   { key: 'available', label: 'Free Space', bg: '#FFFFFF', border: '#CBD5E1', color: '#334155' },
@@ -13,21 +14,42 @@ const statusDef = [
 export default function SlotStatus() {
   const { locations = [] } = usePage<any>().props;
 
-  const occupiedCount = locations.filter((loc: any) => loc.status === 1).length;
-  const availableCount = locations.filter((loc: any) => loc.status === 0).length;
+  useEffect(() => {
+    const interval = setInterval(() => {
+      router.reload({ only: ['locations'], preserveState: true, preserveScroll: true })
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const totalSlots = locations.length;
 
-  const warehouseData = totalSlots > 0 ? [{
-    id: 'Col A',
-    total: totalSlots,
-    available: availableCount,
-    occupied: occupiedCount,
-    planning: 0,
-    shipment: 0,
-    nonPO: 0,
-    moveWH: 0,
-    hold: 0,
-  }] : [];
+  const whMap: Record<string, any> = {};
+
+  locations.forEach((loc: any) => {
+    const whId = loc.location ? loc.location.charAt(0) : 'Unknown';
+    if (!whMap[whId]) {
+      whMap[whId] = {
+        id: `Col ${whId}`,
+        total: 0,
+        available: 0,
+        occupied: 0,
+        planning: 0,
+        shipment: 0,
+        nonPO: 0,
+        moveWH: 0,
+        hold: 0,
+      };
+    }
+    
+    whMap[whId].total++;
+    if (loc.status === 0) whMap[whId].available++;
+    else if (loc.status === 1) whMap[whId].planning++;
+    else if (loc.status === 2) whMap[whId].occupied++;
+    else if (loc.status === 3) whMap[whId].shipment++;
+    else whMap[whId].occupied++; // fallback for other statuses for now
+  });
+
+  const warehouseData = Object.values(whMap).sort((a: any, b: any) => a.id.localeCompare(b.id));
 
   const totals = warehouseData.reduce((acc, wh) => {
     statusDef.forEach(s => {

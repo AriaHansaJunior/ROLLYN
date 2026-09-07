@@ -146,7 +146,7 @@ export default function IncomingRoll() {
 
     useEffect(() => {
         if (!form.jop) return;
-        
+
         axios.post('/incoming-roll/recommend-form', {
             jop: form.jop,
             grade: form.grade,
@@ -433,7 +433,7 @@ export default function IncomingRoll() {
             const errorMsg =
                 err.response?.data?.message ||
                 "Failed to save roll data to database.";
-                
+
             if (err.response?.status === 422) {
                 if (errorMsg.includes("Roll Number")) {
                     setErrors({ rollNumber: errorMsg });
@@ -466,13 +466,12 @@ export default function IncomingRoll() {
                     >
                         <div className="flex items-center gap-2">
                             <div
-                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
-                                    i < step
-                                        ? "bg-green-600 text-white"
-                                        : i === step
-                                          ? "bg-blue-600 text-white shadow-xs"
-                                          : "bg-slate-200 text-slate-600"
-                                }`}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${i < step
+                                    ? "bg-green-600 text-white"
+                                    : i === step
+                                        ? "bg-blue-600 text-white shadow-xs"
+                                        : "bg-slate-200 text-slate-600"
+                                    }`}
                             >
                                 {i < step ? "✓" : i + 1}
                             </div>
@@ -501,19 +500,7 @@ export default function IncomingRoll() {
 
                     {/* Anti-Salah Quick Roll Number & Barcode Verification Card */}
                     <div className="card p-3.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-200/80 rounded-xl shadow-xs">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                                    ✓
-                                </div>
-                                <h4 className="text-xs font-bold text-slate-900">
-                                    Anti-Salah Double Roll Verification (Camera / Barcode Check)
-                                </h4>
-                            </div>
-                            <span className="text-[11px] text-slate-500 font-medium">
-                                Verifikasi real-time sebelum roll disimpan
-                            </span>
-                        </div>
+
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                             <input
                                 type="text"
@@ -649,9 +636,8 @@ export default function IncomingRoll() {
                                             return (
                                                 <tr
                                                     key={j.id || j.jop}
-                                                    className={`hover:bg-slate-50 transition-colors ${
-                                                        isSelected ? "bg-blue-50/60 font-semibold" : ""
-                                                    }`}
+                                                    className={`hover:bg-slate-50 transition-colors ${isSelected ? "bg-blue-50/60 font-semibold" : ""
+                                                        }`}
                                                 >
                                                     <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: "left" }}>
                                                         {j.jop}
@@ -703,11 +689,10 @@ export default function IncomingRoll() {
                                                                     type: "success",
                                                                 });
                                                             }}
-                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${
-                                                                isSelected
-                                                                    ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
-                                                                    : "btn-primary"
-                                                            }`}
+                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${isSelected
+                                                                ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
+                                                                : "btn-primary"
+                                                                }`}
                                                             title="Select this JOP to fill in Form Data"
                                                         >
                                                             {isSelected ? (
@@ -823,12 +808,12 @@ export default function IncomingRoll() {
                                                 {j.jop}{" "}
                                                 {typeof j.customer ===
                                                     "object" &&
-                                                j.customer?.customer
+                                                    j.customer?.customer
                                                     ? `(${j.customer.customer})`
                                                     : typeof j.customer ===
                                                         "string"
-                                                      ? `(${j.customer})`
-                                                      : ""}
+                                                        ? `(${j.customer})`
+                                                        : ""}
                                             </option>
                                         ))}
                                     </select>
@@ -1879,7 +1864,7 @@ export default function IncomingRoll() {
                     </div>
                 </div>
             )}
-            
+
             {showConfirmModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl animate-fade-in-up">
