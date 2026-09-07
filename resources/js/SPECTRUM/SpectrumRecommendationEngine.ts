@@ -109,7 +109,7 @@ export function evaluateSpectrumRecommendation(
     const tier = parts.length > 2 ? parseInt(parts[2], 10) || 1 : 1
 
     const reasonings: string[] = []
-    let tag = 'Rekomendasi SPECTRUM'
+    let tag = 'SPECTRUM Recommendation'
 
     // 1. Grade Clustering Score (0 - 100)
     let gradeScore = 60.0
@@ -117,7 +117,7 @@ export function evaluateSpectrumRecommendation(
     if (gradesInRack.length > 0) {
       if (rollGrade && gradesInRack.includes(rollGrade)) {
         gradeScore = 100.0
-        reasonings.push(`Klaster Grade: Area ${rack} dominan grade ${rollGrade}`)
+        reasonings.push(`Grade Cluster: Area ${rack} is dominated by grade ${rollGrade}`)
         tag = `Cluster ${rollGrade}`
       } else {
         gradeScore = 40.0
@@ -131,8 +131,8 @@ export function evaluateSpectrumRecommendation(
     if (tier === 1) {
       if (rollWeight >= 900) {
         weightScore = 100.0
-        reasonings.push(`Stabilitas Fondasi: Roll berat (${rollWeight} kg) optimal di Baris Bawah (Tier 1)`)
-        if (tag === 'Rekomendasi SPECTRUM') tag = 'Fondasi Berat Tier 1'
+        reasonings.push(`Foundation Stability: Heavy roll (${rollWeight} kg) is optimal at Bottom Row (Tier 1)`)
+        if (tag === 'SPECTRUM Recommendation') tag = 'Heavy Foundation Tier 1'
       } else {
         weightScore = 80.0
       }
@@ -146,7 +146,7 @@ export function evaluateSpectrumRecommendation(
     } else {
       if (rollWeight < 700) {
         weightScore = 90.0
-        reasonings.push(`Keamanan Stacking: Roll ringan (${rollWeight} kg) aman di Baris ${tier}`)
+        reasonings.push(`Stacking Safety: Light roll (${rollWeight} kg) safe at Row ${tier}`)
       } else {
         weightScore = 45.0
       }
@@ -158,8 +158,8 @@ export function evaluateSpectrumRecommendation(
       const jopsInRack = rackJops[rack] || []
       if (jopsInRack.includes(rollJop)) {
         jopScore = 100.0
-        reasonings.push(`Sinkronisasi JOP: Area batch order ${rollJop}`)
-        if (tag === 'Rekomendasi SPECTRUM') tag = `Batch ${rollJop}`
+        reasonings.push(`JOP Synchronization: Order batch area for ${rollJop}`)
+        if (tag === 'SPECTRUM Recommendation') tag = `Batch ${rollJop}`
       }
     }
 
@@ -167,7 +167,7 @@ export function evaluateSpectrumRecommendation(
     let habitScore = 60.0
     if (preferredRacks.includes(rack)) {
       habitScore = 95.0
-      reasonings.push(`Aksesibilitas: Rack ${rack} area strategis operasional`)
+      reasonings.push(`Accessibility: Rack ${rack} is a strategic operational area`)
     }
 
     // 5. Proximity
@@ -176,7 +176,7 @@ export function evaluateSpectrumRecommendation(
       const curSlot = allSlots.find(s => String(s.id) === String(currentLocationId))
       if (curSlot && curSlot.code.split('-')[0] === rack) {
         proximityScore = 95.0
-        reasonings.push(`Dekat Posisi Awal (${curSlot.code})`)
+        reasonings.push(`Near Initial Position (${curSlot.code})`)
       }
     }
 

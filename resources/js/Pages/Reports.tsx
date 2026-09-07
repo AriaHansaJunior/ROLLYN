@@ -190,8 +190,8 @@ export default function Reports() {
               <Package size={16} />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900">Riwayat Produksi Harian</h3>
-              <p className="text-[11px] text-slate-500">Agregasi hasil input roll berdasarkan tanggal dan shift</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Daily Production History</h3>
+              <p className="text-[11px] text-slate-500">Aggregate roll input results by date and shift</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -203,7 +203,7 @@ export default function Reports() {
                 onChange={(e) => applyHistoryFilter(historyDate, e.target.value)}
                 className="bg-transparent border-none outline-none text-xs text-slate-700 font-medium cursor-pointer"
               >
-                <option value="">Semua Shift (All)</option>
+                <option value="">All Shifts</option>
                 {shifts && shifts.map((s: any) => (
                   <option key={s.id} value={s.id}>
                     Shift: {s.shift}
@@ -225,7 +225,7 @@ export default function Reports() {
                 <button 
                   onClick={() => applyHistoryFilter('', historyShift)}
                   className="text-slate-400 hover:text-slate-600"
-                  title="Hapus filter tanggal"
+                  title="Clear date filter"
                 >
                   <X size={14} />
                 </button>
@@ -237,7 +237,7 @@ export default function Reports() {
               <button
                 onClick={() => applyHistoryFilter('', '')}
                 className="btn btn-secondary text-xs py-1.5 px-2.5 flex items-center gap-1 text-slate-600 hover:text-red-600 cursor-pointer"
-                title="Reset semua filter tanggal & shift"
+                title="Reset all date & shift filters"
               >
                 <X size={13} />
                 <span>Reset</span>
@@ -256,10 +256,10 @@ export default function Reports() {
             </colgroup>
             <thead>
               <tr>
-                <th style={{ textAlign: 'center' }}>Tanggal Produksi</th>
+                <th style={{ textAlign: 'center' }}>Production Date</th>
                 <th style={{ textAlign: 'center' }}>Shift</th>
-                <th style={{ textAlign: 'center' }}>Jumlah Roll</th>
-                <th style={{ textAlign: 'center' }}>Total Berat (kg)</th>
+                <th style={{ textAlign: 'center' }}>Total Rolls</th>
+                <th style={{ textAlign: 'center' }}>Total Weight (kg)</th>
               </tr>
             </thead>
             <tbody>
@@ -267,8 +267,8 @@ export default function Reports() {
                 <tr key={i} className="hover:bg-slate-50 transition-colors">
                   <td className="font-semibold text-slate-900" style={{ textAlign: 'center' }}>{h.date}</td>
                   <td className="font-mono text-slate-600" style={{ textAlign: 'center' }}>{h.shift}</td>
-                  <td className="font-medium text-blue-700" style={{ textAlign: 'center' }}>{h.total_rolls} Roll</td>
-                  <td className="font-medium" style={{ textAlign: 'center' }}>{h.total_weight.toLocaleString('id-ID')}</td>
+                  <td className="font-medium text-blue-700" style={{ textAlign: 'center' }}>{h.total_rolls} {h.total_rolls === 1 ? 'Roll' : 'Rolls'}</td>
+                  <td className="font-medium" style={{ textAlign: 'center' }}>{h.total_weight.toLocaleString('en-US')}</td>
                 </tr>
               )) : (
                 <tr>
@@ -411,8 +411,8 @@ export default function Reports() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Rincian Pengiriman: {selectedShipmentDetail.shipment_number}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Customer: <span className="font-semibold text-slate-700">{selectedShipmentDetail.customer}</span> | Tanggal: {selectedShipmentDetail.date}</p>
+                <h3 className="text-base font-bold text-slate-900">Shipment Details: {selectedShipmentDetail.shipment_number}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Customer: <span className="font-semibold text-slate-700">{selectedShipmentDetail.customer}</span> | Date: {selectedShipmentDetail.date}</p>
               </div>
               <button 
                 onClick={() => setSelectedShipmentDetail(null)}
@@ -428,13 +428,13 @@ export default function Reports() {
                   <thead>
                     <tr>
                       <th style={{ textAlign: 'center' }}>No</th>
-                      <th style={{ textAlign: 'left' }}>Nomor Roll</th>
+                      <th style={{ textAlign: 'left' }}>Roll Number</th>
                       <th style={{ textAlign: 'center' }}>JOP</th>
                       <th style={{ textAlign: 'center' }}>Grade</th>
                       <th style={{ textAlign: 'center' }}>GSM</th>
-                      <th style={{ textAlign: 'center' }}>Berat (kg)</th>
-                      <th style={{ textAlign: 'center' }}>Tgl Input</th>
-                      <th style={{ textAlign: 'center' }}>Status QC</th>
+                      <th style={{ textAlign: 'center' }}>Weight (kg)</th>
+                      <th style={{ textAlign: 'center' }}>Entry Date</th>
+                      <th style={{ textAlign: 'center' }}>QC Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -458,7 +458,7 @@ export default function Reports() {
                     ) : (
                       <tr>
                         <td colSpan={8} className="text-center py-8 text-slate-500">
-                          Tidak ada roll dalam shipment ini.
+                          No rolls in this shipment.
                         </td>
                       </tr>
                     )}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X,
   Download, MapPin, Package, Camera, QrCode, CheckCircle2, XCircle, Clock,
@@ -1035,7 +1035,7 @@ export default function RollInventory({
                         <div className="text-[10px] text-slate-400 font-mono">{r.no_roll}</div>
                       </td>
                       <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.gsm}</td>
-                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-700 font-medium">{r.weight ? r.weight.toLocaleString('id-ID') : 0}</td>
+                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-700 font-medium">{r.weight ? r.weight.toLocaleString('en-US') : 0}</td>
                       <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.width}</td>
                       <td style={{ textAlign: 'center' }}>
                         {r.location ? (
@@ -1549,7 +1549,7 @@ export default function RollInventory({
                                   <span className="text-[11px] text-slate-500 block">{r.gsm} GSM</span>
                                 </td>
                                 <td className="py-3 text-slate-700 font-medium">
-                                  {r.weight ? r.weight.toLocaleString('id-ID') : 0} kg
+                                  {r.weight ? r.weight.toLocaleString('en-US') : 0} kg
                                 </td>
                                 <td className="py-3">
                                   <span className="inline-block font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px] font-mono">
@@ -1796,7 +1796,7 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Catatan / Keterangan (Optional)</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Notes / Remarks (Optional)</label>
                 <textarea
                   className="form-input w-full text-xs"
                   rows={2}
@@ -1986,7 +1986,7 @@ export default function RollInventory({
                 </select>
                 {!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD' ? (
                   <p className="text-[10px] text-amber-600 font-semibold mt-1">
-                    Hanya QC dan Admin yang berwenang merilis status HOLD ke OK
+                    Only QC and Admin are authorized to release HOLD status to OK
                   </p>
                 ) : editingRoll?.roll_status === 'HOLD' ? (
                   <p className="text-[10px] text-emerald-600 font-semibold mt-1">

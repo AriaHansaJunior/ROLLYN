@@ -51,11 +51,7 @@ export default function Profile() {
         });
 
         if (confirmed) {
-            SystemUI.toast({
-                message: "Signed out successfully.",
-                type: "info",
-            });
-            router.visit("/login");
+            router.post("/logout");
         }
     }
 

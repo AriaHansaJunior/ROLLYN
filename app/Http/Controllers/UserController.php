@@ -46,7 +46,7 @@ class UserController extends Controller
             'role' => $validated['role'] ?? 'admin',
         ]);
 
-        return redirect()->back()->with('success', 'New administrator created successfully.');
+        return redirect()->back()->with('success', 'New user created successfully.');
     }
 
     public function update(Request $request, User $user)
@@ -70,14 +70,18 @@ class UserController extends Controller
 
         $user->update($updateData);
 
-        return redirect()->back()->with('success', 'Administrator record updated successfully.');
+        return redirect()->back()->with('success', 'User record updated successfully.');
     }
 
     public function destroy(User $user)
     {
+        if ($user->id === auth()->id()) {
+            return redirect()->back()->with('error', 'You cannot delete your own account.');
+        }
+
         $user->delete();
 
-        return redirect()->back()->with('success', 'Administrator deleted successfully.');
+        return redirect()->back()->with('success', 'User deleted successfully.');
     }
 
     public function updateProfile(Request $request)

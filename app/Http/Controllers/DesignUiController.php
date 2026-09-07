@@ -127,7 +127,7 @@ class DesignUiController extends Controller
 
         $warehouseData = [
             [
-                'id' => 'Kolom A',
+                'id' => 'Column A',
                 'occupied' => $occupiedSlots,
                 'available' => $availableSlots,
             ]
@@ -251,7 +251,7 @@ class DesignUiController extends Controller
                 'type' => $notif->type,
                 'title' => $notif->title,
                 'message' => $notif->message,
-                'time' => $notif->created_at->diffForHumans(),
+                'time' => $notif->created_at ? $notif->created_at->diffForHumans() : 'Just now',
                 'unread' => $notif->is_unread,
             ];
         });

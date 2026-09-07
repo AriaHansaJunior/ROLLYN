@@ -16,7 +16,7 @@ export default function SlotStatus() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      router.reload({ only: ['locations'], preserveState: true, preserveScroll: true })
+      router.reload({ only: ['locations'] })
     }, 3000);
     return () => clearInterval(interval);
   }, []);

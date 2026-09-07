@@ -45,7 +45,7 @@ class IncomingRollController extends Controller
         if ($roll) {
             return response()->json([
                 'exists' => true,
-                'message' => "Nomor Roll '{$rollNumber}' sudah terdaftar di database!",
+                'message' => "Roll Number '{$rollNumber}' is already registered in the database!",
                 'roll' => [
                     'no_roll' => $roll->no_roll,
                     'grade' => $roll->grade?->grade ?? '-',
@@ -225,7 +225,7 @@ class IncomingRollController extends Controller
             // User / PIC
             $userId = auth()->id();
             if (!$userId && $request->pic) {
-                $userObj = User::where('name', 'like', '%' . trim($request->pic) . '%')->first();
+                $userObj = User::where('username', 'like', '%' . trim($request->pic) . '%')->first();
                 if ($userObj) {
                     $userId = $userObj->id;
                 }
@@ -255,7 +255,7 @@ class IncomingRollController extends Controller
                         DB::rollBack();
                         return response()->json([
                             'status' => 'error',
-                            'message' => "Form Number {$formNum} sudah digunakan untuk spesifikasi (Jumbo/Grade/Width/Date) yang berbeda. Silakan gunakan Form Number lain."
+                            'message' => "Form Number {$formNum} is already used for different specifications (Jumbo/Grade/Width/Date). Please use a different Form Number."
                         ], 422);
                     }
                 }

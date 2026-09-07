@@ -132,7 +132,7 @@ class DashboardController extends Controller
                 'id' => $alertId++,
                 'type' => 'warning',
                 'title' => 'Quality Hold Alert',
-                'message' => "Terdapat " . max($holdRollsCount, $totalHold) . " roll berstatus HOLD yang memerlukan pemeriksaan QC.",
+                'message' => "There are " . max($holdRollsCount, $totalHold) . " rolls on HOLD status requiring QC inspection.",
                 'time' => now()->subMinutes(15)->format('H:i'),
             ];
         }
@@ -144,7 +144,7 @@ class DashboardController extends Controller
                 'id' => $alertId++,
                 'type' => 'info',
                 'title' => 'Active Shipment Plan',
-                'message' => "$activeShipments pengiriman sedang dalam proses verifikasi atau persiapan.",
+                'message' => "$activeShipments shipments are currently in verification or preparation.",
                 'time' => now()->subMinutes(42)->format('H:i'),
             ];
         }
@@ -154,8 +154,8 @@ class DashboardController extends Controller
             $alerts[] = [
                 'id' => $alertId++,
                 'type' => 'info',
-                'title' => 'Antrean Produksi JOP',
-                'message' => "$activeJops Job Order (JOP) masih membutuhkan pemenuhan roll.",
+                'title' => 'JOP Production Queue',
+                'message' => "$activeJops Job Orders (JOP) still require roll fulfillment.",
                 'time' => now()->subHours(1)->format('H:i'),
             ];
         }
@@ -178,31 +178,32 @@ class DashboardController extends Controller
                 'id' => $alertId++,
                 'type' => 'success',
                 'title' => 'System Online',
-                'message' => 'Roll inventory & warehouse tracking berjalan normal.',
+                'message' => 'Roll inventory & warehouse tracking are operating normally.',
                 'time' => now()->format('H:i'),
             ];
         }
 
         // 5. Dynamic Warehouse Analysis based on real DB values
         $utilPct = $totalSlots > 0 ? round(($occupiedSlots / $totalSlots) * 100, 1) : 0;
+        $currentMonthName = Carbon::now()->format('F');
         $insights = [
             [
                 'icon' => '📈',
-                'text' => "Tren produksi bulan September tercatat $totalRolls roll dengan total bobot " . number_format($totalWeight, 0, ',', '.') . " kg dari $totalJops order terdaftar."
+                'text' => "Production trend for $currentMonthName records $totalRolls rolls with a total weight of " . number_format($totalWeight, 0, ',', '.') . " kg across $totalJops registered orders."
             ],
             [
                 'icon' => '🏭',
-                'text' => "Okupansi gudang berada pada $utilPct% ($occupiedSlots dari $totalSlots slot terisi). Kapasitas terbesar terdistribusi di Column E dan Column A."
+                'text' => "Warehouse occupancy is at $utilPct% ($occupiedSlots of $totalSlots slots occupied). Highest capacity is distributed in Column E and Column A."
             ],
             [
                 'icon' => '👥',
-                'text' => "$activeJops dari $totalJops JOP berstatus aktif menunggu pemenuhan kuantitas roll finishgoods."
+                'text' => "$activeJops of $totalJops JOPs are active awaiting finished goods roll quantity fulfillment."
             ],
             [
                 'icon' => $holdRollsCount > 0 ? '⚠️' : '✅',
                 'text' => $holdRollsCount > 0 
-                    ? "Terdapat $holdRollsCount roll berstatus HOLD yang ditempatkan di karantina slot Column E menunggu disposisi teknis."
-                    : "Seluruh roll finishgoods dalam inventori berstatus OK dan siap dialokasikan ke rencana pengiriman."
+                    ? "There are $holdRollsCount rolls on HOLD status placed in quarantine slot Column E awaiting technical disposition."
+                    : "All finished goods rolls in inventory are marked OK and ready for shipment allocation."
             ],
         ];
 

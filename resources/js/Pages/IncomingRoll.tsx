@@ -347,7 +347,7 @@ export default function IncomingRoll() {
         if (!form.rollNumber.trim()) {
             errs.rollNumber = "Roll number is required.";
         } else if (duplicateWarning && form.rollNumber !== savedRollNumber) {
-            errs.rollNumber = "Nomor roll sudah terdaftar di database (Anti-Salah). Harap gunakan nomor roll lain.";
+            errs.rollNumber = "Roll number is already registered in the database (Anti-Duplicate). Please use another roll number.";
         }
         if (!form.formNumber.trim())
             errs.formNumber = "Form number is required.";
@@ -362,7 +362,7 @@ export default function IncomingRoll() {
         if (!form.cobb.trim()) errs.cobb = "Cobb is required.";
         if (!form.shift.trim()) errs.shift = "Shift is required.";
         if (!form.entry_date.trim()) errs.entry_date = "Production Date is required.";
-        if (!form.pic.trim()) errs.pic = "PIC (Petugas) is required.";
+        if (!form.pic.trim()) errs.pic = "PIC (Officer) is required.";
 
         setErrors(errs);
 
@@ -506,22 +506,22 @@ export default function IncomingRoll() {
                                 type="text"
                                 value={form.rollNumber}
                                 onChange={(e) => setForm((f) => ({ ...f, rollNumber: e.target.value }))}
-                                placeholder="Scan barcode kamera / ketik nomor roll (e.g. R-10425)..."
+                                placeholder="Scan camera barcode / type roll number (e.g. R-10425)..."
                                 className="form-input text-xs flex-1 bg-white font-mono"
                             />
                             {form.rollNumber.trim() && (
                                 <div className="shrink-0 flex items-center gap-1.5">
                                     {isCheckingDuplicate ? (
                                         <span className="text-xs text-slate-500 flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 rounded-lg">
-                                            <RefreshCw size={12} className="animate-spin" /> Memeriksa...
+                                            <RefreshCw size={12} className="animate-spin" /> Checking...
                                         </span>
                                     ) : duplicateWarning ? (
                                         <span className="text-xs font-bold text-red-700 flex items-center gap-1 px-2.5 py-1.5 bg-red-100 border border-red-200 rounded-lg">
-                                            <AlertCircle size={13} /> DUPLIKAT TERDETEKSI
+                                            <AlertCircle size={13} /> DUPLICATE DETECTED
                                         </span>
                                     ) : (
                                         <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 border border-emerald-200 rounded-lg">
-                                            <Check size={13} /> NOMOR ROLL AMAN
+                                            <Check size={13} /> ROLL NUMBER VALID
                                         </span>
                                     )}
                                 </div>
@@ -531,10 +531,10 @@ export default function IncomingRoll() {
                             <div className="mt-2 text-[11px] text-red-700 bg-white/95 p-2.5 rounded-lg border border-red-200 flex items-start gap-1.5">
                                 <AlertCircle size={14} className="shrink-0 mt-0.5 text-red-600" />
                                 <div>
-                                    <strong className="block font-bold">⚠️ PERINGATAN ANTI-SALAH:</strong>
+                                    <strong className="block font-bold">⚠️ ANTI-DUPLICATE WARNING:</strong>
                                     <span>{duplicateWarning.message}</span>
                                     <div className="text-[10px] text-red-600 mt-0.5 font-medium">
-                                        Data di database: Grade {duplicateWarning.roll?.grade} | GSM {duplicateWarning.roll?.gsm} | Shift {duplicateWarning.roll?.shift} | Tgl {duplicateWarning.roll?.entry_date} | Status: {duplicateWarning.roll?.status}
+                                        Database record: Grade {duplicateWarning.roll?.grade} | GSM {duplicateWarning.roll?.gsm} | Shift {duplicateWarning.roll?.shift} | Date: {duplicateWarning.roll?.entry_date} | Status: {duplicateWarning.roll?.status}
                                     </div>
                                 </div>
                             </div>
@@ -959,7 +959,7 @@ export default function IncomingRoll() {
                                     />
                                     {isCheckingDuplicate && (
                                         <p className="text-slate-400 text-[11px] mt-1 flex items-center gap-1">
-                                            <RefreshCw size={11} className="animate-spin" /> Memeriksa nomor roll...
+                                            <RefreshCw size={11} className="animate-spin" /> Checking roll number...
                                         </p>
                                     )}
                                     {errors.rollNumber && (
@@ -971,10 +971,10 @@ export default function IncomingRoll() {
                                         <div className="mt-1.5 p-2 rounded bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-1.5 animate-in fade-in">
                                             <AlertCircle size={14} className="shrink-0 mt-0.5" />
                                             <div>
-                                                <strong className="block font-bold">⚠️ Anti-Salah: Nomor Roll Duplikat!</strong>
+                                                <strong className="block font-bold">⚠️ Anti-Duplicate: Duplicate Roll Number!</strong>
                                                 <span>{duplicateWarning.message}</span>
                                                 <div className="text-[10px] text-red-600 mt-0.5">
-                                                    Spek: {duplicateWarning.roll?.grade} | GSM: {duplicateWarning.roll?.gsm} | Shift: {duplicateWarning.roll?.shift} | Status: {duplicateWarning.roll?.status}
+                                                    Spec: {duplicateWarning.roll?.grade} | GSM: {duplicateWarning.roll?.gsm} | Shift: {duplicateWarning.roll?.shift} | Status: {duplicateWarning.roll?.status}
                                                 </div>
                                             </div>
                                         </div>
@@ -1366,13 +1366,13 @@ export default function IncomingRoll() {
                                         <option value="HOLD">HOLD (Waiting for QC Spec Verification)</option>
                                     </select>
                                     <p className="text-slate-400 text-[10px] mt-1">
-                                        Pilih HOLD jika terdapat deviasi spesifikasi yang memerlukan verifikasi QC di gudang.
+                                        Select HOLD if there are specification deviations requiring QC verification in the warehouse.
                                     </p>
                                 </div>
 
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1">
-                                        PIC (Petugas){" "}
+                                        PIC (Officer){" "}
                                         <span className="text-red-500">*</span>
                                     </label>
                                     <input
@@ -1477,7 +1477,7 @@ export default function IncomingRoll() {
                                 ["Ex Material", form.exMaterial || "(not entered)"],
                                 ["Production Date", form.entry_date || "(not entered)"],
                                 ["Shift", form.shift || "(not entered)"],
-                                ["PIC (Petugas)", form.pic || "(not entered)"],
+                                ["PIC (Officer)", form.pic || "(not entered)"],
                             ].map(([label, value]) => (
                                 <div
                                     key={label}
@@ -1803,7 +1803,7 @@ export default function IncomingRoll() {
                         {form.status === 'HOLD' && (
                             <div className="w-full bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center justify-center gap-2">
                                 <Clock size={18} className="text-amber-600" />
-                                <span className="font-semibold text-sm">Status Roll saat ini adalah HOLD. Label final hanya dapat dicetak setelah spesifikasi dikonfirmasi oleh QC.</span>
+                                <span className="font-semibold text-sm">Current Roll status is HOLD. Final label can only be printed after specification is confirmed by QC.</span>
                             </div>
                         )}
                         <div className="flex flex-wrap gap-3 justify-center pt-2">

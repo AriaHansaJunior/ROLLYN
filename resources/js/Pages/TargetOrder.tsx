@@ -87,7 +87,7 @@ export default function TargetOrder() {
                 <td style={{ textAlign: 'center' }}>{r.gsm?.gsm || '-'}</td>
                 <td style={{ textAlign: 'center' }}>{r.rolls_width?.width || r.rollsWidth?.width || '-'}</td>
                 <td className="font-bold" style={{ textAlign: 'center' }}>{r.quantity || 0}</td>
-                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{(r.weight || 0).toLocaleString('id-ID')}</td>
+                <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{(r.weight || 0).toLocaleString('en-US')}</td>
                 <td style={{ textAlign: 'center' }}>{r.production_estimation?.tph ?? '-'}</td>
                 <td className="font-mono text-xs" style={{ textAlign: 'center' }}>{r.production_estimation?.estimated_finish_time ?? 'N/A'}</td>
                 <td style={{ textAlign: 'center' }}>{r.container || '-'}</td>

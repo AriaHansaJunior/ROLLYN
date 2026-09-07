@@ -147,6 +147,19 @@ export default function Jop() {
     setShowModal(true)
   }
 
+  function handleUpdateTph(jopId: number, newTph: string) {
+    setSelectedJopDetail((prev: any) => {
+      if (!prev || prev.id !== jopId) return prev;
+      return {
+        ...prev,
+        est: {
+          ...prev.est,
+          tph: newTph,
+        },
+      };
+    });
+  }
+
   function handleSave() {
     const errs: Record<string, string> = {}
     if (!form.spk.trim()) errs.spk = 'SPK is required.'
@@ -605,7 +618,7 @@ ${pageBlocks.join('\n')}
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Add Job Order Production</h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">Input order PPIC dan rekomendasi spesifikasi produksi</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Enter PPIC order and production specification recommendations</p>
               </div>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
                 <X size={18} />
@@ -839,12 +852,12 @@ ${pageBlocks.join('\n')}
 
               {/* Notes Input */}
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Catatan / Notes (Optional)</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Notes / Remarks (Optional)</label>
                 <textarea
                   value={form.noted_order}
                   onChange={e => setForm(f => ({ ...f, noted_order: e.target.value }))}
                   className="form-input w-full min-h-[60px]"
-                  placeholder="Instruksi khusus / catatan kombinasi target roll..."
+                  placeholder="Special instructions / notes for roll target combination..."
                 />
               </div>
             </div>
@@ -880,7 +893,7 @@ ${pageBlocks.join('\n')}
 
             {selectedJopDetail.noted_order && (
               <div className="px-4 py-2 bg-amber-50/90 border-b border-amber-200/80 flex items-start gap-2 text-xs text-amber-900">
-                <span className="font-bold shrink-0">Catatan / Notes:</span>
+                <span className="font-bold shrink-0">Notes / Remarks:</span>
                 <span className="font-medium">{selectedJopDetail.noted_order}</span>
               </div>
             )}
@@ -1040,7 +1053,7 @@ ${pageBlocks.join('\n')}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Spesifikasi teknis & inspeksi roll tanpa meninggalkan halaman JOP
+                    Technical specifications & roll inspection without leaving the JOP page
                   </p>
                 </div>
               </div>
@@ -1058,23 +1071,23 @@ ${pageBlocks.join('\n')}
                 {/* 1. Roll Information */}
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
                   <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5 flex items-center justify-between">
-                    <span>Informasi Roll</span>
+                    <span>Roll Information</span>
                     <span className="text-slate-400 text-[10px] font-normal">ID: {selectedRollPopup.no}</span>
                   </div>
                   <div className="space-y-1.5 pt-0.5">
-                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Nomor Roll</span><span className="font-bold text-slate-800 font-mono">{selectedRollPopup.no_roll || `R-${selectedRollPopup.no}`}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Roll Number</span><span className="font-bold text-slate-800 font-mono">{selectedRollPopup.no_roll || `R-${selectedRollPopup.no}`}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Form Number</span><span className="font-semibold text-slate-800">{selectedRollPopup.form ? `F-${selectedRollPopup.form}` : '—'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Shift</span><span className="font-semibold text-slate-800">{selectedRollPopup.shift?.shift || '—'}</span></div>
-                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Tanggal Input</span><span className="font-semibold text-slate-800">{selectedRollPopup.entry_date || '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Entry Date</span><span className="font-semibold text-slate-800">{selectedRollPopup.entry_date || '—'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Operator (PIC)</span><span className="font-semibold text-slate-800">{selectedRollPopup.user?.username || selectedRollPopup.user?.name || 'ADMIN'}</span></div>
-                    <div className="flex justify-between py-1"><span className="text-slate-500">Status Alokasi</span><span className="font-semibold text-slate-800">{selectedRollPopup.locations_id ? 'Slotted' : 'Shipment Plan'}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-slate-500">Allocation Status</span><span className="font-semibold text-slate-800">{selectedRollPopup.locations_id ? 'Slotted' : 'Shipment Plan'}</span></div>
                   </div>
                 </div>
 
                 {/* 2. Specification */}
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
                   <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5">
-                    Spesifikasi Teknis
+                    Technical Specifications
                   </div>
                   <div className="space-y-1.5 pt-0.5">
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Grade</span><span className="font-bold text-slate-800">{selectedRollPopup.grade?.grade || selectedJopDetail?.grade || '—'}</span></div>
@@ -1082,10 +1095,10 @@ ${pageBlocks.join('\n')}
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Plybond (IB)</span><span className="font-semibold text-slate-800">{selectedRollPopup.plybond?.plybonds ?? '—'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Thickness</span><span className="font-semibold text-slate-800">{selectedRollPopup.thickness?.thickness ? `${selectedRollPopup.thickness.thickness} mm` : '—'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Bulk</span><span className="font-semibold text-slate-800">{selectedRollPopup.bulk ?? '—'}</span></div>
-                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Lebar Roll (RW)</span><span className="font-semibold text-slate-800">{(selectedRollPopup.rolls_width?.width || selectedRollPopup.rollsWidth?.width) ? `${selectedRollPopup.rolls_width?.width || selectedRollPopup.rollsWidth?.width} mm` : '—'}</span></div>
-                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Diameter Roll</span><span className="font-semibold text-slate-800">{(selectedRollPopup.rolls_diameter?.diameter || selectedRollPopup.rollsDiameter?.diameter) ? `${selectedRollPopup.rolls_diameter?.diameter || selectedRollPopup.rollsDiameter?.diameter} mm` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Roll Width (RW)</span><span className="font-semibold text-slate-800">{(selectedRollPopup.rolls_width?.width || selectedRollPopup.rollsWidth?.width) ? `${selectedRollPopup.rolls_width?.width || selectedRollPopup.rollsWidth?.width} mm` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Roll Diameter</span><span className="font-semibold text-slate-800">{(selectedRollPopup.rolls_diameter?.diameter || selectedRollPopup.rollsDiameter?.diameter) ? `${selectedRollPopup.rolls_diameter?.diameter || selectedRollPopup.rollsDiameter?.diameter} mm` : '—'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Core Size</span><span className="font-semibold text-slate-800">{selectedRollPopup.core?.core ? `${selectedRollPopup.core.core} mm` : '—'}</span></div>
-                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Berat Aktual</span><span className="font-bold text-blue-700">{selectedRollPopup.weight ? `${selectedRollPopup.weight} kg` : '—'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Actual Weight</span><span className="font-bold text-blue-700">{selectedRollPopup.weight ? `${selectedRollPopup.weight} kg` : '—'}</span></div>
                     <div className="flex justify-between py-1"><span className="text-slate-500">Cobb</span><span className="font-semibold text-slate-800">{selectedRollPopup.cobb?.cobb ?? '—'}</span></div>
                   </div>
                 </div>
@@ -1093,20 +1106,20 @@ ${pageBlocks.join('\n')}
                 {/* 3. Inspection & Warehouse */}
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
                   <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5">
-                    Inspeksi & Gudang
+                    Inspection & Warehouse
                   </div>
                   <div className="space-y-1.5 pt-0.5">
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Ex Material</span><span className="font-semibold text-slate-800">{selectedRollPopup.exmaterial || 'IMPORT'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Visual</span><span className="font-semibold text-slate-800">{selectedRollPopup.visual || 'OK'}</span></div>
-                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Lokasi Gudang</span><span className="font-bold text-slate-800">{selectedRollPopup.location?.location || 'Not Assigned'}</span></div>
-                    <div className="flex justify-between py-1"><span className="text-slate-500">Status Roll</span><span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${selectedRollPopup.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{selectedRollPopup.status || 'OK'}</span></div>
+                    <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Warehouse Location</span><span className="font-bold text-slate-800">{selectedRollPopup.location?.location || 'Not Assigned'}</span></div>
+                    <div className="flex justify-between py-1"><span className="text-slate-500">Roll Status</span><span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${selectedRollPopup.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{selectedRollPopup.status || 'OK'}</span></div>
                   </div>
                 </div>
 
                 {/* 4. Order Information */}
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-2">
                   <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider text-blue-700 border-b border-slate-100 pb-1.5">
-                    Informasi Order
+                    Order Information
                   </div>
                   <div className="space-y-1.5 pt-0.5">
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Job Order Production</span><span className="font-bold text-blue-700 font-mono">{selectedJopDetail?.jop || '—'}</span></div>
@@ -1124,7 +1137,7 @@ ${pageBlocks.join('\n')}
                 className="btn btn-secondary text-xs px-4 py-1.5 cursor-pointer"
                 onClick={() => setSelectedRollPopup(null)}
               >
-                Tutup Detail
+                Close Details
               </button>
             </div>
           </div>

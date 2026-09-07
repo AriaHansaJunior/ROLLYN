@@ -47,13 +47,14 @@ class SpectrumEngineController extends Controller
         try {
             // fallback to inline execution if proxy fails
             $tempImg = sys_get_temp_dir() . '/spectrum_in_' . uniqid() . '.txt';
+            $tempImgNormalized = str_replace('\\', '/', $tempImg);
             file_put_contents($tempImg, $base64Image);
 
             $pythonCode = "
 import sys, json
 from spectrum_engine.app import decode_base64_image, process_spectrum_detection
 
-with open(r'{$tempImg}', 'r') as f:
+with open('{$tempImgNormalized}', 'r') as f:
     b64 = f.read()
 
 img = decode_base64_image(b64)

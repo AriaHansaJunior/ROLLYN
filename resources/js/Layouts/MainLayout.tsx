@@ -29,7 +29,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   useEffect(() => {
     const handleResize = () => {
-      const nextIsMobile = window.innerWidth < 680
+      const nextIsMobile = window.innerWidth < 640
       setIsMobile(nextIsMobile)
       if (!nextIsMobile) {
         setMobileMenuOpen(false)

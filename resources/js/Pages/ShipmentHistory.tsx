@@ -111,7 +111,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
     try {
       const [y, m, d] = date.split('-').map(Number)
       const dObj = new Date(y, m - 1, d)
-      return dObj.toLocaleDateString('id-ID', {
+      return dObj.toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -123,7 +123,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
   }, [date])
 
   return (
-    <div className="py-4 px-2.5 sm:px-6 space-y-4 h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+    <div className="py-4 px-2.5 sm:px-6 space-y-4 min-h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)] flex flex-col overflow-y-auto lg:overflow-hidden">
       {/* Title Bar */}
       <div className="flex flex-wrap justify-between items-center gap-3 flex-shrink-0">
         <div>
@@ -132,13 +132,13 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
             Shipment History
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Riwayat pengiriman roll selesai berdasarkan tanggal
+            Completed roll shipment history by date
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-            Terpilih: {formattedSelectedDate}
+            Selected: {formattedSelectedDate}
           </span>
         </div>
       </div>
@@ -152,17 +152,17 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
               <button
                 onClick={prevMonth}
                 className="p-1.5 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
-                title="Bulan Sebelumnya"
+                title="Previous Month"
               >
                 <ChevronLeft size={16} />
               </button>
               <span className="px-3 font-bold text-slate-800 select-none min-w-[140px] text-center">
-                {currentMonth.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+                {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
               </span>
               <button
                 onClick={nextMonth}
                 className="p-1.5 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
-                title="Bulan Berikutnya"
+                title="Next Month"
               >
                 <ChevronRight size={16} />
               </button>
@@ -172,26 +172,26 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
               onClick={goToToday}
               className="px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-700 transition-colors cursor-pointer"
             >
-              Hari Ini
+              Today
             </button>
           </div>
 
           <div className="flex items-center gap-1.5 text-slate-500">
             <span className="w-2 h-2 rounded-full bg-red-500 inline-block ring-2 ring-red-200"></span>
-            <span className="font-medium text-[11px]">Ada Pengiriman</span>
+            <span className="font-medium text-[11px]">Has Shipment</span>
           </div>
         </div>
 
         {/* Locked Grid: 7 Columns x 6 Rows */}
         <div className="p-3">
           <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400 mb-1">
-            <div>Minggu</div>
-            <div>Senin</div>
-            <div>Selasa</div>
-            <div>Rabu</div>
-            <div>Kamis</div>
-            <div>Jumat</div>
-            <div>Sabtu</div>
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
           </div>
           <div className="grid grid-cols-7 gap-1">
             {calendarGridDays.map((d, i) => {
@@ -235,10 +235,10 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
           <div className="p-3 border-b border-slate-100 bg-slate-50/70 flex justify-between items-center flex-shrink-0">
             <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <PackageCheck size={14} className="text-blue-600" />
-              Pengiriman pada {date}
+              Shipments on {date}
             </h3>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-              {shipments.length} Pengiriman
+              {shipments.length} {shipments.length === 1 ? 'Shipment' : 'Shipments'}
             </span>
           </div>
 
@@ -246,8 +246,8 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
             {shipments.length === 0 ? (
               <div className="text-center py-12 text-slate-400">
                 <PackageCheck size={36} className="mx-auto mb-2 opacity-40" />
-                <p className="text-xs font-medium">Tidak ada pengiriman selesai pada tanggal ini.</p>
-                <p className="text-[11px] text-slate-400 mt-1">Pilih tanggal dengan tanda merah untuk melihat data.</p>
+                <p className="text-xs font-medium">No completed shipments on this date.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Select a date with a red indicator to view records.</p>
               </div>
             ) : (
               shipments.map((s) => {
@@ -279,7 +279,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
                     <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-[11px] text-slate-500">
                       <span className="flex items-center gap-1 font-medium">
                         <FileText size={11} className="text-blue-500" />
-                        {s.shipment_rolls?.length || 0} Roll
+                        {s.shipment_rolls?.length || 0} {(s.shipment_rolls?.length || 0) === 1 ? 'Roll' : 'Rolls'}
                       </span>
                       <span className="text-slate-400 text-[10px]">QC: {s.qc?.username}</span>
                     </div>
@@ -297,7 +297,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
               <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex-shrink-0 flex flex-wrap justify-between items-center gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    Detail Pengiriman:
+                    Shipment Details:
                     <span className="text-blue-700 font-extrabold">{activeShipment.shipment_number}</span>
                   </h3>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 mt-1">
@@ -310,8 +310,8 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
                       <span className="text-slate-700">{activeShipment.admin?.username}</span>
                     </p>
                     <p>
-                      <span className="font-semibold text-slate-500">Total Roll:</span>{' '}
-                      <span className="font-bold text-blue-600">{activeShipment.shipment_rolls?.length || 0} roll</span>
+                      <span className="font-semibold text-slate-500">Total Rolls:</span>{' '}
+                      <span className="font-bold text-blue-600">{activeShipment.shipment_rolls?.length || 0} {(activeShipment.shipment_rolls?.length || 0) === 1 ? 'roll' : 'rolls'}</span>
                     </p>
                   </div>
                 </div>
@@ -321,12 +321,12 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
                 <table className="w-full text-left border-collapse text-xs">
                   <thead className="sticky top-0 bg-white shadow-xs z-10">
                     <tr className="border-b border-slate-200 text-slate-600 bg-slate-50/90 backdrop-blur-xs">
-                      <th className="py-2.5 px-4 font-bold">No. Roll</th>
+                      <th className="py-2.5 px-4 font-bold">Roll No.</th>
                       <th className="py-2.5 px-4 font-bold">Grade</th>
                       <th className="py-2.5 px-4 font-bold">GSM</th>
-                      <th className="py-2.5 px-4 font-bold text-right">Berat (kg)</th>
-                      <th className="py-2.5 px-4 font-bold text-center">Status QC</th>
-                      <th className="py-2.5 px-4 font-bold text-center">Aksi</th>
+                      <th className="py-2.5 px-4 font-bold text-right">Weight (kg)</th>
+                      <th className="py-2.5 px-4 font-bold text-center">QC Status</th>
+                      <th className="py-2.5 px-4 font-bold text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -341,7 +341,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
                         <td className="py-3 px-4 text-slate-600">{sr.roll?.grade || '—'}</td>
                         <td className="py-3 px-4 text-slate-600">{sr.roll?.gsm || '—'}</td>
                         <td className="py-3 px-4 text-slate-700 text-right font-medium">
-                          {sr.roll?.weight ? `${Number(sr.roll.weight).toLocaleString('id-ID')} kg` : '—'}
+                          {sr.roll?.weight ? `${Number(sr.roll.weight).toLocaleString('en-US')} kg` : '—'}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <span
@@ -359,7 +359,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
                             onClick={() => setSelectedRoll(sr.roll)}
                             className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
                           >
-                            Detail
+                            Details
                           </button>
                         </td>
                       </tr>
@@ -371,8 +371,8 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
               <PackageCheck size={48} className="mb-3 opacity-25" />
-              <p className="text-sm font-semibold text-slate-600">Pilih pengiriman untuk melihat detail roll.</p>
-              <p className="text-xs text-slate-400 mt-0.5">Klik pada salah satu item di daftar pengiriman di sebelah kiri.</p>
+              <p className="text-sm font-semibold text-slate-600">Select a shipment to view roll details.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Click on any item from the shipment list on the left.</p>
             </div>
           )}
         </div>
@@ -384,7 +384,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
           <div className="card w-full max-w-md p-0 bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Detail Roll</h3>
+                <h3 className="text-base font-bold text-slate-900">Roll Details</h3>
                 <p className="text-xs text-slate-500">No: {selectedRoll.no_roll}</p>
               </div>
               <button
@@ -437,7 +437,7 @@ export default function ShipmentHistory({ shipments, selectedDate, shipmentDates
                 className="btn btn-secondary text-xs px-4 py-2"
                 onClick={() => setSelectedRoll(null)}
               >
-                Tutup
+                Close
               </button>
             </div>
           </div>

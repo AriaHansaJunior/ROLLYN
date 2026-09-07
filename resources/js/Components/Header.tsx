@@ -13,8 +13,10 @@ const pageLabels: Record<string, string[]> = {
   'ocr-monitoring': ['Production', 'OCR Monitoring'],
   'target-order': ['Orders', 'Target Order'],
   'jop': ['Orders', 'JOP (Job Order Production)'],
+  'shipment-history': ['Orders', 'Shipment History'],
   'reports': ['Reports'],
   'user-management': ['Administration', 'User Management'],
+  'recommendation-logs': ['Administration', 'Recommendation Logs'],
   'profile': ['Administration', 'Profile'],
   'notifications': ['Notifications'],
 }

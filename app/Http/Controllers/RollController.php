@@ -261,7 +261,7 @@ class RollController extends Controller
 
                 if ($currentOccupancy >= 4) {
                     DB::rollBack();
-                    return redirect()->back()->with('error', 'Slot tersebut sudah penuh (maksimal 4 roll). Silakan pilih slot lain.');
+                    return redirect()->back()->with('error', 'This slot is already full (maximum 4 rolls). Please select another slot.');
                 }
             }
 

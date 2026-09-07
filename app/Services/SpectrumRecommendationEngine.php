@@ -178,7 +178,7 @@ class SpectrumRecommendationEngine
         if (!empty($existingGradesInCol)) {
             if (in_array($grade, $existingGradesInCol)) {
                 $gradeScore = 100.0;
-                $reasonings[] = "Klaster Grade sejenis: Kolom " . sprintf('%02d', $col) . " telah terisi " . $grade;
+                $reasonings[] = "Grade Cluster: Column " . sprintf('%02d', $col) . " already contains " . $grade;
                 $tags[] = "Cluster " . $grade;
             } else {
                 $gradeScore = 20.0; // Penalty for mixing different grades in same bay stack
@@ -189,7 +189,7 @@ class SpectrumRecommendationEngine
             $rightGrades = $columnGrades[$col + 1] ?? [];
             if (in_array($grade, $leftGrades) || in_array($grade, $rightGrades)) {
                 $gradeScore = 85.0;
-                $reasonings[] = "Zona Grade berdekatan: Berdampingan dengan area " . $grade;
+                $reasonings[] = "Adjacent Grade Zone: Near " . $grade . " storage bay";
             } else {
                 $gradeScore = 65.0;
             }
@@ -200,8 +200,8 @@ class SpectrumRecommendationEngine
         if ($tier === 1) {
             if ($weight >= 900) {
                 $weightScore = 100.0;
-                $reasonings[] = "Stabilitas Fondasi: Beban berat ({$weight} kg) optimal di Tier 1 (Lantai dasar)";
-                $tags[] = "Fondasi Berat Tier 1";
+                $reasonings[] = "Foundation Stability: Heavy load ({$weight} kg) optimal at Tier 1 (Ground level)";
+                $tags[] = "Heavy Foundation Tier 1";
             } elseif ($weight >= 700) {
                 $weightScore = 85.0;
             } else {
@@ -210,15 +210,15 @@ class SpectrumRecommendationEngine
         } elseif ($tier === 2) {
             if ($weight >= 600 && $weight <= 950) {
                 $weightScore = 95.0;
-                $reasonings[] = "Keseimbangan Beban: Tier 2 stabil untuk berat sedang ({$weight} kg)";
+                $reasonings[] = "Load Balance: Tier 2 stable for medium load ({$weight} kg)";
             } else {
                 $weightScore = 75.0;
             }
         } elseif ($tier >= 3) {
             if ($weight < 750) {
                 $weightScore = 95.0;
-                $reasonings[] = "Keamanan Penumpukan: Roll ringan ({$weight} kg) aman di Tier {$tier}";
-                $tags[] = "Stack Aman Tier {$tier}";
+                $reasonings[] = "Stacking Safety: Lightweight roll ({$weight} kg) secure at Tier {$tier}";
+                $tags[] = "Safe Stack Tier {$tier}";
             } else {
                 $weightScore = 35.0; // Penalty: Heavy rolls on high tiers pose structural risk
             }
@@ -230,7 +230,7 @@ class SpectrumRecommendationEngine
             $existingJopsInCol = $columnJops[$col] ?? [];
             if (in_array($jop, $existingJopsInCol)) {
                 $jopScore = 100.0;
-                $reasonings[] = "Sinkronisasi Order JOP: Mengelompokkan pesanan {$jop} untuk kemudahan dispatching";
+                $reasonings[] = "JOP Order Synchronization: Grouped with {$jop} for streamlined dispatching";
                 $tags[] = "Batch {$jop}";
             } elseif (in_array($jop, $columnJops[$col - 1] ?? []) || in_array($jop, $columnJops[$col + 1] ?? [])) {
                 $jopScore = 80.0;
@@ -243,8 +243,8 @@ class SpectrumRecommendationEngine
             $freq = $userHabitBayWeights[$col]; // 0.0 - 1.0
             $habitScore = round(40.0 + ($freq * 60.0), 1);
             if ($freq > 0.15) {
-                $reasonings[] = "Pola Kebiasaan Operator: Kolom " . sprintf('%02d', $col) . " merupakan preferensi historis penempatan";
-                $tags[] = "Pola Operator";
+                $reasonings[] = "Operator Pattern: Column " . sprintf('%02d', $col) . " matches historical operator preference";
+                $tags[] = "Operator Pattern";
             }
         }
 
@@ -259,8 +259,8 @@ class SpectrumRecommendationEngine
                     $dist = abs($col - $curCol);
                     $proximityScore = max(20.0, 100.0 - ($dist * 12.0));
                     if ($dist <= 2) {
-                        $reasonings[] = "Efisiensi Jarak: Relokasi ergonomis dekat posisi asal ({$currentLoc->location})";
-                        $tags[] = "Jarak Optimal";
+                        $reasonings[] = "Distance Efficiency: Ergonomic relocation near origin ({$currentLoc->location})";
+                        $tags[] = "Optimal Distance";
                     }
                 }
             }
@@ -276,7 +276,7 @@ class SpectrumRecommendationEngine
             ($proximityScore * $weights['proximity'])
         );
 
-        $primaryTag = !empty($tags) ? $tags[0] : 'Rekomendasi SPECTRUM';
+        $primaryTag = !empty($tags) ? $tags[0] : 'SPECTRUM Recommendation';
 
         return [
             'totalScore' => round($totalScore, 1),

@@ -368,7 +368,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
         <div className="hidden md:block absolute bottom-full mb-2 w-max px-3 py-2 bg-white text-slate-800 text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-xl border border-slate-200 whitespace-nowrap left-1/2 -translate-x-1/2">
           <div className="font-bold text-blue-600">Location: {code} (DB ID: {slot.id})</div>
           <div className="text-slate-500 text-[10px] mt-0.5">
-            Capacity: <span className="font-bold text-slate-800">{rollsCount} / 4 Roll</span>
+            Capacity: <span className="font-bold text-slate-800">{rollsCount} / 4 {rollsCount === 1 ? 'Roll' : 'Rolls'}</span>
             {isFull ? ' (FULL)' : ` (${4 - rollsCount} slots remaining)`}
           </div>
           {rollsCount > 0 && (
@@ -665,7 +665,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
               </div>
               <div className="bg-white/60 border border-slate-200 rounded-xl p-3 flex flex-col justify-center hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:bg-white transition-all duration-300 group">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 group-hover:text-emerald-600 transition-colors">Total Weight (KGS)</div>
-                <div className="text-lg font-black text-slate-800 transition-colors">{totalWeight.toLocaleString('id-ID', {minimumFractionDigits: 2})}</div>
+                <div className="text-lg font-black text-slate-800 transition-colors">{totalWeight.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
               </div>
               <div className="bg-white/60 border border-slate-200 rounded-xl p-3 flex flex-col justify-center hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:bg-white transition-all duration-300 group">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 group-hover:text-indigo-600 transition-colors">Total Physical Slots</div>
