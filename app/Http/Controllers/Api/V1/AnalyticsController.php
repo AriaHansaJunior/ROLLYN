@@ -65,8 +65,9 @@ class AnalyticsController extends Controller
             $query->where('jops_id', $jopId);
         }
 
-        $sort = $request->query('sort', 'entry_date');
-        $order = $request->query('order', 'desc');
+        $allowedSorts = ['entry_date', 'no_roll', 'weight', 'created_at', 'no', 'form'];
+        $sort = in_array($request->query('sort'), $allowedSorts, true) ? $request->query('sort') : 'entry_date';
+        $order = strtolower($request->query('order', 'desc')) === 'asc' ? 'asc' : 'desc';
 
         $query->orderBy($sort, $order);
 

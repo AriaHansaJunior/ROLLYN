@@ -44,9 +44,9 @@ class SpectrumEngineController extends Controller
             Log::warning('[SPECTRUM Proxy] Microservice connection failed: ' . $e->getMessage());
         }
 
+        $tempImg = sys_get_temp_dir() . '/spectrum_in_' . uniqid() . '.txt';
         try {
             // fallback to inline execution if proxy fails
-            $tempImg = sys_get_temp_dir() . '/spectrum_in_' . uniqid() . '.txt';
             $tempImgNormalized = str_replace('\\', '/', $tempImg);
             file_put_contents($tempImg, $base64Image);
 
@@ -64,7 +64,6 @@ print(json.dumps(res))
             $engineDir = base_path('spectrum_engine');
             $cmd = 'cmd /c cd /d ' . escapeshellarg($engineDir) . ' && python -c ' . escapeshellarg($pythonCode);
             $output = shell_exec($cmd);
-            @unlink($tempImg);
 
             if ($output) {
                 $data = json_decode(trim($output), true);
@@ -74,6 +73,10 @@ print(json.dumps(res))
             }
         } catch (\Exception $ex) {
             Log::error('[SPECTRUM Fallback] Local execution error: ' . $ex->getMessage());
+        } finally {
+            if (file_exists($tempImg)) {
+                @unlink($tempImg);
+            }
         }
 
         return response()->json([
@@ -187,6 +190,11 @@ print(json.dumps(res))
             'image_saved' => $imageFilename,
             'log_id' => $log->id,
         ]);
+    }
+
+    public function saveDataset(Request $request)
+    {
+        return $this->logTestResult($request);
     }
 
     public function stats()

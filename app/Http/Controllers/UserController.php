@@ -36,14 +36,16 @@ class UserController extends Controller
             'name' => 'required|string|max:45|unique:users,username',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
-            'role' => 'nullable|string',
+            'role' => ['nullable', 'string', 'in:admin,ppic,production,qc'],
         ]);
+
+        $role = !empty($validated['role']) ? strtolower($validated['role']) : 'production';
 
         User::create([
             'username' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'] ?? 'admin',
+            'role' => $role,
         ]);
 
         return redirect()->back()->with('success', 'New user created successfully.');
@@ -55,13 +57,13 @@ class UserController extends Controller
             'name' => 'required|string|max:45|unique:users,username,' . $user->id,
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6|confirmed',
-            'role' => 'nullable|string',
+            'role' => ['nullable', 'string', 'in:admin,ppic,production,qc'],
         ]);
 
         $updateData = [
             'username' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'] ?? $user->role,
+            'role' => !empty($validated['role']) ? strtolower($validated['role']) : $user->role,
         ];
 
         if (!empty($validated['password'])) {
@@ -79,9 +81,12 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'You cannot delete your own account.');
         }
 
-        $user->delete();
-
-        return redirect()->back()->with('success', 'User deleted successfully.');
+        try {
+            $user->delete();
+            return redirect()->back()->with('success', 'User deleted successfully.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            return redirect()->back()->with('error', 'Cannot delete user because they are associated with existing operational records (rolls, shipments, or audit logs).');
+        }
     }
 
     public function updateProfile(Request $request)

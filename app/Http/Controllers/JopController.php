@@ -140,8 +140,23 @@ class JopController extends Controller
     public function destroy($id)
     {
         $jop = Jop::findOrFail($id);
-        $jop->delete();
-        return response()->json(['message' => 'JOP deleted successfully']);
+
+        if ($jop->rolls()->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Cannot delete JOP because it already has associated production rolls.'
+            ], 422);
+        }
+
+        try {
+            $jop->delete();
+            return response()->json(['message' => 'JOP deleted successfully']);
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Cannot delete JOP because it is referenced by other records.'
+            ], 422);
+        }
     }
 
     public function getActive()

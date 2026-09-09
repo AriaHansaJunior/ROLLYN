@@ -236,6 +236,15 @@ class ShipmentController extends Controller
 
     public function cancelRoll($shipmentId, $rollNo)
     {
+        $shipment = Shipment::find($shipmentId);
+        if (!$shipment) {
+            return redirect()->back()->withErrors(['error' => 'Shipment not found.']);
+        }
+
+        if (in_array($shipment->status, ['completed', 'canceled'])) {
+            return redirect()->back()->withErrors(['error' => 'Cannot modify a completed or canceled shipment.']);
+        }
+
         $shipmentRoll = ShipmentRoll::where('shipment_id', $shipmentId)
             ->where(function ($q) use ($rollNo) {
                 $q->where('roll_no', $rollNo)

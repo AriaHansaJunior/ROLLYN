@@ -15,7 +15,7 @@ Route::get('/', function () {
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware('auth')->group(function () {
@@ -34,6 +34,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/ocr-monitoring', [DesignUiController::class, 'ocrMonitoring']);
         Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
         Route::get('/recommendation-logs', [\App\Http\Controllers\RecommendationLogController::class, 'index']);
+        Route::post('/api/spectrum/retrain', [SpectrumEngineController::class, 'retrain'])
+            ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+            ->middleware('throttle:5,1');
     });
 
     // 3. ADMIN + PPIC
@@ -97,16 +100,17 @@ Route::middleware('auth')->group(function () {
         Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
         Route::post('/rolls/ship', [RollController::class, 'confirmShipments']);
     });
+
+    // SPECTRUM AI Authenticated Endpoints
+    Route::get('/api/spectrum/stats', [SpectrumEngineController::class, 'stats']);
+    Route::get('/api/spectrum/retrain-status', [SpectrumEngineController::class, 'retrainStatus']);
+    Route::get('/api/spectrum/insights', [SpectrumEngineController::class, 'modelInsights']);
+
+    Route::withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+        ->middleware('throttle:60,1')
+        ->group(function () {
+            Route::post('/api/spectrum/detect', [SpectrumEngineController::class, 'detect']);
+            Route::post('/api/spectrum/log', [SpectrumEngineController::class, 'logTestResult']);
+            Route::post('/api/spectrum/save-dataset', [SpectrumEngineController::class, 'saveDataset']);
+        });
 });
-
-Route::get('/api/spectrum/stats', [SpectrumEngineController::class, 'stats']);
-Route::get('/api/spectrum/retrain-status', [SpectrumEngineController::class, 'retrainStatus']);
-Route::get('/api/spectrum/insights', [SpectrumEngineController::class, 'modelInsights']);
-
-Route::withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
-    ->group(function () {
-        Route::post('/api/spectrum/detect', [SpectrumEngineController::class, 'detect']);
-        Route::post('/api/spectrum/log', [SpectrumEngineController::class, 'logTestResult']);
-        Route::post('/api/spectrum/retrain', [SpectrumEngineController::class, 'retrain']);
-        Route::post('/api/spectrum/save-dataset', [SpectrumEngineController::class, 'saveDataset']);
-    });

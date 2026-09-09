@@ -36,8 +36,9 @@ class JopController extends Controller
             });
         }
 
-        $sort = $request->query('sort', 'created_at');
-        $order = $request->query('order', 'desc');
+        $allowedSorts = ['created_at', 'spk', 'jop', 'po', 'quantity', 'weight', 'id'];
+        $sort = in_array($request->query('sort'), $allowedSorts, true) ? $request->query('sort') : 'created_at';
+        $order = strtolower($request->query('order', 'desc')) === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sort, $order);
 
         $limit = $request->query('limit', 15);

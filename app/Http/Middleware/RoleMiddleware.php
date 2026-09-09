@@ -15,14 +15,14 @@ class RoleMiddleware
             return redirect('/login');
         }
 
-        $userRole = strtolower(auth()->user()->role ?? 'admin');
+        $userRole = strtolower(auth()->user()->role ?? '');
 
         // Admin has access to everything
         if ($userRole === 'admin') {
             return $next($request);
         }
 
-        if (!in_array($userRole, $roles)) {
+        if (empty($userRole) || !in_array($userRole, $roles, true)) {
             abort(403, 'Unauthorized action.');
         }
 

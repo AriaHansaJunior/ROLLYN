@@ -26,13 +26,15 @@ class AuthController extends Controller
 
             $request->session()->regenerate();
             
-            $role = strtolower($user->role ?? 'admin');
+            $role = strtolower($user->role ?? '');
             $redirectPath = '/dashboard';
             
             if ($role === 'production') {
                 $redirectPath = '/incoming-roll';
             } elseif ($role === 'qc') {
                 $redirectPath = '/roll-inventory';
+            } elseif ($role !== 'admin' && $role !== 'ppic') {
+                $redirectPath = '/profile';
             }
             
             return redirect()->intended($redirectPath);

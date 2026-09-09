@@ -13,6 +13,7 @@ use App\Models\RollsDiameter;
 use App\Models\Core;
 use App\Models\Cobb;
 use App\Models\Jop;
+use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -157,9 +158,12 @@ class IncomingRollController extends Controller
                 $jopCode = trim($request->jop);
                 $jopObj = Jop::where('jop', $jopCode)->first();
                 if (!$jopObj) {
+                    $defaultCustomer = Customer::firstOrCreate(['customer' => 'GENERAL']);
                     $jopObj = Jop::create([
                         'jop' => $jopCode,
-                        'spk' => 'SPK-' . rand(100, 999),
+                        'spk' => 'SPK-' . strtoupper(substr(uniqid(), -6)),
+                        'po' => 'PO-' . date('Ymd'),
+                        'customers_id' => $defaultCustomer->id,
                         'grades_id' => $grade->id,
                         'gsms_id' => $gsm->id,
                     ]);

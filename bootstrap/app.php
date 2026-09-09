@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/spectrum/detect',
             'api/spectrum/log',
             'api/spectrum/retrain',
+            'api/spectrum/save-dataset',
         ]);
 
         $middleware->alias([
@@ -26,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
+            \App\Http\Middleware\SecurityHeaders::class,
+        ]);
+
+        $middleware->api(append: [
+            \App\Http\Middleware\SecurityHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

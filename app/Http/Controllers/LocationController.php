@@ -16,7 +16,7 @@ class LocationController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'nullable|integer',
+            'status' => 'nullable|integer|between:0,6',
         ]);
 
         $location->update($validated);
@@ -28,7 +28,7 @@ class LocationController extends Controller
         $validated = $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:locations,id',
-            'status' => 'nullable|integer',
+            'status' => 'nullable|integer|between:0,6',
         ]);
 
         $updateData = $request->only(['status']);

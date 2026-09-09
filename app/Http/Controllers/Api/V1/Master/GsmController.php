@@ -17,11 +17,10 @@ class GsmController extends Controller
         if ($search = $request->query('search')) {
             $query->where('gsm', 'like', '%' . $search . '%');
         }
-        if ($sort = $request->query('sort')) {
-            $query->orderBy($sort, $request->query('order', 'asc'));
-        } else {
-            $query->orderBy('id', 'desc');
-        }
+        $allowedSorts = ['id', 'gsm', 'created_at'];
+        $sort = in_array($request->query('sort'), $allowedSorts, true) ? $request->query('sort') : 'id';
+        $order = strtolower($request->query('order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sort, $order);
 
         $limit = $request->query('limit', 15);
         return $this->successResponse($query->paginate($limit), 'Data retrieved successfully');
@@ -62,7 +61,11 @@ class GsmController extends Controller
         $data = Gsm::find($id);
         if (!$data) return $this->errorResponse('Data not found', 404);
 
-        $data->delete();
-        return $this->successResponse(null, 'Data deleted successfully');
+        try {
+            $data->delete();
+            return $this->successResponse(null, 'Data deleted successfully');
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->errorResponse('Cannot delete GSM because it is referenced by existing rolls or orders.', 422);
+        }
     }
 }

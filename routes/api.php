@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
-    Route::post('/auth/login', [\App\Http\Controllers\Api\V1\AuthController::class, 'login']);
+    Route::post('/auth/login', [\App\Http\Controllers\Api\V1\AuthController::class, 'login'])->middleware('throttle:10,1');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [\App\Http\Controllers\Api\V1\AuthController::class, 'logout']);
