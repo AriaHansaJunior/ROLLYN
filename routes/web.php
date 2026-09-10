@@ -72,6 +72,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/incoming-roll', [DesignUiController::class, 'incomingRoll']);
         Route::post('/incoming-roll', [IncomingRollController::class, 'store']);
         Route::get('/incoming-roll/check-roll-number', [IncomingRollController::class, 'checkRollNumber']);
+        Route::get('/incoming-roll/recommended-roll-number', [IncomingRollController::class, 'getRecommendedRollNumber']);
         Route::post('/incoming-roll/recommend-form', [IncomingRollController::class, 'recommendFormNumber']);
         Route::post('/api/spectrum/recommend-location', [SpectrumEngineController::class, 'recommendLocation']);
     });

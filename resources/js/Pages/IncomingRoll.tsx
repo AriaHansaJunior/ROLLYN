@@ -46,8 +46,55 @@ interface JopOption {
     customer?: { customer: string } | string;
 }
 
+function calculateNextRollNumber(lastRoll: string | null | undefined): string {
+    if (!lastRoll || !String(lastRoll).trim()) return "";
+    const trimmed = String(lastRoll).trim();
+    const match = trimmed.match(/^(.*?)(\d+)$/);
+    if (!match) return "";
+    const prefix = match[1];
+    const digits = match[2];
+    try {
+        const nextBigInt = BigInt(digits) + 1n;
+        let nextStr = nextBigInt.toString();
+        if (digits.length > 1 && digits.startsWith("0") && nextStr.length < digits.length) {
+            nextStr = nextStr.padStart(digits.length, "0");
+        }
+        return `${prefix}${nextStr}`;
+    } catch {
+        const nextNum = parseInt(digits, 10) + 1;
+        return `${prefix}${nextNum}`;
+    }
+}
+
 export default function IncomingRoll() {
-    const { jopList = [] } = usePage<any>().props;
+    const { jopList = [], lastSavedRollNumber: initialLastSaved, recommendedRollNumber: initialRecommended } = usePage<any>().props;
+
+    const [recommendedRoll, setRecommendedRoll] = useState<string>(() => {
+        if (initialRecommended) return String(initialRecommended);
+        if (initialLastSaved) return calculateNextRollNumber(String(initialLastSaved));
+        const savedRec = sessionStorage.getItem("incomingRoll_recommended");
+        if (savedRec) return savedRec;
+        const savedLast = sessionStorage.getItem("incomingRoll_lastSaved");
+        if (savedLast) return calculateNextRollNumber(savedLast);
+        return "";
+    });
+
+    useEffect(() => {
+        if (initialRecommended) {
+            setRecommendedRoll(String(initialRecommended));
+            sessionStorage.setItem("incomingRoll_recommended", String(initialRecommended));
+        } else if (initialLastSaved) {
+            const next = calculateNextRollNumber(String(initialLastSaved));
+            setRecommendedRoll(next);
+            sessionStorage.setItem("incomingRoll_recommended", next);
+        }
+    }, [initialRecommended, initialLastSaved]);
+
+    useEffect(() => {
+        if (recommendedRoll) {
+            sessionStorage.setItem("incomingRoll_recommended", recommendedRoll);
+        }
+    }, [recommendedRoll]);
     const [step, setStep] = useState(() => {
         const saved = sessionStorage.getItem("incomingRoll_step");
         return saved ? JSON.parse(saved) : 0;
@@ -68,13 +115,14 @@ export default function IncomingRoll() {
     });
 
     const [form, setForm] = useState(() => {
+        const defaultRoll = initialRecommended || (initialLastSaved ? calculateNextRollNumber(String(initialLastSaved)) : (sessionStorage.getItem("incomingRoll_recommended") || ""));
         const defaultState = {
             jop: "",
             grade: "",
             gsm: "",
             visual: "OK",
             status: "OK",
-            rollNumber: "",
+            rollNumber: defaultRoll,
             formNumber: "",
             plybond: "",
             diameter: "",
@@ -89,8 +137,22 @@ export default function IncomingRoll() {
             pic: "",
         };
         const saved = sessionStorage.getItem("incomingRoll_form");
-        return saved ? { ...defaultState, ...JSON.parse(saved) } : defaultState;
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return {
+                ...defaultState,
+                ...parsed,
+                rollNumber: parsed.rollNumber !== undefined && parsed.rollNumber !== "" ? parsed.rollNumber : defaultRoll
+            };
+        }
+        return defaultState;
     });
+
+    useEffect(() => {
+        if (recommendedRoll && !form.rollNumber.trim()) {
+            setForm((f) => ({ ...f, rollNumber: recommendedRoll }));
+        }
+    }, [recommendedRoll]);
 
     useEffect(() => {
         sessionStorage.setItem("incomingRoll_step", JSON.stringify(step));
@@ -426,7 +488,15 @@ export default function IncomingRoll() {
                 type: "success",
             });
 
-            setSavedRollNumber(form.rollNumber);
+            // Update last saved roll number and recommend next (+1)
+            const savedRoll = form.rollNumber;
+            const nextRec = res.data?.recommended_roll_number || calculateNextRollNumber(savedRoll);
+
+            setSavedRollNumber(savedRoll);
+            setRecommendedRoll(nextRec);
+            sessionStorage.setItem("incomingRoll_lastSaved", savedRoll);
+            sessionStorage.setItem("incomingRoll_recommended", nextRec);
+
             setStep(3);
         } catch (err: any) {
             console.error("[Roll Save Error]:", err);
@@ -500,6 +570,25 @@ export default function IncomingRoll() {
 
                     {/* Anti-Salah Quick Roll Number & Barcode Verification Card */}
                     <div className="card p-3.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-200/80 rounded-xl shadow-xs">
+                        {recommendedRoll && (
+                            <div className="mb-2 flex items-center justify-between px-0.5">
+                                <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                                    <span className="text-slate-500 font-medium">Recommended Roll Number:</span>
+                                    <span className="font-mono text-blue-800 font-bold text-xs bg-blue-100/80 px-2 py-0.5 rounded border border-blue-200">
+                                        {recommendedRoll}
+                                    </span>
+                                </div>
+                                {form.rollNumber !== recommendedRoll && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm((f) => ({ ...f, rollNumber: recommendedRoll }))}
+                                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                                    >
+                                        Use Recommended
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                             <input
@@ -585,6 +674,7 @@ export default function IncomingRoll() {
                                 <thead>
                                     <tr>
                                         <th style={{ textAlign: "left" }}>JOP Number</th>
+                                        <th style={{ textAlign: "center" }}>SPK</th>
                                         <th style={{ textAlign: "center" }}>Customer</th>
                                         <th style={{ textAlign: "center" }}>Grade / GSM</th>
                                         <th style={{ textAlign: "center" }}>Target Tonnage</th>
@@ -602,10 +692,28 @@ export default function IncomingRoll() {
                                         const incomplete = (jopList || [])
                                             .map((j: any) => {
                                                 const est = j.production_estimation || {};
+                                                
+                                                // Calculate Actual Tonnage from rolls (assuming weight is in kg)
+                                                const actualWeightKg = j.rolls ? j.rolls.reduce((sum: number, r: any) => sum + (Number(r.weight) || 0), 0) : 0;
+                                                const actualTonnage = actualWeightKg / 1000;
+                                                
+                                                // Calculate Target Tonnage (assuming j.weight is target weight in kg)
+                                                const targetWeightKg = Number(j.weight) || 0;
+                                                const targetTonnage = targetWeightKg / 1000;
+                                                
+                                                const remainingTonnage = Math.max(0, targetTonnage - actualTonnage);
+                                                
+                                                const isCompleted = (j.rolls ? j.rolls.length : 0) >= (Number(j.quantity) || 1);
+
                                                 return {
                                                     ...j,
-                                                    est,
-                                                    isCompleted: est.is_completed || false,
+                                                    est: {
+                                                        ...est,
+                                                        target_tonnage: targetWeightKg > 0 ? targetTonnage.toFixed(2) : "-",
+                                                        actual_tonnage: actualWeightKg > 0 ? actualTonnage.toFixed(2) : "-",
+                                                        remaining_tonnage: targetWeightKg > 0 ? remainingTonnage.toFixed(2) : "-",
+                                                    },
+                                                    isCompleted: est.is_completed || isCompleted,
                                                 };
                                             })
                                             .filter((j: any) => !j.isCompleted)
@@ -937,6 +1045,41 @@ export default function IncomingRoll() {
                             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
                                 {/* Row 1 */}
                                 <div>
+                                    {/* Recommended Roll Number UI Banner at top of input area (Section 11) */}
+                                    {recommendedRoll && (
+                                        <div className="mb-2 p-2.5 bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 border border-blue-200/90 rounded-lg flex items-center justify-between shadow-2xs">
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">
+                                                    Recommended Roll Number
+                                                </span>
+                                                <span className="text-sm font-black font-mono text-blue-900 leading-tight block">
+                                                    {recommendedRoll}
+                                                </span>
+                                            </div>
+                                            {form.rollNumber !== recommendedRoll && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setForm((f) => ({
+                                                            ...f,
+                                                            rollNumber: recommendedRoll,
+                                                        }));
+                                                        if (errors.rollNumber) {
+                                                            setErrors((err) => ({
+                                                                ...err,
+                                                                rollNumber: undefined,
+                                                            }));
+                                                        }
+                                                    }}
+                                                    className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-md shadow-2xs transition-colors shrink-0 cursor-pointer"
+                                                    title="Apply recommended roll number"
+                                                >
+                                                    Use {recommendedRoll}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <label className="form-label text-xs font-semibold block mb-1">
                                         Roll Number{" "}
                                         <span className="text-red-500">*</span>
@@ -1840,7 +1983,7 @@ export default function IncomingRoll() {
                                         gsm: "",
                                         visual: "OK",
                                         status: "OK",
-                                        rollNumber: "",
+                                        rollNumber: recommendedRoll || "",
                                         formNumber: "",
                                         plybond: "",
                                         diameter: "",

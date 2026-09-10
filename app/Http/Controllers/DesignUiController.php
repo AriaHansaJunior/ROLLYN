@@ -73,7 +73,16 @@ class DesignUiController extends Controller
             usleep(500000); // 500ms
         }
 
-        return Inertia::render('IncomingRoll', ['jopList' => $jops]); 
+        $lastSavedRollNumber = session('last_saved_roll_number');
+        $recommendedRollNumber = $lastSavedRollNumber 
+            ? \App\Http\Controllers\IncomingRollController::getNextRollNumber($lastSavedRollNumber) 
+            : null;
+
+        return Inertia::render('IncomingRoll', [
+            'jopList' => $jops,
+            'lastSavedRollNumber' => $lastSavedRollNumber,
+            'recommendedRollNumber' => $recommendedRollNumber,
+        ]); 
     }
     public function ocrMonitoring() { return Inertia::render('OcrMonitoring'); }
     public function targetOrder() { 

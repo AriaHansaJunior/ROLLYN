@@ -95,6 +95,53 @@ class IncomingRollController extends Controller
         return response()->json(['formNumber' => $maxForm + 1]);
     }
 
+    /**
+     * Calculate next recommended roll number based on last successfully saved roll number (+1).
+     */
+    public static function getNextRollNumber(?string $lastRoll): ?string
+    {
+        if (!$lastRoll || trim($lastRoll) === '') {
+            return null;
+        }
+
+        $trimmed = trim($lastRoll);
+
+        // Pattern matching: prefix + digits (e.g. "2000" -> "", "2000"; "R-10425" -> "R-", "10425")
+        if (preg_match('/^(.*?)(\d+)$/', $trimmed, $matches)) {
+            $prefix = $matches[1];
+            $digits = $matches[2];
+
+            if (function_exists('bcadd')) {
+                $nextNum = bcadd($digits, '1');
+            } else {
+                $nextNum = strval((int)$digits + 1);
+            }
+
+            // Preserve leading zeroes if original had them
+            if (strlen($digits) > 1 && $digits[0] === '0' && strlen($nextNum) < strlen($digits)) {
+                $nextNum = str_pad($nextNum, strlen($digits), '0', STR_PAD_LEFT);
+            }
+
+            return $prefix . $nextNum;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the current recommended roll number from session.
+     */
+    public function getRecommendedRollNumber()
+    {
+        $lastSaved = session('last_saved_roll_number');
+        $recommended = $lastSaved ? self::getNextRollNumber($lastSaved) : null;
+
+        return response()->json([
+            'last_saved_roll_number' => $lastSaved,
+            'recommended_roll_number' => $recommended,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -322,13 +369,19 @@ class IncomingRollController extends Controller
                 ]);
             }
 
+            // Store the latest successfully saved roll number in session (Sections 4 & 5)
+            session(['last_saved_roll_number' => $rollNumber]);
+            $nextRecommended = self::getNextRollNumber($rollNumber);
+
             DB::commit();
             session()->forget('incoming_roll_weight');
 
             return response()->json([
                 'status' => 'success',
                 'message' => "Roll {$rollNumber} saved successfully to database!",
-                'data' => $roll
+                'data' => $roll,
+                'last_saved_roll_number' => $rollNumber,
+                'recommended_roll_number' => $nextRecommended,
             ], 201);
 
         } catch (\Exception $e) {
