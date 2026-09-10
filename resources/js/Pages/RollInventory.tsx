@@ -184,9 +184,7 @@ export default function RollInventory({
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'pending' | 'completed' | 'canceled'>('all')
   const [manualScanInput, setManualScanInput] = useState('')
   const [isProcessingScan, setIsProcessingScan] = useState(false)
-  const [consecutiveQcErrors, setConsecutiveQcErrors] = useState<number>(0)
-  const consecutiveQcErrorsRef = useRef<number>(0)
-  const [showSuspendedModal, setShowSuspendedModal] = useState<boolean>(false)
+
   const lastScannedThrottleRef = useRef<{ code: string; time: number }>({ code: '', time: 0 })
 
   // QC Reject Modal State
@@ -534,7 +532,7 @@ export default function RollInventory({
   // SHIPMENTS & QC FUNCTIONS
   // ----------------------------------------------------
   function handleQCScan(scannedData: string) {
-    if (!activeShipment || isProcessingScan || activeShipment.status === 'canceled' || showSuspendedModal) return
+    if (!activeShipment || isProcessingScan || activeShipment.status === 'canceled') return
 
     let cleanVal = scannedData.trim()
     let rollNo = cleanVal
@@ -574,8 +572,7 @@ export default function RollInventory({
         onSuccess: () => {
           setIsProcessingScan(false)
           setManualScanInput('')
-          consecutiveQcErrorsRef.current = 0
-          setConsecutiveQcErrors(0) // Reset consecutive errors on successful valid scan
+
           SystemUI.toast({ message: `✓ Roll ${targetRoll.no_roll} PASSED QC inspection!`, type: 'success' })
         },
         onError: () => {
@@ -602,8 +599,7 @@ export default function RollInventory({
           type: 'info'
         })
         setActiveShipmentId(otherShipment.id)
-        consecutiveQcErrorsRef.current = 0
-        setConsecutiveQcErrors(0)
+
       } else {
         // Anti-spam camera frame throttle
         const now = Date.now()
@@ -612,17 +608,8 @@ export default function RollInventory({
         }
         lastScannedThrottleRef.current = { code: q, time: now }
 
-        consecutiveQcErrorsRef.current += 1
-        const newErrors = consecutiveQcErrorsRef.current
-        setConsecutiveQcErrors(newErrors)
-
-        if (newErrors >= 10) {
-          setShowSuspendedModal(true)
-          return
-        }
-
         SystemUI.toast({
-          message: `Roll "${rollNo}" is not in this shipment! (Invalid attempts: ${newErrors}/10)`,
+          message: `Roll "${rollNo}" is not in this shipment!`,
           type: 'warning'
         })
       }
@@ -2026,43 +2013,7 @@ export default function RollInventory({
         onScanSuccess={handleStorageQRScanSuccess}
       />
 
-      {/* 6. QC Security Lockout & Account Suspension Modal */}
-      {showSuspendedModal && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-fade-in">
-          <div className="card w-full max-w-md p-6 bg-white rounded-2xl shadow-2xl space-y-4 border-2 border-red-500 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner animate-pulse">
-              <ShieldAlert size={36} />
-            </div>
-            <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                AKUN DITANGGUHKAN
-              </h3>
-              <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-0.5 rounded-full mt-1 inline-block">
-                Security Lockout Activated
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed text-justify bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-              The system detected <strong>10 consecutive barcode scan errors</strong> in this inspection session. To maintain warehouse integrity and prevent shipment anomalies, your account session has been <strong>suspended</strong>.
-            </p>
-            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 font-medium text-left flex items-start gap-2">
-              <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
-              <span>Please <strong>contact the Administrator</strong> to verify physical rolls and restore your account access.</span>
-            </div>
-            <button
-              onClick={() => {
-                router.post('/logout', {}, {
-                  onFinish: () => {
-                    window.location.href = '/login?suspended=1'
-                  }
-                })
-              }}
-              className="btn btn-primary w-full py-2.5 font-bold text-xs bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center justify-center gap-2"
-            >
-              <span>OK, I Understand (Log Out)</span>
-            </button>
-          </div>
-        </div>
-      )}
+
     </div>
   )
 }
