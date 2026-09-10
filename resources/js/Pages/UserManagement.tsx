@@ -309,10 +309,12 @@ export default function UserManagement({ users = [] }: Props) {
               </button>
             </div>
 
-            <div className="space-y-3">
+            <form onSubmit={e => { e.preventDefault(); save(); }} autoComplete="off" className="space-y-3">
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Full Name (Username) <span className="text-red-500">*</span></label>
                 <input
+                  name="new_user_name"
+                  autoComplete="off"
                   value={form.name}
                   onChange={e => {
                     setForm(f => ({ ...f, name: e.target.value }))
@@ -327,13 +329,15 @@ export default function UserManagement({ users = [] }: Props) {
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Email Address <span className="text-red-500">*</span></label>
                 <input
+                  name="new_user_email"
+                  autoComplete="off"
                   value={form.email}
                   onChange={e => {
                     setForm(f => ({ ...f, email: e.target.value }))
                     if (errors.email) setErrors(err => ({ ...err, email: undefined }))
                   }}
                   className={`form-input w-full ${errors.email ? 'border-red-500 focus:ring-red-200' : ''}`}
-                  placeholder="admin@spectacore.id"
+                  placeholder="e.g. user@example.com"
                   type="email"
                 />
                 {errors.email && <p className="text-red-600 text-[11px] mt-1">{errors.email}</p>}
@@ -360,6 +364,8 @@ export default function UserManagement({ users = [] }: Props) {
                 </label>
                 <input
                   type="password"
+                  name="new_user_password"
+                  autoComplete="new-password"
                   value={form.password}
                   onChange={e => {
                     setForm(f => ({ ...f, password: e.target.value }))
@@ -377,6 +383,8 @@ export default function UserManagement({ users = [] }: Props) {
                 </label>
                 <input
                   type="password"
+                  name="new_user_confirm_password"
+                  autoComplete="new-password"
                   value={form.password_confirmation}
                   onChange={e => {
                     setForm(f => ({ ...f, password_confirmation: e.target.value }))
@@ -399,16 +407,16 @@ export default function UserManagement({ users = [] }: Props) {
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
-            </div>
 
-            <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
-              <button className="btn btn-secondary text-xs px-3 py-1.5" onClick={() => setShowModal(false)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary text-xs px-3 py-1.5" onClick={save}>
-                Save User
-              </button>
-            </div>
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+                <button type="button" className="btn btn-secondary text-xs px-3 py-1.5" onClick={() => setShowModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary text-xs px-3 py-1.5">
+                  Save User
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { X, Package, MoveRight, Layers, Eye, MapPin, Calendar, AlertCircle, PlusCircle, CheckCircle2 } from 'lucide-react'
+import { X, Package, MoveRight, Layers, Eye, MapPin, Calendar, AlertCircle, PlusCircle, CheckCircle2, ChevronDown } from 'lucide-react'
 import { Link, router } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import { motion } from 'framer-motion'
@@ -480,7 +480,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
 
         {/* Warehouse Grid Container */}
         <motion.div variants={itemVariants} className="flex-1 min-w-0 transition-all duration-500 ease-in-out transform-gpu glass-panel rounded-2xl p-3.5 sm:p-5 flex flex-col relative z-10">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2 sm:mb-3 pb-2 sm:pb-3 border-b border-slate-100">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm shadow-sm">
@@ -493,7 +493,8 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   <span className="text-[11px] text-slate-500 font-medium">{totalSlots} Slots × Max 4 Rolls = {totalSlots * 4} Total Capacity</span>
                 </div>
               </div>
-              <div className="flex flex-wrap bg-slate-100/80 backdrop-blur-md p-1.5 rounded-xl self-start sm:self-auto gap-1.5 border border-slate-200 shadow-inner">
+              {/* Desktop Warehouse Tabs */}
+              <div className="hidden sm:flex flex-wrap bg-slate-100/80 backdrop-blur-md p-1.5 rounded-xl self-start sm:self-auto gap-1.5 border border-slate-200 shadow-inner">
                 <button
                   onClick={() => {
                     setActiveArea('A')
@@ -583,12 +584,38 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   Warehouse H
                 </button>
               </div>
+
+              {/* Mobile Warehouse Dropdown */}
+              <div className="sm:hidden w-full relative">
+                <div className="relative">
+                  <select
+                    value={activeArea}
+                    onChange={(e) => {
+                      setActiveArea(e.target.value as any)
+                      setSelectedSlotCodes([])
+                    }}
+                    className="w-full appearance-none bg-slate-100/90 backdrop-blur-md border border-slate-200 text-slate-800 font-bold text-xs py-2.5 pl-3.5 pr-9 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-inner transition-all cursor-pointer"
+                  >
+                    <option value="A">Column A</option>
+                    <option value="E">Column E</option>
+                    <option value="B_KANAN">Warehouse B (RIGHT)</option>
+                    <option value="B_KIRI">Warehouse B (LEFT)</option>
+                    <option value="C_KANAN">Warehouse C (RIGHT)</option>
+                    <option value="C_KIRI">Warehouse C (LEFT)</option>
+                    <option value="G">Warehouse G</option>
+                    <option value="H">Warehouse H</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                    <ChevronDown size={16} />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center bg-slate-100/80 backdrop-blur-md border border-slate-200 rounded-full p-1 shadow-inner">
+            <div className="w-full sm:w-auto flex items-center gap-2">
+              <div className="flex-1 sm:flex-initial flex items-center bg-slate-100/80 backdrop-blur-md border border-slate-200 rounded-full p-1.5 sm:p-1 shadow-inner">
                 <button
                   onClick={() => toggleMode('row')}
-                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 text-xs sm:text-[11px] font-bold px-3.5 sm:px-3 py-2 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
                     selectRowsOn ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                   title="Select all rows vertically in this column"
@@ -597,7 +624,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </button>
                 <button
                   onClick={() => toggleMode('col')}
-                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 text-xs sm:text-[11px] font-bold px-3.5 sm:px-3 py-2 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
                     selectColOn ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                   title="Select all columns horizontally in this row"
@@ -606,7 +633,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 </button>
                 <button
                   onClick={() => toggleMode('block')}
-                  className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1 text-xs sm:text-[11px] font-bold px-3.5 sm:px-3 py-2 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
                     selectBlockOn ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent'
                   }`}
                   title="Select entire block"
@@ -620,13 +647,13 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                   setMultiSelectMode(!multiSelectMode)
                   setSelectedSlotCodes([])
                 }}
-                className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm backdrop-blur-md ${
+                className={`shrink-0 flex items-center justify-center gap-1.5 text-xs sm:text-[11px] font-bold px-4 sm:px-3 py-2 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm backdrop-blur-md ${
                   multiSelectMode 
                     ? 'bg-white text-blue-600 border-slate-200 shadow-sm scale-[1.02]' 
                     : 'bg-slate-50 text-slate-600 border border-slate-200 hover:text-slate-800 hover:bg-white hover:border-slate-300'
                 }`}
               >
-                <Layers size={13} />
+                <Layers size={15} className="sm:w-[13px] sm:h-[13px]" />
                 <span className="hidden sm:inline">Multi-Select: {multiSelectMode ? 'ON' : 'OFF'}</span>
                 <span className="sm:hidden">{multiSelectMode ? 'ON' : 'OFF'}</span>
               </button>
@@ -639,7 +666,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
 
           {/* Grid Area */}
           <div className="w-full overflow-x-auto custom-scrollbar">
-            <div className="flex gap-4 pt-12 pb-6 px-2 flex-nowrap min-w-min">
+            <div className="flex gap-4 pt-2 sm:pt-12 pb-6 px-2 flex-nowrap min-w-min">
               {currentConfig.map(config => renderRack(config))}
             </div>
           </div>

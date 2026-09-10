@@ -122,8 +122,9 @@ export default function Reports() {
                 <XAxis dataKey="id" tick={{ fontSize: 10, fill: '#64748B' }} tickFormatter={v => `WH ${v}`} />
                 <YAxis tick={{ fontSize: 10, fill: '#64748B' }} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #E2E8F0' }} />
-                <Bar dataKey="occupied" fill="#2563EB" name="Occupied" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="available" fill="#E2E8F0" name="Available" radius={[4, 4, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="occupied" stackId="a" fill="#2563EB" name="Occupied" radius={[0, 0, 4, 4]} maxBarSize={60} />
+                <Bar dataKey="available" stackId="a" fill="#E2E8F0" name="Available" radius={[4, 4, 0, 0]} maxBarSize={60} />
               </BarChart>
             </ResponsiveContainer>
           </div>

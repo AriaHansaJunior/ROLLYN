@@ -522,7 +522,7 @@ export default function SpectrumWeightDetectionEngine({
                 </div>
 
                 {(engineState === "permission_modal" || engineState === "requesting" || engineState === "camera_active" || engineState === "camera_denied") && (
-                    <div style={{ textAlign: "center", padding: "40px 20px", color: "#999", fontSize: 13 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "40px 20px", color: "#999", fontSize: 13 }}>
                         <Camera size={36} style={{ color: "#ddd", marginBottom: 12 }} />
                         <p style={{ margin: 0 }}>
                             Point camera at scale LED display, then click <strong>Take Photo</strong>.
