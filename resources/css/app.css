@@ -11,6 +11,7 @@
 @import './components/forms.css';
 @import './components/typography.css';
 @import './components/tabs.css';
+@import './components/acos.css';
 @theme {
   --breakpoint-sm: 680px;
   --breakpoint-lg: 1180px;

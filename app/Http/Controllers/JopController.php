@@ -10,13 +10,53 @@ use App\Models\Plybond;
 use App\Models\Thickness;
 use App\Models\Core;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class JopController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core'])->get();
-        return response()->json($jops);
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core'])->get();
+            return response()->json($jops);
+        }
+
+        $orders = Jop::with([
+            'customer',
+            'grade',
+            'gsm',
+            'plybond',
+            'thickness',
+            'core',
+            'rollsWidth',
+            'rolls.grade',
+            'rolls.gsm',
+            'rolls.shift',
+            'rolls.thickness',
+            'rolls.core',
+            'rolls.rollsWidth',
+            'rolls.rollsDiameter',
+            'rolls.plybond',
+            'rolls.cobb',
+            'rolls.location',
+            'rolls.user',
+        ])->latest()->get();
+
+        return Inertia::render('Jop', ['jopData' => $orders]);
+    }
+
+    /**
+     * Backward-compatible alias for jop view
+     */
+    public function jop(Request $request)
+    {
+        return $this->index($request);
+    }
+
+    public function targetOrder()
+    {
+        $orders = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls'])->latest()->get();
+        return Inertia::render('TargetOrder', ['targetOrders' => $orders]);
     }
 
     public function masterData()

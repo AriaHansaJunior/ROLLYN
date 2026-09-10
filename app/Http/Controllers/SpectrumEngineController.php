@@ -16,6 +16,11 @@ class SpectrumEngineController extends Controller
         return Inertia::render('Training');
     }
 
+    public function ocrMonitoring()
+    {
+        return Inertia::render('OcrMonitoring');
+    }
+
     public function detect(Request $request)
     {
         $base64Image = $request->input('image') ?? $request->input('image_base64');

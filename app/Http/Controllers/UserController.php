@@ -89,6 +89,11 @@ class UserController extends Controller
         }
     }
 
+    public function profile()
+    {
+        return Inertia::render('Profile');
+    }
+
     public function updateProfile(Request $request)
     {
         $user = auth()->user();
