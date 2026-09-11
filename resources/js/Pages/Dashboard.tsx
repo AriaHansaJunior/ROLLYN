@@ -66,25 +66,30 @@ const alertBg: Record<string, string> = {
           <p className="text-xs text-slate-500 mt-0.5">Real-time metrics & operational status</p>
         </div>
 
-        <div className="grid grid-cols-2 min-[680px]:grid-cols-3 min-[920px]:grid-cols-4 min-[1180px]:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-2 min-[640px]:grid-cols-3 min-[1080px]:grid-cols-6 gap-2.5 sm:gap-3">
           {kpis.map(kpi => {
             const Icon = kpi.icon
             return (
               <motion.div
                 variants={itemVariants}
                 key={kpi.label}
-                className="glass-panel group rounded-xl p-3 cursor-default"
+                className="glass-panel group rounded-xl p-3 sm:p-3.5 cursor-default flex flex-col justify-between min-h-[116px] hover:shadow-md transition-all duration-300"
               >
                 <div className="flex items-start justify-between gap-1.5">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-semibold text-slate-500 truncate">{kpi.label}</div>
-                    <div className="text-lg sm:text-xl font-extrabold text-slate-800 tracking-tight mt-1 leading-none">
-                      {kpi.value}
-                    </div>
-                    <div className="text-[10px] font-medium text-slate-400 mt-1 truncate">{kpi.sub}</div>
-                  </div>
-                  <div className={`w-7 h-7 rounded-lg ${kpi.bg} border border-white/50 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-xs`}>
+                  <span className="text-[11px] font-semibold text-slate-500 leading-snug line-clamp-2 min-h-[28px]">
+                    {kpi.label}
+                  </span>
+                  <div className={`w-7 h-7 rounded-lg ${kpi.bg} border border-white/60 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110 shadow-2xs`}>
                     <Icon size={14} className={kpi.text} />
+                  </div>
+                </div>
+
+                <div className="mt-2">
+                  <div className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight leading-none">
+                    {kpi.value}
+                  </div>
+                  <div className="text-[10px] font-medium text-slate-400 mt-1.5 truncate">
+                    {kpi.sub}
                   </div>
                 </div>
               </motion.div>

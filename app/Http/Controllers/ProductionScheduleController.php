@@ -52,6 +52,7 @@ class ProductionScheduleController extends Controller
                 'grade'    => $j->grade?->grade,
                 'gsm'      => $j->gsm?->gsm,
                 'nase'     => $j->rollsWidth?->width,
+                'tph'      => $j->tph,
             ]);
 
         $totalTonnage = $schedules->sum('tonnage');

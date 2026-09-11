@@ -56,7 +56,11 @@ function calculateNextRollNumber(lastRoll: string | null | undefined): string {
     try {
         const nextBigInt = BigInt(digits) + 1n;
         let nextStr = nextBigInt.toString();
-        if (digits.length > 1 && digits.startsWith("0") && nextStr.length < digits.length) {
+        if (
+            digits.length > 1 &&
+            digits.startsWith("0") &&
+            nextStr.length < digits.length
+        ) {
             nextStr = nextStr.padStart(digits.length, "0");
         }
         return `${prefix}${nextStr}`;
@@ -67,11 +71,16 @@ function calculateNextRollNumber(lastRoll: string | null | undefined): string {
 }
 
 export default function IncomingRoll() {
-    const { jopList = [], lastSavedRollNumber: initialLastSaved, recommendedRollNumber: initialRecommended } = usePage<any>().props;
+    const {
+        jopList = [],
+        lastSavedRollNumber: initialLastSaved,
+        recommendedRollNumber: initialRecommended,
+    } = usePage<any>().props;
 
     const [recommendedRoll, setRecommendedRoll] = useState<string>(() => {
         if (initialRecommended) return String(initialRecommended);
-        if (initialLastSaved) return calculateNextRollNumber(String(initialLastSaved));
+        if (initialLastSaved)
+            return calculateNextRollNumber(String(initialLastSaved));
         const savedRec = sessionStorage.getItem("incomingRoll_recommended");
         if (savedRec) return savedRec;
         const savedLast = sessionStorage.getItem("incomingRoll_lastSaved");
@@ -82,7 +91,10 @@ export default function IncomingRoll() {
     useEffect(() => {
         if (initialRecommended) {
             setRecommendedRoll(String(initialRecommended));
-            sessionStorage.setItem("incomingRoll_recommended", String(initialRecommended));
+            sessionStorage.setItem(
+                "incomingRoll_recommended",
+                String(initialRecommended),
+            );
         } else if (initialLastSaved) {
             const next = calculateNextRollNumber(String(initialLastSaved));
             setRecommendedRoll(next);
@@ -101,11 +113,13 @@ export default function IncomingRoll() {
     });
     const [weight, setWeight] = useState<WeightState>(() => {
         const saved = sessionStorage.getItem("incomingRoll_weight");
-        return saved ? JSON.parse(saved) : {
-            value: 0,
-            display: "",
-            source: "none",
-        };
+        return saved
+            ? JSON.parse(saved)
+            : {
+                  value: 0,
+                  display: "",
+                  source: "none",
+              };
     });
     const [jops, setJops] = useState<JopOption[]>([]);
     const [jopSearch, setJopSearch] = useState("");
@@ -115,7 +129,11 @@ export default function IncomingRoll() {
     });
 
     const [form, setForm] = useState(() => {
-        const defaultRoll = initialRecommended || (initialLastSaved ? calculateNextRollNumber(String(initialLastSaved)) : (sessionStorage.getItem("incomingRoll_recommended") || ""));
+        const defaultRoll =
+            initialRecommended ||
+            (initialLastSaved
+                ? calculateNextRollNumber(String(initialLastSaved))
+                : sessionStorage.getItem("incomingRoll_recommended") || "");
         const defaultState = {
             jop: "",
             grade: "",
@@ -133,7 +151,7 @@ export default function IncomingRoll() {
             exMaterial: "IMPORT",
             cobb: "",
             shift: "1",
-            entry_date: new Date().toISOString().split('T')[0],
+            entry_date: new Date().toISOString().split("T")[0],
             pic: "",
         };
         const saved = sessionStorage.getItem("incomingRoll_form");
@@ -142,7 +160,10 @@ export default function IncomingRoll() {
             return {
                 ...defaultState,
                 ...parsed,
-                rollNumber: parsed.rollNumber !== undefined && parsed.rollNumber !== "" ? parsed.rollNumber : defaultRoll
+                rollNumber:
+                    parsed.rollNumber !== undefined && parsed.rollNumber !== ""
+                        ? parsed.rollNumber
+                        : defaultRoll,
             };
         }
         return defaultState;
@@ -179,7 +200,7 @@ export default function IncomingRoll() {
     const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
     useEffect(() => {
-        const trimmed = (form.rollNumber || '').trim();
+        const trimmed = (form.rollNumber || "").trim();
         if (!trimmed || trimmed === savedRollNumber) {
             setDuplicateWarning(null);
             return;
@@ -187,8 +208,11 @@ export default function IncomingRoll() {
 
         const timer = setTimeout(() => {
             setIsCheckingDuplicate(true);
-            axios.get(`/incoming-roll/check-roll-number?rollNumber=${encodeURIComponent(trimmed)}`)
-                .then(res => {
+            axios
+                .get(
+                    `/incoming-roll/check-roll-number?rollNumber=${encodeURIComponent(trimmed)}`,
+                )
+                .then((res) => {
                     if (res.data?.exists) {
                         setDuplicateWarning(res.data);
                     } else {
@@ -209,18 +233,24 @@ export default function IncomingRoll() {
     useEffect(() => {
         if (!form.jop) return;
 
-        axios.post('/incoming-roll/recommend-form', {
-            jop: form.jop,
-            grade: form.grade,
-            width: form.width,
-            entry_date: form.entry_date
-        }).then(res => {
-            if (res.data && res.data.formNumber) {
-                setForm(f => ({ ...f, formNumber: String(res.data.formNumber) }));
-            }
-        }).catch(err => {
-            console.error("Failed to fetch recommended form number:", err);
-        });
+        axios
+            .post("/incoming-roll/recommend-form", {
+                jop: form.jop,
+                grade: form.grade,
+                width: form.width,
+                entry_date: form.entry_date,
+            })
+            .then((res) => {
+                if (res.data && res.data.formNumber) {
+                    setForm((f) => ({
+                        ...f,
+                        formNumber: String(res.data.formNumber),
+                    }));
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to fetch recommended form number:", err);
+            });
     }, [form.jop, form.grade, form.width, form.entry_date]);
 
     useEffect(() => {
@@ -409,7 +439,8 @@ export default function IncomingRoll() {
         if (!form.rollNumber.trim()) {
             errs.rollNumber = "Roll number is required.";
         } else if (duplicateWarning && form.rollNumber !== savedRollNumber) {
-            errs.rollNumber = "Roll number is already registered in the database (Anti-Duplicate). Please use another roll number.";
+            errs.rollNumber =
+                "Roll number is already registered in the database (Anti-Duplicate). Please use another roll number.";
         }
         if (!form.formNumber.trim())
             errs.formNumber = "Form number is required.";
@@ -423,7 +454,8 @@ export default function IncomingRoll() {
             errs.exMaterial = "Ex material is required.";
         if (!form.cobb.trim()) errs.cobb = "Cobb is required.";
         if (!form.shift.trim()) errs.shift = "Shift is required.";
-        if (!form.entry_date.trim()) errs.entry_date = "Production Date is required.";
+        if (!form.entry_date.trim())
+            errs.entry_date = "Production Date is required.";
         if (!form.pic.trim()) errs.pic = "PIC (Officer) is required.";
 
         setErrors(errs);
@@ -490,12 +522,17 @@ export default function IncomingRoll() {
 
             // Update last saved roll number and recommend next (+1)
             const savedRoll = form.rollNumber;
-            const nextRec = res.data?.recommended_roll_number || calculateNextRollNumber(savedRoll);
+            const nextRec =
+                res.data?.recommended_roll_number ||
+                calculateNextRollNumber(savedRoll);
 
             setSavedRollNumber(savedRoll);
             setRecommendedRoll(nextRec);
             sessionStorage.setItem("incomingRoll_lastSaved", savedRoll);
             sessionStorage.setItem("incomingRoll_recommended", nextRec);
+
+            // Instantly refresh jopList props from server for real-time tonnage tracking
+            router.reload({ only: ["jopList"] });
 
             setStep(3);
         } catch (err: any) {
@@ -536,12 +573,13 @@ export default function IncomingRoll() {
                     >
                         <div className="flex items-center gap-2">
                             <div
-                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${i < step
-                                    ? "bg-green-600 text-white"
-                                    : i === step
-                                        ? "bg-blue-600 text-white shadow-xs"
-                                        : "bg-slate-200 text-slate-600"
-                                    }`}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                                    i < step
+                                        ? "bg-green-600 text-white"
+                                        : i === step
+                                          ? "bg-blue-600 text-white shadow-xs"
+                                          : "bg-slate-200 text-slate-600"
+                                }`}
                             >
                                 {i < step ? "✓" : i + 1}
                             </div>
@@ -572,16 +610,15 @@ export default function IncomingRoll() {
                     <div className="card p-3.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-200/80 rounded-xl shadow-xs">
                         {recommendedRoll && (
                             <div className="mb-2 flex items-center justify-between px-0.5">
-                                <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-medium">Recommended Roll Number:</span>
-                                    <span className="font-mono text-blue-800 font-bold text-xs bg-blue-100/80 px-2 py-0.5 rounded border border-blue-200">
-                                        {recommendedRoll}
-                                    </span>
-                                </div>
                                 {form.rollNumber !== recommendedRoll && (
                                     <button
                                         type="button"
-                                        onClick={() => setForm((f) => ({ ...f, rollNumber: recommendedRoll }))}
+                                        onClick={() =>
+                                            setForm((f) => ({
+                                                ...f,
+                                                rollNumber: recommendedRoll,
+                                            }))
+                                        }
                                         className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                                     >
                                         Use Recommended
@@ -594,7 +631,12 @@ export default function IncomingRoll() {
                             <input
                                 type="text"
                                 value={form.rollNumber}
-                                onChange={(e) => setForm((f) => ({ ...f, rollNumber: e.target.value }))}
+                                onChange={(e) =>
+                                    setForm((f) => ({
+                                        ...f,
+                                        rollNumber: e.target.value,
+                                    }))
+                                }
                                 placeholder="Scan camera barcode / type roll number (e.g. R-10425)..."
                                 className="form-input text-xs flex-1 bg-white font-mono"
                             />
@@ -602,15 +644,21 @@ export default function IncomingRoll() {
                                 <div className="shrink-0 flex items-center gap-1.5">
                                     {isCheckingDuplicate ? (
                                         <span className="text-xs text-slate-500 flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 rounded-lg">
-                                            <RefreshCw size={12} className="animate-spin" /> Checking...
+                                            <RefreshCw
+                                                size={12}
+                                                className="animate-spin"
+                                            />{" "}
+                                            Checking...
                                         </span>
                                     ) : duplicateWarning ? (
                                         <span className="text-xs font-bold text-red-700 flex items-center gap-1 px-2.5 py-1.5 bg-red-100 border border-red-200 rounded-lg">
-                                            <AlertCircle size={13} /> DUPLICATE DETECTED
+                                            <AlertCircle size={13} /> DUPLICATE
+                                            DETECTED
                                         </span>
                                     ) : (
                                         <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 border border-emerald-200 rounded-lg">
-                                            <Check size={13} /> ROLL NUMBER VALID
+                                            <Check size={13} /> ROLL NUMBER
+                                            VALID
                                         </span>
                                     )}
                                 </div>
@@ -618,12 +666,22 @@ export default function IncomingRoll() {
                         </div>
                         {duplicateWarning && (
                             <div className="mt-2 text-[11px] text-red-700 bg-white/95 p-2.5 rounded-lg border border-red-200 flex items-start gap-1.5">
-                                <AlertCircle size={14} className="shrink-0 mt-0.5 text-red-600" />
+                                <AlertCircle
+                                    size={14}
+                                    className="shrink-0 mt-0.5 text-red-600"
+                                />
                                 <div>
-                                    <strong className="block font-bold">⚠️ ANTI-DUPLICATE WARNING:</strong>
+                                    <strong className="block font-bold">
+                                        ⚠️ ANTI-DUPLICATE WARNING:
+                                    </strong>
                                     <span>{duplicateWarning.message}</span>
                                     <div className="text-[10px] text-red-600 mt-0.5 font-medium">
-                                        Database record: Grade {duplicateWarning.roll?.grade} | GSM {duplicateWarning.roll?.gsm} | Shift {duplicateWarning.roll?.shift} | Date: {duplicateWarning.roll?.entry_date} | Status: {duplicateWarning.roll?.status}
+                                        Database record: Grade{" "}
+                                        {duplicateWarning.roll?.grade} | GSM{" "}
+                                        {duplicateWarning.roll?.gsm} | Shift{" "}
+                                        {duplicateWarning.roll?.shift} | Date:{" "}
+                                        {duplicateWarning.roll?.entry_date} |
+                                        Status: {duplicateWarning.roll?.status}
                                     </div>
                                 </div>
                             </div>
@@ -640,27 +698,39 @@ export default function IncomingRoll() {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                                            Incomplete JOP List (Production Target)
+                                            Incomplete JOP List (Production
+                                            Target)
                                         </h3>
                                         <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
                                             {
-                                                (jopList || []).filter((j: any) => (Number(j.quantity) || 1) > (j.rolls ? j.rolls.length : 0)).length
-                                            } Active JOPs
+                                                (jopList || []).filter(
+                                                    (j: any) =>
+                                                        !j.production_estimation
+                                                            ?.is_completed,
+                                                ).length
+                                            }{" "}
+                                            Active JOPs
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-slate-500">
-                                        Monitor the remaining rolls needed to complete each Job Order Production
+                                        Monitor the remaining rolls needed to
+                                        complete each Job Order Production
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs w-full sm:w-64">
-                                    <Search size={14} className="text-slate-400 shrink-0" />
+                                    <Search
+                                        size={14}
+                                        className="text-slate-400 shrink-0"
+                                    />
                                     <input
                                         type="text"
                                         value={jopSearch}
-                                        onChange={(e) => setJopSearch(e.target.value)}
+                                        onChange={(e) =>
+                                            setJopSearch(e.target.value)
+                                        }
                                         placeholder="Search JOP, SPK, Customer..."
                                         className="bg-transparent border-none outline-none text-xs w-full text-slate-800 placeholder:text-slate-400"
                                     />
@@ -673,143 +743,346 @@ export default function IncomingRoll() {
                             <table className="data-table w-full text-xs">
                                 <thead>
                                     <tr>
-                                        <th style={{ textAlign: "left" }}>JOP Number</th>
-                                        <th style={{ textAlign: "center" }}>SPK</th>
-                                        <th style={{ textAlign: "center" }}>Customer</th>
-                                        <th style={{ textAlign: "center" }}>Grade / GSM</th>
-                                        <th style={{ textAlign: "center" }}>Target Tonnage</th>
-                                        <th style={{ textAlign: "center" }}>Actual Prod</th>
-                                        <th style={{ textAlign: "center" }}>Remaining</th>
-                                        <th style={{ textAlign: "center" }}>TPH</th>
-                                        <th style={{ textAlign: "center" }}>Est. Duration</th>
-                                        <th style={{ textAlign: "center" }}>Est. Finish</th>
-                                        <th style={{ textAlign: "center" }}>Est. COP/GSM</th>
-                                        <th style={{ textAlign: "center" }}>Select JOP</th>
+                                        <th style={{ textAlign: "left" }}>
+                                            JOP Number
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            SPK
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Customer
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Grade / GSM
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Target Tonnage
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Actual Prod
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Remaining
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            TPH
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Est. Duration
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Est. Finish
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Est. COP/GSM
+                                        </th>
+                                        <th style={{ textAlign: "center" }}>
+                                            Select JOP
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(() => {
                                         const incomplete = (jopList || [])
                                             .map((j: any) => {
-                                                const est = j.production_estimation || {};
-                                                
-                                                // Calculate Actual Tonnage from rolls (assuming weight is in kg)
-                                                const actualWeightKg = j.rolls ? j.rolls.reduce((sum: number, r: any) => sum + (Number(r.weight) || 0), 0) : 0;
-                                                const actualTonnage = actualWeightKg / 1000;
-                                                
-                                                // Calculate Target Tonnage (assuming j.weight is target weight in kg)
-                                                const targetWeightKg = Number(j.weight) || 0;
-                                                const targetTonnage = targetWeightKg / 1000;
-                                                
-                                                const remainingTonnage = Math.max(0, targetTonnage - actualTonnage);
-                                                
-                                                const isCompleted = (j.rolls ? j.rolls.length : 0) >= (Number(j.quantity) || 1);
+                                                const est =
+                                                    j.production_estimation ||
+                                                    {};
+
+                                                // Calculate Actual Tonnage from rolls (in kg / 1000)
+                                                const actualWeightKg = j.rolls
+                                                    ? j.rolls.reduce(
+                                                          (
+                                                              sum: number,
+                                                              r: any,
+                                                          ) =>
+                                                              sum +
+                                                              (Number(
+                                                                  r.weight,
+                                                              ) || 0),
+                                                          0,
+                                                      )
+                                                    : 0;
+                                                const actualTonnage =
+                                                    actualWeightKg / 1000;
+
+                                                // Target Tonnage from Production Schedule (est.target_tonnage) or fallback
+                                                const targetTonnageNum =
+                                                    est.target_tonnage &&
+                                                    est.target_tonnage !== "-"
+                                                        ? Number(
+                                                              est.target_tonnage,
+                                                          )
+                                                        : (Number(j.weight) ||
+                                                              0) / 1000;
+
+                                                const remainingTonnage =
+                                                    targetTonnageNum > 0
+                                                        ? Math.max(
+                                                              0,
+                                                              targetTonnageNum -
+                                                                  actualTonnage,
+                                                          )
+                                                        : 0;
+
+                                                const isCompleted =
+                                                    est.is_completed !==
+                                                    undefined
+                                                        ? est.is_completed
+                                                        : (targetTonnageNum >
+                                                              0 &&
+                                                              remainingTonnage <=
+                                                                  0) ||
+                                                          (j.rolls
+                                                              ? j.rolls.length
+                                                              : 0) >=
+                                                              (Number(
+                                                                  j.quantity,
+                                                              ) || 1);
 
                                                 return {
                                                     ...j,
                                                     est: {
                                                         ...est,
-                                                        target_tonnage: targetWeightKg > 0 ? targetTonnage.toFixed(2) : "-",
-                                                        actual_tonnage: actualWeightKg > 0 ? actualTonnage.toFixed(2) : "-",
-                                                        remaining_tonnage: targetWeightKg > 0 ? remainingTonnage.toFixed(2) : "-",
+                                                        target_tonnage:
+                                                            targetTonnageNum > 0
+                                                                ? targetTonnageNum.toFixed(
+                                                                      2,
+                                                                  )
+                                                                : est.target_tonnage ||
+                                                                  "-",
+                                                        actual_tonnage:
+                                                            actualTonnage.toFixed(
+                                                                2,
+                                                            ),
+                                                        remaining_tonnage:
+                                                            targetTonnageNum > 0
+                                                                ? remainingTonnage.toFixed(
+                                                                      2,
+                                                                  )
+                                                                : "-",
+                                                        tph:
+                                                            est.tph ||
+                                                            (j.tph
+                                                                ? String(j.tph)
+                                                                : "-"),
                                                     },
-                                                    isCompleted: est.is_completed || isCompleted,
+                                                    isCompleted,
                                                 };
                                             })
                                             .filter((j: any) => !j.isCompleted)
                                             .filter((j: any) => {
-                                                if (!jopSearch.trim()) return true;
-                                                const q = jopSearch.toLowerCase();
+                                                if (!jopSearch.trim())
+                                                    return true;
+                                                const q =
+                                                    jopSearch.toLowerCase();
                                                 return (
-                                                    (j.jop || "").toLowerCase().includes(q) ||
-                                                    (j.spk || "").toLowerCase().includes(q) ||
-                                                    (j.po || "").toLowerCase().includes(q) ||
-                                                    (j.customer?.customer || "").toLowerCase().includes(q) ||
-                                                    (j.grade?.grade || "").toLowerCase().includes(q)
+                                                    (j.jop || "")
+                                                        .toLowerCase()
+                                                        .includes(q) ||
+                                                    (j.spk || "")
+                                                        .toLowerCase()
+                                                        .includes(q) ||
+                                                    (j.po || "")
+                                                        .toLowerCase()
+                                                        .includes(q) ||
+                                                    (j.customer?.customer || "")
+                                                        .toLowerCase()
+                                                        .includes(q) ||
+                                                    (j.grade?.grade || "")
+                                                        .toLowerCase()
+                                                        .includes(q)
                                                 );
                                             });
 
                                         if (incomplete.length === 0) {
                                             return (
                                                 <tr>
-                                                    <td colSpan={9} className="text-center py-6 text-slate-400">
-                                                        {jopSearch ? "No JOPs matched your search." : "All JOP targets have been completed 100%!"}
+                                                    <td
+                                                        colSpan={9}
+                                                        className="text-center py-6 text-slate-400"
+                                                    >
+                                                        {jopSearch
+                                                            ? "No JOPs matched your search."
+                                                            : "All JOP targets have been completed 100%!"}
                                                     </td>
                                                 </tr>
                                             );
                                         }
 
                                         return incomplete.map((j: any) => {
-                                            const isSelected = form.jop === j.jop;
+                                            const isSelected =
+                                                form.jop === j.jop;
                                             return (
                                                 <tr
                                                     key={j.id || j.jop}
-                                                    className={`hover:bg-slate-50 transition-colors ${isSelected ? "bg-blue-50/60 font-semibold" : ""
-                                                        }`}
+                                                    className={`hover:bg-slate-50 transition-colors ${
+                                                        isSelected
+                                                            ? "bg-blue-50/60 font-semibold"
+                                                            : ""
+                                                    }`}
                                                 >
-                                                    <td className="font-bold text-blue-700 font-mono text-xs" style={{ textAlign: "left" }}>
+                                                    <td
+                                                        className="font-bold text-blue-700 font-mono text-xs"
+                                                        style={{
+                                                            textAlign: "left",
+                                                        }}
+                                                    >
                                                         {j.jop}
                                                     </td>
-                                                    <td className="font-mono text-slate-600" style={{ textAlign: "center" }}>
+                                                    <td
+                                                        className="font-mono text-slate-600"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
                                                         {j.spk || "-"}
                                                     </td>
-                                                    <td className="text-slate-800" style={{ textAlign: "center" }}>
-                                                        {j.customer?.customer || j.customer || "-"}
+                                                    <td
+                                                        className="text-slate-800"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
+                                                        {j.customer?.customer ||
+                                                            j.customer ||
+                                                            "-"}
                                                     </td>
-                                                    <td style={{ textAlign: "center" }}>
+                                                    <td
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
                                                         <span className="font-medium text-slate-900">
-                                                            {j.grade?.grade || j.grade || "-"}
+                                                            {j.grade?.grade ||
+                                                                j.grade ||
+                                                                "-"}
                                                         </span>
-                                                        <span className="text-slate-400 mx-1">/</span>
+                                                        <span className="text-slate-400 mx-1">
+                                                            /
+                                                        </span>
                                                         <span className="text-slate-600">
-                                                            {j.gsm?.gsm || j.gsm || "-"} g/m²
+                                                            {j.gsm?.gsm ||
+                                                                j.gsm ||
+                                                                "-"}{" "}
+                                                            g/m²
                                                         </span>
                                                     </td>
-                                                    <td className="font-semibold text-slate-700" style={{ textAlign: "center" }}>
-                                                        {j.est?.target_tonnage ?? "-"} Ton
+                                                    <td
+                                                        className="font-semibold text-slate-700"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
+                                                        {j.est
+                                                            ?.target_tonnage &&
+                                                        j.est.target_tonnage !==
+                                                            "-"
+                                                            ? `${j.est.target_tonnage} Ton`
+                                                            : "-"}
                                                     </td>
-                                                    <td className="font-bold text-slate-900" style={{ textAlign: "center" }}>
-                                                        {j.est?.actual_tonnage ?? "-"} Ton
+                                                    <td
+                                                        className="font-bold text-slate-900"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
+                                                        {j.est
+                                                            ?.actual_tonnage ??
+                                                            "0.00"}{" "}
+                                                        Ton
                                                     </td>
-                                                    <td style={{ textAlign: "center" }}>
+                                                    <td
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
                                                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-amber-100 text-amber-800 border border-amber-200">
-                                                            Remaining {j.est?.remaining_tonnage ?? "-"} Ton
+                                                            Remaining{" "}
+                                                            {j.est
+                                                                ?.remaining_tonnage &&
+                                                            j.est
+                                                                .remaining_tonnage !==
+                                                                "-"
+                                                                ? `${j.est.remaining_tonnage} Ton`
+                                                                : "-"}
                                                         </span>
                                                     </td>
-                                                    <td className="font-semibold text-slate-700" style={{ textAlign: "center" }}>
+                                                    <td
+                                                        className="font-semibold text-slate-700"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
                                                         {j.est?.tph ?? "-"}
                                                     </td>
-                                                    <td className="font-mono text-slate-700" style={{ textAlign: "center" }}>
-                                                        {j.est?.estimated_duration_formatted ?? "N/A"}
+                                                    <td
+                                                        className="font-mono text-slate-700"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
+                                                        {j.est
+                                                            ?.estimated_duration_formatted ??
+                                                            "N/A"}
                                                     </td>
-                                                    <td className="font-mono text-slate-900 text-[11px]" style={{ textAlign: "center" }}>
-                                                        {j.est?.estimated_finish_time ?? "N/A"}
+                                                    <td
+                                                        className="font-mono text-slate-900 text-[11px]"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
+                                                        {j.est
+                                                            ?.estimated_finish_time ??
+                                                            "N/A"}
                                                     </td>
-                                                    <td className="font-mono text-slate-600 text-[11px]" style={{ textAlign: "center" }}>
-                                                        {j.est?.cop_gsm_change_estimate ?? "N/A"}
+                                                    <td
+                                                        className="font-mono text-slate-600 text-[11px]"
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
+                                                        {j.est
+                                                            ?.cop_gsm_change_estimate ??
+                                                            "N/A"}
                                                     </td>
-                                                    <td style={{ textAlign: "center" }}>
+                                                    <td
+                                                        style={{
+                                                            textAlign: "center",
+                                                        }}
+                                                    >
                                                         <button
                                                             onClick={() => {
-                                                                handleJopSelect(j.jop);
+                                                                handleJopSelect(
+                                                                    j.jop,
+                                                                );
                                                                 SystemUI.toast({
                                                                     message: `JOP ${j.jop} selected for roll input!`,
                                                                     type: "success",
                                                                 });
                                                             }}
-                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${isSelected
-                                                                ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
-                                                                : "btn-primary"
-                                                                }`}
+                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${
+                                                                isSelected
+                                                                    ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
+                                                                    : "btn-primary"
+                                                            }`}
                                                             title="Select this JOP to fill in Form Data"
                                                         >
                                                             {isSelected ? (
                                                                 <>
-                                                                    <Check size={12} />
-                                                                    <span>Selected</span>
+                                                                    <Check
+                                                                        size={
+                                                                            12
+                                                                        }
+                                                                    />
+                                                                    <span>
+                                                                        Selected
+                                                                    </span>
                                                                 </>
                                                             ) : (
-                                                                <span>Select</span>
+                                                                <span>
+                                                                    Select
+                                                                </span>
                                                             )}
                                                         </button>
                                                     </td>
@@ -826,7 +1099,7 @@ export default function IncomingRoll() {
 
             {/* Step 1: Form Data */}
             {step === 1 && (
-                <div className="w-full 2xl:max-w-7xl space-y-4 lg:space-y-6">
+                <div className="w-full space-y-4 lg:space-y-6">
                     {/* Weight Card Header */}
                     <div className="card p-4">
                         <div className="flex items-center justify-between gap-4 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl">
@@ -883,15 +1156,15 @@ export default function IncomingRoll() {
 
                     {/* Roll Data Entry Segments */}
                     <div className="space-y-4">
-                        {/* Segment 1: Job Order & Specification */}
+                        {/* Segment 1: Job Order & Auto-Filled Specifications */}
                         <div className="card p-4 sm:p-5">
                             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
                                 <FileText size={16} className="text-blue-600" />
                                 <h3 className="text-sm font-bold text-slate-900">
-                                    Job Order & Specification
+                                    Job Order & Specification (Auto-filled)
                                 </h3>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
                                 {/* JOP Dropdown */}
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1">
@@ -916,12 +1189,12 @@ export default function IncomingRoll() {
                                                 {j.jop}{" "}
                                                 {typeof j.customer ===
                                                     "object" &&
-                                                    j.customer?.customer
+                                                j.customer?.customer
                                                     ? `(${j.customer.customer})`
                                                     : typeof j.customer ===
                                                         "string"
-                                                        ? `(${j.customer})`
-                                                        : ""}
+                                                      ? `(${j.customer})`
+                                                      : ""}
                                             </option>
                                         ))}
                                     </select>
@@ -930,10 +1203,165 @@ export default function IncomingRoll() {
                                             {errors.jop}
                                         </p>
                                     )}
-                                    {form.jop && jops.find((j) => j.jop === form.jop || String(j.id) === form.jop)?.noted_order && (
-                                        <div className="mt-2 p-2 bg-yellow-50 text-yellow-800 text-[11px] rounded border border-yellow-200 shadow-sm leading-snug">
-                                            <strong>Note:</strong> {jops.find((j) => j.jop === form.jop || String(j.id) === form.jop)?.noted_order}
+                                    {form.jop &&
+                                        jops.find(
+                                            (j) =>
+                                                j.jop === form.jop ||
+                                                String(j.id) === form.jop,
+                                        )?.noted_order && (
+                                            <div className="mt-2 p-2 bg-yellow-50 text-yellow-800 text-[11px] rounded border border-yellow-200 shadow-sm leading-snug">
+                                                <strong>Note:</strong>{" "}
+                                                {
+                                                    jops.find(
+                                                        (j) =>
+                                                            j.jop ===
+                                                                form.jop ||
+                                                            String(j.id) ===
+                                                                form.jop,
+                                                    )?.noted_order
+                                                }
+                                            </div>
+                                        )}
+                                </div>
+
+                                {/* Roll Number */}
+                                <div>
+                                    {recommendedRoll && (
+                                        <div>
+                                            {form.rollNumber !==
+                                                recommendedRoll && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setForm((f) => ({
+                                                            ...f,
+                                                            rollNumber:
+                                                                recommendedRoll,
+                                                        }));
+                                                        if (errors.rollNumber) {
+                                                            setErrors(
+                                                                (err) => ({
+                                                                    ...err,
+                                                                    rollNumber:
+                                                                        undefined,
+                                                                }),
+                                                            );
+                                                        }
+                                                    }}
+                                                    className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-md shadow-2xs transition-colors shrink-0 cursor-pointer"
+                                                    title="Apply recommended roll number"
+                                                >
+                                                    Use {recommendedRoll}
+                                                </button>
+                                            )}
                                         </div>
+                                    )}
+
+                                    <label className="form-label text-xs font-semibold block mb-1">
+                                        Roll Number{" "}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        value={form.rollNumber}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                rollNumber: e.target.value,
+                                            }));
+                                            if (errors.rollNumber)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    rollNumber: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full font-mono ${errors.rollNumber || duplicateWarning ? "border-red-500 bg-red-50/20" : ""}`}
+                                        placeholder="e.g. R-10425"
+                                    />
+                                    {isCheckingDuplicate && (
+                                        <p className="text-slate-400 text-[11px] mt-1 flex items-center gap-1">
+                                            <RefreshCw
+                                                size={11}
+                                                className="animate-spin"
+                                            />{" "}
+                                            Checking roll number...
+                                        </p>
+                                    )}
+                                    {errors.rollNumber && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.rollNumber}
+                                        </p>
+                                    )}
+                                    {duplicateWarning && (
+                                        <div className="mt-1.5 p-2 rounded bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-1.5 animate-in fade-in">
+                                            <AlertCircle
+                                                size={14}
+                                                className="shrink-0 mt-0.5"
+                                            />
+                                            <div>
+                                                <strong className="block font-bold">
+                                                    ⚠️ Anti-Duplicate: Duplicate
+                                                    Roll Number!
+                                                </strong>
+                                                <span>
+                                                    {duplicateWarning.message}
+                                                </span>
+                                                <div className="text-[10px] text-red-600 mt-0.5">
+                                                    Spec:{" "}
+                                                    {
+                                                        duplicateWarning.roll
+                                                            ?.grade
+                                                    }{" "}
+                                                    | GSM:{" "}
+                                                    {duplicateWarning.roll?.gsm}{" "}
+                                                    | Shift:{" "}
+                                                    {
+                                                        duplicateWarning.roll
+                                                            ?.shift
+                                                    }{" "}
+                                                    | Status:{" "}
+                                                    {
+                                                        duplicateWarning.roll
+                                                            ?.status
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Form Number */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Form Number{" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 font-normal">
+                                            (Jumbo + Grade + RW)
+                                        </span>
+                                    </label>
+                                    <input
+                                        value={form.formNumber}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                formNumber: e.target.value,
+                                            }));
+                                            if (errors.formNumber)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    formNumber: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.formNumber ? "border-red-500" : ""}`}
+                                        placeholder="e.g. F-2241"
+                                    />
+                                    {errors.formNumber && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.formNumber}
+                                        </p>
                                     )}
                                 </div>
 
@@ -947,15 +1375,23 @@ export default function IncomingRoll() {
                                             </span>
                                         </span>
                                         <span className="text-[10px] text-blue-600 font-normal">
-                                            (Editable / Realisasi Produk Samping)
+                                            (Editable / Realisasi Produk
+                                            Samping)
                                         </span>
                                     </label>
                                     <input
                                         type="text"
                                         value={form.grade}
                                         onChange={(e) => {
-                                            setForm((f) => ({ ...f, grade: e.target.value }));
-                                            if (errors.grade) setErrors((err) => ({ ...err, grade: undefined }));
+                                            setForm((f) => ({
+                                                ...f,
+                                                grade: e.target.value,
+                                            }));
+                                            if (errors.grade)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    grade: undefined,
+                                                }));
                                         }}
                                         placeholder="Enter Grade"
                                         className={`form-input w-full ${errors.grade ? "border-red-500" : ""}`}
@@ -984,8 +1420,15 @@ export default function IncomingRoll() {
                                         type="text"
                                         value={form.gsm}
                                         onChange={(e) => {
-                                            setForm((f) => ({ ...f, gsm: e.target.value }));
-                                            if (errors.gsm) setErrors((err) => ({ ...err, gsm: undefined }));
+                                            setForm((f) => ({
+                                                ...f,
+                                                gsm: e.target.value,
+                                            }));
+                                            if (errors.gsm)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    gsm: undefined,
+                                                }));
                                         }}
                                         placeholder="Enter GSM"
                                         className={`form-input w-full ${errors.gsm ? "border-red-500" : ""}`}
@@ -993,6 +1436,313 @@ export default function IncomingRoll() {
                                     {errors.gsm && (
                                         <p className="text-red-600 text-[11px] mt-1">
                                             {errors.gsm}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Roll Width (RW) */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Roll Width (RW) (mm){" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Rekomendasi JOP)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={form.width}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                width: e.target.value,
+                                            }));
+                                            if (errors.width)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    width: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.width ? "border-red-500" : ""}`}
+                                        placeholder="e.g. 1650"
+                                    />
+                                    {errors.width && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.width}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Plybond */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Plybond{" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Rekomendasi PPIC)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.plybond}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                plybond: e.target.value,
+                                            }));
+                                            if (errors.plybond)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    plybond: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.plybond ? "border-red-500" : ""}`}
+                                        placeholder="e.g. 1.8 or 400"
+                                    />
+                                    {errors.plybond && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.plybond}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Thickness */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Thickness (mm){" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Rekomendasi PPIC)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.thickness}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                thickness: e.target.value,
+                                            }));
+                                            if (errors.thickness)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    thickness: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.thickness ? "border-red-500" : ""}`}
+                                        placeholder="e.g. 0.22 or 600"
+                                    />
+                                    {errors.thickness && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.thickness}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Core */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Core (mm / &quot;){" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Rekomendasi PPIC)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.core}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                core: e.target.value,
+                                            }));
+                                            if (errors.core)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    core: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.core ? "border-red-500" : ""}`}
+                                        placeholder="e.g. 3 or 76"
+                                    />
+                                    {errors.core && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.core}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Segment 2: Physical & Dimension Specifications (Manual Input) */}
+                        <div className="card p-4 sm:p-5">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                                <Layers
+                                    size={16}
+                                    className="text-emerald-600"
+                                />
+                                <h3 className="text-sm font-bold text-slate-900">
+                                    Roll Physical Measurements (Manual Input)
+                                </h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+                                {/* Roll Diameter (RD) */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Roll Diameter (RD) (mm){" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            (Diisi Produksi)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={form.diameter}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                diameter: e.target.value,
+                                            }));
+                                            if (errors.diameter)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    diameter: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.diameter ? "border-red-500" : ""}`}
+                                        placeholder="e.g. 1120"
+                                    />
+                                    {errors.diameter && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.diameter}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Bulk */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Bulk{" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            (Diisi Produksi)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.bulk}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                bulk: e.target.value,
+                                            }));
+                                            if (errors.bulk)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    bulk: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.bulk ? "border-red-500" : ""}`}
+                                        placeholder="e.g. 1.4 or 1,4"
+                                    />
+                                    {errors.bulk && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.bulk}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Cobb */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Cobb{" "}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            (Diisi Produksi)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.cobb}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                cobb: e.target.value,
+                                            }));
+                                            if (errors.cobb)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    cobb: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.cobb ? "border-red-500" : ""}`}
+                                        placeholder="e.g. 150-250"
+                                    />
+                                    {errors.cobb && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.cobb}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Ex Material */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1">
+                                        Ex Material{" "}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={form.exMaterial}
+                                        onChange={(e) => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                exMaterial: e.target.value,
+                                            }));
+                                            if (errors.exMaterial)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    exMaterial: undefined,
+                                                }));
+                                        }}
+                                        className={`form-input w-full ${errors.exMaterial ? "border-red-500" : ""}`}
+                                    >
+                                        {["IMPORT", "LOCAL", "MIX"].map((o) => (
+                                            <option key={o} value={o}>
+                                                {o}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.exMaterial && (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.exMaterial}
                                         </p>
                                     )}
                                 </div>
@@ -1031,409 +1781,6 @@ export default function IncomingRoll() {
                             </div>
                         </div>
 
-                        {/* Segment 2: Physical & Dimension Specifications */}
-                        <div className="card p-4 sm:p-5">
-                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                                <Layers
-                                    size={16}
-                                    className="text-emerald-600"
-                                />
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    Roll Identification & Physical Specs
-                                </h3>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4">
-                                {/* Row 1 */}
-                                <div>
-                                    {/* Recommended Roll Number UI Banner at top of input area (Section 11) */}
-                                    {recommendedRoll && (
-                                        <div className="mb-2 p-2.5 bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 border border-blue-200/90 rounded-lg flex items-center justify-between shadow-2xs">
-                                            <div className="min-w-0">
-                                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">
-                                                    Recommended Roll Number
-                                                </span>
-                                                <span className="text-sm font-black font-mono text-blue-900 leading-tight block">
-                                                    {recommendedRoll}
-                                                </span>
-                                            </div>
-                                            {form.rollNumber !== recommendedRoll && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setForm((f) => ({
-                                                            ...f,
-                                                            rollNumber: recommendedRoll,
-                                                        }));
-                                                        if (errors.rollNumber) {
-                                                            setErrors((err) => ({
-                                                                ...err,
-                                                                rollNumber: undefined,
-                                                            }));
-                                                        }
-                                                    }}
-                                                    className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-md shadow-2xs transition-colors shrink-0 cursor-pointer"
-                                                    title="Apply recommended roll number"
-                                                >
-                                                    Use {recommendedRoll}
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Roll Number{" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        value={form.rollNumber}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                rollNumber: e.target.value,
-                                            }));
-                                            if (errors.rollNumber)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    rollNumber: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full font-mono ${errors.rollNumber || duplicateWarning ? "border-red-500 bg-red-50/20" : ""}`}
-                                        placeholder="e.g. R-10425"
-                                    />
-                                    {isCheckingDuplicate && (
-                                        <p className="text-slate-400 text-[11px] mt-1 flex items-center gap-1">
-                                            <RefreshCw size={11} className="animate-spin" /> Checking roll number...
-                                        </p>
-                                    )}
-                                    {errors.rollNumber && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.rollNumber}
-                                        </p>
-                                    )}
-                                    {duplicateWarning && (
-                                        <div className="mt-1.5 p-2 rounded bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-1.5 animate-in fade-in">
-                                            <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                                            <div>
-                                                <strong className="block font-bold">⚠️ Anti-Duplicate: Duplicate Roll Number!</strong>
-                                                <span>{duplicateWarning.message}</span>
-                                                <div className="text-[10px] text-red-600 mt-0.5">
-                                                    Spec: {duplicateWarning.roll?.grade} | GSM: {duplicateWarning.roll?.gsm} | Shift: {duplicateWarning.roll?.shift} | Status: {duplicateWarning.roll?.status}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Form Number{" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-slate-400 font-normal">
-                                            (Jumbo + Grade + RW)
-                                        </span>
-                                    </label>
-                                    <input
-                                        value={form.formNumber}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                formNumber: e.target.value,
-                                            }));
-                                            if (errors.formNumber)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    formNumber: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.formNumber ? "border-red-500" : ""}`}
-                                        placeholder="e.g. F-2241"
-                                    />
-                                    {errors.formNumber && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.formNumber}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Plybond{" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (Rekomendasi PPIC)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.plybond}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                plybond: e.target.value,
-                                            }));
-                                            if (errors.plybond)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    plybond: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.plybond ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1.8 or 400"
-                                    />
-                                    {errors.plybond && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.plybond}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Row 2 */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Roll Diameter (RD) (mm){" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-emerald-600 font-normal">
-                                            (Diisi Produksi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={form.diameter}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                diameter: e.target.value,
-                                            }));
-                                            if (errors.diameter)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    diameter: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.diameter ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1120"
-                                    />
-                                    {errors.diameter && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.diameter}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Roll Width (RW) (mm){" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-emerald-600 font-normal">
-                                            (Diisi Produksi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={form.width}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                width: e.target.value,
-                                            }));
-                                            if (errors.width)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    width: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.width ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1650"
-                                    />
-                                    {errors.width && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.width}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Thickness (mm){" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (Rekomendasi PPIC)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.thickness}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                thickness: e.target.value,
-                                            }));
-                                            if (errors.thickness)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    thickness: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.thickness ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 0.22 or 600"
-                                    />
-                                    {errors.thickness && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.thickness}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Row 3 */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Bulk{" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-emerald-600 font-normal">
-                                            (Diisi Produksi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.bulk}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                bulk: e.target.value,
-                                            }));
-                                            if (errors.bulk)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    bulk: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.bulk ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1.4 or 1,4"
-                                    />
-                                    {errors.bulk && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.bulk}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Core (mm / &quot;){" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (Rekomendasi PPIC)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.core}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                core: e.target.value,
-                                            }));
-                                            if (errors.core)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    core: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.core ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 3 or 76"
-                                    />
-                                    {errors.core && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.core}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Ex Material{" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        value={form.exMaterial}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                exMaterial: e.target.value,
-                                            }));
-                                            if (errors.exMaterial)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    exMaterial: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.exMaterial ? "border-red-500" : ""}`}
-                                    >
-                                        {["IMPORT", "LOCAL", "MIX"].map(
-                                            (o) => (
-                                                <option key={o} value={o}>
-                                                    {o}
-                                                </option>
-                                            ),
-                                        )}
-                                    </select>
-                                    {errors.exMaterial && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.exMaterial}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Cobb{" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-emerald-600 font-normal">
-                                            (Diisi Produksi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.cobb}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                cobb: e.target.value,
-                                            }));
-                                            if (errors.cobb)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    cobb: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.cobb ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 150-250"
-                                    />
-                                    {errors.cobb && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.cobb}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Segment 3: Shift & Operational Details */}
                         <div className="card p-4 sm:p-5">
                             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
@@ -1452,13 +1799,22 @@ export default function IncomingRoll() {
                                         type="date"
                                         value={form.entry_date}
                                         onChange={(e) => {
-                                            setForm((f) => ({ ...f, entry_date: e.target.value }));
-                                            if (errors.entry_date) setErrors((err) => ({ ...err, entry_date: undefined }));
+                                            setForm((f) => ({
+                                                ...f,
+                                                entry_date: e.target.value,
+                                            }));
+                                            if (errors.entry_date)
+                                                setErrors((err) => ({
+                                                    ...err,
+                                                    entry_date: undefined,
+                                                }));
                                         }}
                                         className={`form-input w-full ${errors.entry_date ? "border-red-500" : ""}`}
                                     />
                                     {errors.entry_date && (
-                                        <p className="text-red-600 text-[11px] mt-1">{errors.entry_date}</p>
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.entry_date}
+                                        </p>
                                     )}
                                 </div>
 
@@ -1501,15 +1857,25 @@ export default function IncomingRoll() {
                                     <select
                                         value={form.status}
                                         onChange={(e) => {
-                                            setForm((f) => ({ ...f, status: e.target.value }));
+                                            setForm((f) => ({
+                                                ...f,
+                                                status: e.target.value,
+                                            }));
                                         }}
                                         className="form-input w-full font-semibold"
                                     >
-                                        <option value="OK">OK (Standard Passed)</option>
-                                        <option value="HOLD">HOLD (Waiting for QC Spec Verification)</option>
+                                        <option value="OK">
+                                            OK (Standard Passed)
+                                        </option>
+                                        <option value="HOLD">
+                                            HOLD (Waiting for QC Spec
+                                            Verification)
+                                        </option>
                                     </select>
                                     <p className="text-slate-400 text-[10px] mt-1">
-                                        Select HOLD if there are specification deviations requiring QC verification in the warehouse.
+                                        Select HOLD if there are specification
+                                        deviations requiring QC verification in
+                                        the warehouse.
                                     </p>
                                 </div>
 
@@ -1564,7 +1930,7 @@ export default function IncomingRoll() {
 
             {/* Step 2: Review & Save */}
             {step === 2 && (
-                <div className="w-full 2xl:max-w-7xl space-y-4">
+                <div className="w-full space-y-4">
                     <div className="card p-4 sm:p-6 lg:p-8">
                         <h3 className="text-sm sm:text-base lg:text-xl font-extrabold text-slate-900 mb-4 pb-3 border-b border-slate-200">
                             Review & Save
@@ -1582,11 +1948,11 @@ export default function IncomingRoll() {
                                         ? `${form.gsm} g/m²`
                                         : "(not entered)",
                                 ],
-                                ["Visual Status", form.visual || "(not entered)"],
                                 [
-                                    "Roll Status",
-                                    form.status || "(not entered)",
+                                    "Visual Status",
+                                    form.visual || "(not entered)",
                                 ],
+                                ["Roll Status", form.status || "(not entered)"],
                                 [
                                     "Roll Number",
                                     form.rollNumber || "(not entered)",
@@ -1617,8 +1983,14 @@ export default function IncomingRoll() {
                                 ],
                                 ["Core", `${form.core} mm`],
                                 ["Cobb", form.cobb || "(not entered)"],
-                                ["Ex Material", form.exMaterial || "(not entered)"],
-                                ["Production Date", form.entry_date || "(not entered)"],
+                                [
+                                    "Ex Material",
+                                    form.exMaterial || "(not entered)",
+                                ],
+                                [
+                                    "Production Date",
+                                    form.entry_date || "(not entered)",
+                                ],
                                 ["Shift", form.shift || "(not entered)"],
                                 ["PIC (Officer)", form.pic || "(not entered)"],
                             ].map(([label, value]) => (
@@ -1630,7 +2002,7 @@ export default function IncomingRoll() {
                                         {label}
                                     </span>
                                     <span
-                                        className={`font-semibold text-right ${typeof value === 'string' && value.includes("(not entered)") ? "text-amber-600" : "text-slate-900"}`}
+                                        className={`font-semibold text-right ${typeof value === "string" && value.includes("(not entered)") ? "text-amber-600" : "text-slate-900"}`}
                                     >
                                         {value}
                                     </span>
@@ -1659,7 +2031,7 @@ export default function IncomingRoll() {
 
             {/* Step 3: Print Label & Dynamic QR Generation */}
             {step === 3 && (
-                <div className="w-full 2xl:max-w-4xl space-y-4">
+                <div className="w-full space-y-4">
                     <style>{`
                         @media print {
                             @page {
@@ -1943,10 +2315,14 @@ export default function IncomingRoll() {
                         </div>
 
                         {/* Action buttons */}
-                        {form.status === 'HOLD' && (
+                        {form.status === "HOLD" && (
                             <div className="w-full bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center justify-center gap-2">
                                 <Clock size={18} className="text-amber-600" />
-                                <span className="font-semibold text-sm">Current Roll status is HOLD. Final label can only be printed after specification is confirmed by QC.</span>
+                                <span className="font-semibold text-sm">
+                                    Current Roll status is HOLD. Final label can
+                                    only be printed after specification is
+                                    confirmed by QC.
+                                </span>
                             </div>
                         )}
                         <div className="flex flex-wrap gap-3 justify-center pt-2">
@@ -1959,17 +2335,25 @@ export default function IncomingRoll() {
                             <button
                                 className="btn btn-primary btn-md flex items-center gap-2 px-6 py-2.5 font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => window.print()}
-                                disabled={form.status === 'HOLD'}
+                                disabled={form.status === "HOLD"}
                             >
                                 <Printer size={16} /> <span>Print Label</span>
                             </button>
                             <button
                                 className="btn btn-secondary btn-md flex items-center gap-2 px-6 py-2.5 font-semibold cursor-pointer"
                                 onClick={() => {
-                                    sessionStorage.removeItem("incomingRoll_step");
-                                    sessionStorage.removeItem("incomingRoll_weight");
-                                    sessionStorage.removeItem("incomingRoll_form");
-                                    sessionStorage.removeItem("incomingRoll_savedId");
+                                    sessionStorage.removeItem(
+                                        "incomingRoll_step",
+                                    );
+                                    sessionStorage.removeItem(
+                                        "incomingRoll_weight",
+                                    );
+                                    sessionStorage.removeItem(
+                                        "incomingRoll_form",
+                                    );
+                                    sessionStorage.removeItem(
+                                        "incomingRoll_savedId",
+                                    );
                                     setSavedRollNumber("");
                                     setStep(0);
                                     setWeight({
@@ -1994,7 +2378,9 @@ export default function IncomingRoll() {
                                         exMaterial: "IMPORT",
                                         cobb: "",
                                         shift: "1",
-                                        entry_date: new Date().toISOString().split('T')[0],
+                                        entry_date: new Date()
+                                            .toISOString()
+                                            .split("T")[0],
                                         pic: "",
                                     });
                                     setErrors({});
@@ -2014,9 +2400,13 @@ export default function IncomingRoll() {
                         <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-5">
                             <Save size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 text-center mb-2">Confirm Data</h3>
+                        <h3 className="text-xl font-bold text-slate-900 text-center mb-2">
+                            Confirm Data
+                        </h3>
                         <p className="text-slate-500 text-center text-sm mb-6">
-                            Are you sure all filled data is correct? This process will save the data to the system and generate the QR Label.
+                            Are you sure all filled data is correct? This
+                            process will save the data to the system and
+                            generate the QR Label.
                         </p>
                         <div className="flex gap-3">
                             <button

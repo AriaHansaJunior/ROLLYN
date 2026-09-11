@@ -23,7 +23,7 @@ class IncomingRollController extends Controller
 {
     public function index()
     {
-        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls'])->latest()->get();
+        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules'])->latest()->get();
 
         // Auto-start SPECTRUM Engine if it's not running
         $connection = @fsockopen('127.0.0.1', 8001, $errno, $errstr, 1);

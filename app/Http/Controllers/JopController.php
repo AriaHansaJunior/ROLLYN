@@ -17,7 +17,7 @@ class JopController extends Controller
     public function index(Request $request)
     {
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core'])->get();
+            $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules'])->get();
             return response()->json($jops);
         }
 
@@ -29,6 +29,7 @@ class JopController extends Controller
             'thickness',
             'core',
             'rollsWidth',
+            'productionSchedules',
             'rolls.grade',
             'rolls.gsm',
             'rolls.shift',
@@ -55,7 +56,7 @@ class JopController extends Controller
 
     public function targetOrder()
     {
-        $orders = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls'])->latest()->get();
+        $orders = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules'])->latest()->get();
         return Inertia::render('TargetOrder', ['targetOrders' => $orders]);
     }
 
@@ -113,11 +114,12 @@ class JopController extends Controller
             'quantity' => 'nullable|integer',
             'weight' => 'nullable|integer',
             'container' => 'nullable|integer',
-            'noted_order' => 'nullable|string'
+            'noted_order' => 'nullable|string',
+            'tph' => 'nullable|numeric'
         ]);
 
         $jop = Jop::create($validated);
-        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core']);
+        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules']);
 
         return response()->json([
             'status' => 'success',
@@ -169,11 +171,12 @@ class JopController extends Controller
             'quantity' => 'nullable|integer',
             'weight' => 'nullable|integer',
             'container' => 'nullable|integer',
-            'noted_order' => 'nullable|string'
+            'noted_order' => 'nullable|string',
+            'tph' => 'nullable|numeric'
         ]);
 
         $jop->update($validated);
-        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core']);
+        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules']);
         return response()->json(['message' => 'JOP updated successfully', 'data' => $jop]);
     }
 
