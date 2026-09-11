@@ -17,7 +17,6 @@ class IncomingRollAutoIncrementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withoutVite();
         $this->user = User::first() ?? User::create([
             'username' => 'admin_test',
             'email'    => 'admin@test.com',
