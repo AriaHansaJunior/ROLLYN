@@ -16,7 +16,9 @@ class ProductionScheduleController extends Controller
             'jop.customer',
             'jop.grade',
             'jop.gsm',
-            'jop.rollsWidth',
+            'jop.plybond',
+            'jop.thickness',
+            'jop.core',
         ])->latest()->get()->map(function ($s) {
             $j = $s->jop;
             return [
@@ -28,7 +30,9 @@ class ProductionScheduleController extends Controller
                 'customer'         => $j?->customer?->customer,
                 'grade'            => $j?->grade?->grade,
                 'gsm'              => $j?->gsm?->gsm,
-                'nase'             => $j?->rollsWidth?->width, // NASE = roll width from rollsWidth
+                'plybond'          => $j?->plybond?->plybonds,
+                'thickness'        => $j?->thickness?->thickness,
+                'core'             => $j?->core?->core,
                 'tonnage'          => $s->tonnage,
                 'rewinder_cut'     => $s->rewinder_cut,
                 'tph'              => $s->tph,
@@ -40,7 +44,7 @@ class ProductionScheduleController extends Controller
             ];
         });
 
-        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])
+        $jops = Jop::with(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core'])
             ->orderBy('jop', 'asc')
             ->get()
             ->map(fn($j) => [
@@ -48,10 +52,12 @@ class ProductionScheduleController extends Controller
                 'spk'      => $j->spk,
                 'jop'      => $j->jop,
                 'po'       => $j->po,
-                'customer' => $j->customer?->customer,
-                'grade'    => $j->grade?->grade,
-                'gsm'      => $j->gsm?->gsm,
-                'nase'     => $j->rollsWidth?->width,
+                'customer'  => $j->customer?->customer,
+                'grade'     => $j->grade?->grade,
+                'gsm'       => $j->gsm?->gsm,
+                'plybond'   => $j->plybond?->plybonds,
+                'thickness' => $j->thickness?->thickness,
+                'core'      => $j->core?->core,
                 'tph'      => $j->tph,
             ]);
 

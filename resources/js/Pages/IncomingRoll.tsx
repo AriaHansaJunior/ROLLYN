@@ -116,10 +116,10 @@ export default function IncomingRoll() {
         return saved
             ? JSON.parse(saved)
             : {
-                  value: 0,
-                  display: "",
-                  source: "none",
-              };
+                value: 0,
+                display: "",
+                source: "none",
+            };
     });
     const [jops, setJops] = useState<JopOption[]>([]);
     const [jopSearch, setJopSearch] = useState("");
@@ -573,13 +573,12 @@ export default function IncomingRoll() {
                     >
                         <div className="flex items-center gap-2">
                             <div
-                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
-                                    i < step
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${i < step
                                         ? "bg-green-600 text-white"
                                         : i === step
-                                          ? "bg-blue-600 text-white shadow-xs"
-                                          : "bg-slate-200 text-slate-600"
-                                }`}
+                                            ? "bg-blue-600 text-white shadow-xs"
+                                            : "bg-slate-200 text-slate-600"
+                                    }`}
                             >
                                 {i < step ? "✓" : i + 1}
                             </div>
@@ -792,16 +791,16 @@ export default function IncomingRoll() {
                                                 // Calculate Actual Tonnage from rolls (in kg / 1000)
                                                 const actualWeightKg = j.rolls
                                                     ? j.rolls.reduce(
-                                                          (
-                                                              sum: number,
-                                                              r: any,
-                                                          ) =>
-                                                              sum +
-                                                              (Number(
-                                                                  r.weight,
-                                                              ) || 0),
-                                                          0,
-                                                      )
+                                                        (
+                                                            sum: number,
+                                                            r: any,
+                                                        ) =>
+                                                            sum +
+                                                            (Number(
+                                                                r.weight,
+                                                            ) || 0),
+                                                        0,
+                                                    )
                                                     : 0;
                                                 const actualTonnage =
                                                     actualWeightKg / 1000;
@@ -809,36 +808,36 @@ export default function IncomingRoll() {
                                                 // Target Tonnage from Production Schedule (est.target_tonnage) or fallback
                                                 const targetTonnageNum =
                                                     est.target_tonnage &&
-                                                    est.target_tonnage !== "-"
+                                                        est.target_tonnage !== "-"
                                                         ? Number(
-                                                              est.target_tonnage,
-                                                          )
+                                                            est.target_tonnage,
+                                                        )
                                                         : (Number(j.weight) ||
-                                                              0) / 1000;
+                                                            0) / 1000;
 
                                                 const remainingTonnage =
                                                     targetTonnageNum > 0
                                                         ? Math.max(
-                                                              0,
-                                                              targetTonnageNum -
-                                                                  actualTonnage,
-                                                          )
+                                                            0,
+                                                            targetTonnageNum -
+                                                            actualTonnage,
+                                                        )
                                                         : 0;
 
                                                 const isCompleted =
                                                     est.is_completed !==
-                                                    undefined
+                                                        undefined
                                                         ? est.is_completed
                                                         : (targetTonnageNum >
-                                                              0 &&
-                                                              remainingTonnage <=
-                                                                  0) ||
-                                                          (j.rolls
-                                                              ? j.rolls.length
-                                                              : 0) >=
-                                                              (Number(
-                                                                  j.quantity,
-                                                              ) || 1);
+                                                            0 &&
+                                                            remainingTonnage <=
+                                                            0) ||
+                                                        (j.rolls
+                                                            ? j.rolls.length
+                                                            : 0) >=
+                                                        (Number(
+                                                            j.quantity,
+                                                        ) || 1);
 
                                                 return {
                                                     ...j,
@@ -847,10 +846,10 @@ export default function IncomingRoll() {
                                                         target_tonnage:
                                                             targetTonnageNum > 0
                                                                 ? targetTonnageNum.toFixed(
-                                                                      2,
-                                                                  )
+                                                                    2,
+                                                                )
                                                                 : est.target_tonnage ||
-                                                                  "-",
+                                                                "-",
                                                         actual_tonnage:
                                                             actualTonnage.toFixed(
                                                                 2,
@@ -858,8 +857,8 @@ export default function IncomingRoll() {
                                                         remaining_tonnage:
                                                             targetTonnageNum > 0
                                                                 ? remainingTonnage.toFixed(
-                                                                      2,
-                                                                  )
+                                                                    2,
+                                                                )
                                                                 : "-",
                                                         tph:
                                                             est.tph ||
@@ -916,11 +915,10 @@ export default function IncomingRoll() {
                                             return (
                                                 <tr
                                                     key={j.id || j.jop}
-                                                    className={`hover:bg-slate-50 transition-colors ${
-                                                        isSelected
+                                                    className={`hover:bg-slate-50 transition-colors ${isSelected
                                                             ? "bg-blue-50/60 font-semibold"
                                                             : ""
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <td
                                                         className="font-bold text-blue-700 font-mono text-xs"
@@ -976,7 +974,7 @@ export default function IncomingRoll() {
                                                     >
                                                         {j.est
                                                             ?.target_tonnage &&
-                                                        j.est.target_tonnage !==
+                                                            j.est.target_tonnage !==
                                                             "-"
                                                             ? `${j.est.target_tonnage} Ton`
                                                             : "-"}
@@ -1001,8 +999,8 @@ export default function IncomingRoll() {
                                                             Remaining{" "}
                                                             {j.est
                                                                 ?.remaining_tonnage &&
-                                                            j.est
-                                                                .remaining_tonnage !==
+                                                                j.est
+                                                                    .remaining_tonnage !==
                                                                 "-"
                                                                 ? `${j.est.remaining_tonnage} Ton`
                                                                 : "-"}
@@ -1061,11 +1059,10 @@ export default function IncomingRoll() {
                                                                     type: "success",
                                                                 });
                                                             }}
-                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${
-                                                                isSelected
+                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${isSelected
                                                                     ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
                                                                     : "btn-primary"
-                                                            }`}
+                                                                }`}
                                                             title="Select this JOP to fill in Form Data"
                                                         >
                                                             {isSelected ? (
@@ -1189,12 +1186,12 @@ export default function IncomingRoll() {
                                                 {j.jop}{" "}
                                                 {typeof j.customer ===
                                                     "object" &&
-                                                j.customer?.customer
+                                                    j.customer?.customer
                                                     ? `(${j.customer.customer})`
                                                     : typeof j.customer ===
                                                         "string"
-                                                      ? `(${j.customer})`
-                                                      : ""}
+                                                        ? `(${j.customer})`
+                                                        : ""}
                                             </option>
                                         ))}
                                     </select>
@@ -1215,9 +1212,9 @@ export default function IncomingRoll() {
                                                     jops.find(
                                                         (j) =>
                                                             j.jop ===
-                                                                form.jop ||
+                                                            form.jop ||
                                                             String(j.id) ===
-                                                                form.jop,
+                                                            form.jop,
                                                     )?.noted_order
                                                 }
                                             </div>
@@ -1230,30 +1227,30 @@ export default function IncomingRoll() {
                                         <div>
                                             {form.rollNumber !==
                                                 recommendedRoll && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setForm((f) => ({
-                                                            ...f,
-                                                            rollNumber:
-                                                                recommendedRoll,
-                                                        }));
-                                                        if (errors.rollNumber) {
-                                                            setErrors(
-                                                                (err) => ({
-                                                                    ...err,
-                                                                    rollNumber:
-                                                                        undefined,
-                                                                }),
-                                                            );
-                                                        }
-                                                    }}
-                                                    className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-md shadow-2xs transition-colors shrink-0 cursor-pointer"
-                                                    title="Apply recommended roll number"
-                                                >
-                                                    Use {recommendedRoll}
-                                                </button>
-                                            )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setForm((f) => ({
+                                                                ...f,
+                                                                rollNumber:
+                                                                    recommendedRoll,
+                                                            }));
+                                                            if (errors.rollNumber) {
+                                                                setErrors(
+                                                                    (err) => ({
+                                                                        ...err,
+                                                                        rollNumber:
+                                                                            undefined,
+                                                                    }),
+                                                                );
+                                                            }
+                                                        }}
+                                                        className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-md shadow-2xs transition-colors shrink-0 cursor-pointer"
+                                                        title="Apply recommended roll number"
+                                                    >
+                                                        Use {recommendedRoll}
+                                                    </button>
+                                                )}
                                         </div>
                                     )}
 

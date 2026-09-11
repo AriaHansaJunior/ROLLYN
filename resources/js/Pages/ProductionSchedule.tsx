@@ -20,7 +20,9 @@ interface JopOption {
     customer: string | null;
     grade: string | null;
     gsm: number | null;
-    nase: number | null;
+    plybond: number | null;
+    thickness: number | null;
+    core: string | null;
     tph?: number | null;
 }
 
@@ -33,7 +35,9 @@ interface ScheduleRow {
     customer: string | null;
     grade: string | null;
     gsm: number | null;
-    nase: number | null;
+    plybond: number | null;
+    thickness: number | null;
+    core: string | null;
     tonnage: number;
     rewinder_cut: string | null;
     tph: number;
@@ -314,7 +318,6 @@ export default function ProductionSchedule() {
                             <th style={{ textAlign: "center" }}>PO</th>
                             <th style={{ textAlign: "center" }}>Grade</th>
                             <th style={{ textAlign: "center" }}>GSM</th>
-                            <th style={{ textAlign: "center" }}>NASE (mm)</th>
                             <th style={{ textAlign: "center" }}>Tonnage</th>
                             <th style={{ textAlign: "center" }}>
                                 Rewinder Cut
@@ -355,9 +358,6 @@ export default function ProductionSchedule() {
                                     </td>
                                     <td style={{ textAlign: "center" }}>
                                         {r.gsm || "-"}
-                                    </td>
-                                    <td style={{ textAlign: "center" }}>
-                                        {r.nase || "-"}
                                     </td>
                                     <td
                                         className="font-semibold text-slate-900"
@@ -570,7 +570,7 @@ export default function ProductionSchedule() {
 
                             {/* Auto-populated info */}
                             {selectedJop && (
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
                                     <div>
                                         <div className="text-slate-400 font-semibold uppercase tracking-wide text-[10px]">
                                             PO
@@ -597,13 +597,29 @@ export default function ProductionSchedule() {
                                     </div>
                                     <div>
                                         <div className="text-slate-400 font-semibold uppercase tracking-wide text-[10px]">
-                                            NASE (mm)
+                                            Plybond
                                         </div>
                                         <div className="font-bold text-slate-800">
-                                            {selectedJop.nase || "-"}
+                                            {selectedJop.plybond || "-"}
                                         </div>
                                     </div>
-                                    <div className="col-span-2 sm:col-span-4">
+                                    <div>
+                                        <div className="text-slate-400 font-semibold uppercase tracking-wide text-[10px]">
+                                            Thickness
+                                        </div>
+                                        <div className="font-bold text-slate-800">
+                                            {selectedJop.thickness || "-"}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-slate-400 font-semibold uppercase tracking-wide text-[10px]">
+                                            Core
+                                        </div>
+                                        <div className="font-bold text-slate-800">
+                                            {selectedJop.core || "-"}
+                                        </div>
+                                    </div>
+                                    <div className="col-span-1 sm:col-span-4">
                                         <div className="text-slate-400 font-semibold uppercase tracking-wide text-[10px]">
                                             Customer
                                         </div>
