@@ -40,8 +40,8 @@ class SpectrumEngineController extends Controller
 
         $spectrumUrl = env('SPECTRUM_ENGINE_URL', 'http://127.0.0.1:8001');
         try {
-            // offload heavy inference to specialized ML microservice
-            $response = Http::timeout(5)->post("{$spectrumUrl}/api/spectrum/detect", $payload);
+            // offload heavy inference to specialized ML microservice with fast 3s timeout
+            $response = Http::timeout(3)->post("{$spectrumUrl}/api/spectrum/detect", $payload);
 
             if ($response->successful()) {
                 return response()->json($response->json());
@@ -50,40 +50,7 @@ class SpectrumEngineController extends Controller
             Log::warning('[SPECTRUM Proxy] Microservice connection failed: ' . $e->getMessage());
         }
 
-        $tempImg = sys_get_temp_dir() . '/spectrum_in_' . uniqid() . '.txt';
-        try {
-            // fallback to inline execution if proxy fails
-            $tempImgNormalized = str_replace('\\', '/', $tempImg);
-            file_put_contents($tempImg, $base64Image);
-
-            $pythonCode = "
-import sys, json
-from spectrum_engine.app import decode_base64_image, process_spectrum_detection
-
-with open('{$tempImgNormalized}', 'r') as f:
-    b64 = f.read()
-
-img = decode_base64_image(b64)
-res = process_spectrum_detection(img)
-print(json.dumps(res))
-";
-            $cmd = 'cmd /c cd /d ' . escapeshellarg(base_path()) . ' && python -c ' . escapeshellarg($pythonCode);
-            $output = shell_exec($cmd);
-
-            if ($output) {
-                $data = json_decode(trim($output), true);
-                if ($data) {
-                    return response()->json($data);
-                }
-            }
-        } catch (\Exception $ex) {
-            Log::error('[SPECTRUM Fallback] Local execution error: ' . $ex->getMessage());
-        } finally {
-            if (file_exists($tempImg)) {
-                @unlink($tempImg);
-            }
-        }
-
+        // Return non-blocking fallback response so PHP worker never freezes
         return response()->json([
             'status' => 'WARNING_LOW_CONFIDENCE',
             'weight_detected' => 0,

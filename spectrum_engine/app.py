@@ -190,11 +190,21 @@ def preprocess_hsv_red_led(bgr_img: np.ndarray):
 
     red_pixels = cv2.countNonZero(red_mask)
     if red_pixels > 300:
-        # It's a red LED scale display: use the clean red mask without corrupting dark background
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        # Use a compact 3x3 close kernel so we don't bridge adjacent digits together
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         closed_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
-        dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
-        return dilated_mask
+        
+        # Remove border artifacts touching top or bottom margins that bridge separate digits
+        H, W = closed_mask.shape
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(closed_mask)
+        for i in range(1, num_labels):
+            x, y, w, h, area = stats[i]
+            if (y <= 5 or (y + h) >= H - 5) and (h < H * 0.25 or w > W * 0.40):
+                closed_mask[labels == i] = 0
+            elif (y <= 3 and (y + h) >= H - 3):
+                closed_mask[labels == i] = 0
+
+        return closed_mask
 
     # 2. Dark LCD / Ink Detection (black on light bg fallback)
     gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
@@ -203,10 +213,17 @@ def preprocess_hsv_red_led(bgr_img: np.ndarray):
     )
     noise_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     dark_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_OPEN, noise_kernel)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     closed_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_CLOSE, kernel)
-    dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
-    return dilated_mask
+    
+    H, W = closed_mask.shape
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(closed_mask)
+    for i in range(1, num_labels):
+        x, y, w, h, area = stats[i]
+        if (y <= 5 or (y + h) >= H - 5) and (h < H * 0.25 or w > W * 0.40):
+            closed_mask[labels == i] = 0
+
+    return closed_mask
 
 
 def compute_iou(boxA, boxB):
@@ -311,25 +328,45 @@ def verify_7segment_geometric_rules(active_pattern: list[int], raw_digit: int | 
     return 0, 0.5
 
 
-def fix_digit_prediction(digit_crop: np.ndarray, model_prediction: int) -> int:
+def fix_digit_prediction(digit_crop: np.ndarray, model_prediction: int, ratios: list[float] = None) -> int:
     h, w = digit_crop.shape[:2]
     if h < 10 or w < 4:
         return model_prediction
 
-    # Keep confident predictions for distinct digits
-    if model_prediction in (1, 2, 4, 5, 7, 8):
+    if ratios and len(ratios) == 7:
+        top_r, tl_r, tr_r, mid_r, bl_r, br_r, bot_r = ratios
+        # Critical 3 vs 8 disambiguation:
+        if model_prediction == 8:
+            is_tl_weak = (tl_r < 0.25) or (tr_r > 0.35 and tl_r < 0.48 * tr_r)
+            is_bl_weak = (bl_r < 0.25) or (br_r > 0.35 and bl_r < 0.48 * br_r)
+            if is_tl_weak and is_bl_weak:
+                return 3
+            elif is_tl_weak and not is_bl_weak:
+                return 6 if tr_r < 0.35 else 8
+            elif not is_tl_weak and is_bl_weak:
+                return 9
+        elif model_prediction == 3:
+            is_tl_strong = (tl_r >= 0.35) and (tr_r <= 0.20 or tl_r >= 0.55 * tr_r)
+            is_bl_strong = (bl_r >= 0.35) and (br_r <= 0.20 or bl_r >= 0.55 * br_r)
+            if is_tl_strong and is_bl_strong:
+                return 8
+            elif is_tl_strong and not is_bl_strong:
+                return 9
+
+    # Keep confident predictions for other distinct digits
+    if model_prediction in (1, 2, 4, 5, 7):
         return model_prediction
 
-    top_left_region = digit_crop[int(h * 0.15):int(h * 0.45), 0:int(w * 0.35)]
+    top_left_region = digit_crop[int(h * 0.18):int(h * 0.40), 0:int(w * 0.28)]
     top_left_pixels = cv2.countNonZero(top_left_region) if top_left_region.size > 0 else 0
     top_left_total = top_left_region.size if top_left_region.size > 0 else 1
 
-    bottom_left_region = digit_crop[int(h * 0.55):int(h * 0.85), 0:int(w * 0.35)]
+    bottom_left_region = digit_crop[int(h * 0.60):int(h * 0.82), 0:int(w * 0.28)]
     bottom_left_pixels = cv2.countNonZero(bottom_left_region) if bottom_left_region.size > 0 else 0
     bottom_left_total = bottom_left_region.size if bottom_left_region.size > 0 else 1
 
-    is_tl_empty = (top_left_pixels / float(top_left_total)) < 0.10
-    is_bl_empty = (bottom_left_pixels / float(bottom_left_total)) < 0.10
+    is_tl_empty = (top_left_pixels / float(top_left_total)) < 0.15
+    is_bl_empty = (bottom_left_pixels / float(bottom_left_total)) < 0.15
 
     # Check middle and bottom segments to distinguish 3 from 7
     middle_region = digit_crop[int(h * 0.40):int(h * 0.60), int(w * 0.20):int(w * 0.80)]
@@ -357,77 +394,114 @@ def recognize_digit_from_crop(digit_crop: np.ndarray) -> tuple[int, float]:
     if h < 10 or w < 4:
         return None, 0.0
 
+    # Ensure binary mask (0 background, 255 foreground)
+    bin_crop = digit_crop
+    if bin_crop.ndim == 3:
+        bin_crop = cv2.cvtColor(bin_crop, cv2.COLOR_BGR2GRAY)
+    
+    unique_vals = np.unique(bin_crop)
+    if len(unique_vals) > 2 or (len(unique_vals) == 2 and not (0 in unique_vals and 255 in unique_vals)):
+        corners = [bin_crop[0, 0], bin_crop[0, -1], bin_crop[-1, 0], bin_crop[-1, -1]]
+        bg_val = np.median(corners)
+        if bg_val > 127:
+            _, bin_crop = cv2.threshold(bin_crop, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        else:
+            _, bin_crop = cv2.threshold(bin_crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
     # Rule for '1': If aspect ratio w/h < 0.38 (skinny box), FORCE digit to 1
     aspect_w_h = w / float(h)
     if aspect_w_h < 0.38:
         return 1, 0.98
 
     # Also detect '1' when left half is empty and right half is active (distinguishes 1 from 8)
-    left_half = digit_crop[:, 0:int(w * 0.45)]
-    right_half = digit_crop[:, int(w * 0.55):w]
+    left_half = bin_crop[:, 0:int(w * 0.45)]
+    right_half = bin_crop[:, int(w * 0.55):w]
     left_density = (cv2.countNonZero(left_half) / float(left_half.size)) if left_half.size > 0 else 0
     right_density = (cv2.countNonZero(right_half) / float(right_half.size)) if right_half.size > 0 else 0
     if left_density < 0.08 and right_density > 0.20:
         return 1, 0.96
 
-    mlp_digit, mlp_conf = _mlp_classify(digit_crop)
-
+    # Dedicated non-overlapping 7-segment core sample zones:
     segments_rel = [
-        (0.2, 0.0, 0.6, 0.2),    # Top [0]
-        (0.0, 0.08, 0.3, 0.42),  # Top-Left [1]
-        (0.7, 0.08, 0.3, 0.42),  # Top-Right [2]
-        (0.2, 0.4, 0.6, 0.2),    # Middle [3]
-        (0.0, 0.5, 0.3, 0.42),   # Bottom-Left [4]
-        (0.7, 0.5, 0.3, 0.42),   # Bottom-Right [5]
-        (0.2, 0.8, 0.6, 0.2),    # Bottom [6]
+        (0.20, 0.00, 0.60, 0.18),    # Top [0]
+        (0.00, 0.18, 0.28, 0.22),    # Top-Left [1] (pure vertical zone)
+        (0.72, 0.18, 0.28, 0.22),    # Top-Right [2] (pure vertical zone)
+        (0.20, 0.42, 0.60, 0.16),    # Middle [3]
+        (0.00, 0.60, 0.28, 0.22),    # Bottom-Left [4] (pure vertical zone)
+        (0.72, 0.60, 0.28, 0.22),    # Bottom-Right [5] (pure vertical zone)
+        (0.20, 0.82, 0.60, 0.18),    # Bottom [6]
     ]
 
-    active_pattern = []
-    scores = []
-
+    ratios = []
     for (rx, ry, rw, rh) in segments_rel:
         x1, y1 = int(rx * w), int(ry * h)
-        x2, y2 = int((rx + rw) * w), int((ry + rh) * h)
+        x2, y2 = max(x1 + 1, int((rx + rw) * w)), max(y1 + 1, int((ry + rh) * h))
 
-        roi = digit_crop[y1:y2, x1:x2]
+        roi = bin_crop[y1:y2, x1:x2]
         if roi.size == 0:
-            active_pattern.append(0)
-            scores.append(0.0)
+            ratios.append(0.0)
             continue
 
         on_pixels = cv2.countNonZero(roi)
-        total_pixels = roi.shape[0] * roi.shape[1]
-        ratio = on_pixels / float(total_pixels) if total_pixels > 0 else 0
+        ratio = on_pixels / float(roi.size)
+        ratios.append(ratio)
 
-        is_on = 1 if ratio > 0.22 else 0
-        active_pattern.append(is_on)
-        scores.append(ratio if is_on else (1.0 - ratio))
+    top_r, tl_r, tr_r, mid_r, bl_r, br_r, bot_r = ratios
+    is_tl = (tl_r > 0.25) and (tr_r <= 0.20 or tl_r > 0.48 * tr_r)
+    is_bl = (bl_r > 0.25) and (br_r <= 0.20 or bl_r > 0.48 * br_r)
+    is_tr = tr_r > 0.25
+    is_br = br_r > 0.25
+    is_top = top_r > 0.22
+    is_mid = mid_r > 0.22
+    is_bot = bot_r > 0.22
 
-    pattern_tuple = tuple(active_pattern)
-    raw_digit = SEVEN_SEG_MAP.get(pattern_tuple, None)
-    confidence = float(np.mean(scores)) if scores else 0.5
+    active_pattern = [
+        1 if is_top else 0,
+        1 if is_tl else 0,
+        1 if is_tr else 0,
+        1 if is_mid else 0,
+        1 if is_bl else 0,
+        1 if is_br else 0,
+        1 if is_bot else 0,
+    ]
 
-    top, top_left, top_right, middle, bottom_left, bottom_right, bottom = active_pattern
+    # Explicit 3 vs 8 vs 9 disambiguation:
+    if is_top and is_mid and is_bot and is_tr and is_br:
+        if not is_tl and not is_bl:
+            return 3, 0.98
+        elif is_tl and not is_bl:
+            return 9, 0.96
+        elif is_tl and is_bl:
+            return 8, 0.98
+        elif not is_tl and is_bl:
+            return (8 if bl_r > 0.40 else 3), 0.92
 
-    # Correct MLP misclassifications for 9 vs 6, 8 vs 1, 8 vs 6, 9 vs 4, 9 vs 5
-    if mlp_digit == 6 and bottom_left == 0 and top_right == 1:
+    mlp_digit, mlp_conf = _mlp_classify(digit_crop)
+
+    # Correct MLP misclassifications
+    if mlp_digit == 8 and (not is_tl or not is_bl):
+        if not is_tl and not is_bl:
+            mlp_digit = 3
+        elif is_tl and not is_bl:
+            mlp_digit = 9
+    elif mlp_digit == 3 and (is_tl and is_bl):
+        mlp_digit = 8
+    elif mlp_digit == 6 and not is_bl and is_tr:
         mlp_digit = 9
-    elif mlp_digit == 8 and top_right == 0 and bottom_left == 1:
+    elif mlp_digit == 8 and not is_tr and is_bl:
         mlp_digit = 6
-    elif mlp_digit == 8 and bottom_left == 0 and top_left == 0:
-        mlp_digit = 1 if (middle == 0 and bottom == 0) else 3
-    elif mlp_digit == 9 and top == 0 and bottom == 0:
+    elif mlp_digit == 9 and not is_top and not is_bot:
         mlp_digit = 4
-    elif mlp_digit == 9 and top_right == 0:
+    elif mlp_digit == 9 and not is_tr:
         mlp_digit = 5
 
     if mlp_digit is not None and mlp_conf >= 0.75:
         geo_digit, geo_conf = verify_7segment_geometric_rules(active_pattern, mlp_digit, mlp_conf)
-        final_d = fix_digit_prediction(digit_crop, geo_digit)
+        final_d = fix_digit_prediction(digit_crop, geo_digit, ratios)
         return final_d, geo_conf
 
-    final_digit, final_conf = verify_7segment_geometric_rules(active_pattern, raw_digit, confidence)
-    final_d = fix_digit_prediction(digit_crop, final_digit)
+    final_digit, final_conf = verify_7segment_geometric_rules(active_pattern, mlp_digit, 0.85)
+    final_d = fix_digit_prediction(digit_crop, final_digit, ratios)
     return final_d, final_conf
 
 
