@@ -205,46 +205,69 @@ export default function SpectrumWeightDetectionEngine({
 
             const quality = analyseImageQuality(rawCanvas);
 
-            const spectrumData = await detectSpectrumWeight(frames);
-
-            let legacyOutcome: any = null;
-
-            if (!spectrumData || spectrumData.weight_detected === 0 || spectrumData.confidence < 0.80) {
-                legacyOutcome = await recogniseWeight(variants, quality, expectedDigitCount);
-            }
+            // Execute SPECTRUM microservice and Legacy OCR in parallel for instant comparison
+            const [spectrumData, legacyOutcome] = await Promise.all([
+                detectSpectrumWeight(frames).catch((err) => {
+                    console.warn("[SPECTRUM] Detection failed:", err);
+                    return null;
+                }),
+                recogniseWeight(variants, quality, expectedDigitCount).catch((err) => {
+                    console.warn("[Legacy OCR] Recognition failed:", err);
+                    return null;
+                }),
+            ]);
 
             setSpectrumResult(spectrumData);
 
             if (legacyOutcome) {
                 if ("result" in legacyOutcome) {
                     setOcrResult(legacyOutcome.result);
-                } else {
+                    setOcrError(null);
+                } else if ("error" in legacyOutcome) {
                     setOcrError(legacyOutcome.error);
+                    setOcrResult(null);
                 }
             } else {
                 setOcrResult(null);
                 setOcrError(null);
             }
 
-            if (spectrumData && spectrumData.weight_detected > 0 && spectrumData.confidence >= 0.80) {
+            const hasSpectrum = spectrumData && spectrumData.weight_detected > 0;
+            const hasLegacy = legacyOutcome && "result" in legacyOutcome && legacyOutcome.result.weight > 0;
+
+            if (hasSpectrum && spectrumData.confidence >= 0.80) {
                 setSelectedEngine("spectrum");
                 setEditedWeight(String(spectrumData.weight_detected));
-                SystemUI.toast({
-                    message: "Detection complete — SPECTRUM 4.0 ready!",
-                    type: "success",
-                });
-            } else if (legacyOutcome && "result" in legacyOutcome) {
+                if (hasLegacy && legacyOutcome.result.weight === spectrumData.weight_detected) {
+                    SystemUI.toast({
+                        message: `Dual Verification Match: ${spectrumData.weight_detected} kg!`,
+                        type: "success",
+                    });
+                } else {
+                    SystemUI.toast({
+                        message: "Detection complete — SPECTRUM 4.0 ready!",
+                        type: "success",
+                    });
+                }
+            } else if (hasLegacy && legacyOutcome.result.confidence >= 40) {
                 setSelectedEngine("ocr");
                 setEditedWeight(String(legacyOutcome.result.weight));
                 SystemUI.toast({
-                    message: "SPECTRUM low confidence. Legacy OCR result used.",
-                    type: "warning",
+                    message: "Legacy OCR detected weight successfully.",
+                    type: hasSpectrum ? "info" : "success",
                 });
-            } else if (spectrumData && spectrumData.weight_detected > 0) {
+            } else if (hasSpectrum) {
                 setSelectedEngine("spectrum");
                 setEditedWeight(String(spectrumData.weight_detected));
                 SystemUI.toast({
-                    message: "Warning: SPECTRUM confidence < 80%. Please verify detected weight.",
+                    message: "SPECTRUM detected weight. Please verify detected reading.",
+                    type: "warning",
+                });
+            } else if (hasLegacy) {
+                setSelectedEngine("ocr");
+                setEditedWeight(String(legacyOutcome.result.weight));
+                SystemUI.toast({
+                    message: "Legacy OCR candidate used. Please verify reading.",
                     type: "warning",
                 });
             } else {

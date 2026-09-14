@@ -30,11 +30,12 @@ class SecurityHeaders
         // Content Security Policy (anti-clickjacking via frame-ancestors, XSS mitigation)
         $csp = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+            "worker-src 'self' blob:",
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
             "font-src 'self' data: https://fonts.bunny.net https://fonts.gstatic.com",
             "img-src 'self' data: blob:",
-            "connect-src 'self' ws: wss:",
+            "connect-src 'self' ws: wss: blob: data:",
             "frame-ancestors 'self'",
             "base-uri 'self'",
             "form-action 'self'",

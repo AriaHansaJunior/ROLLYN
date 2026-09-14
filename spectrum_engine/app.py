@@ -3,6 +3,7 @@ import base64
 import re
 import io
 import os
+import sys
 import cv2
 import numpy as np
 from PIL import Image
@@ -12,11 +13,25 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from spectrum_engine.train_spectrum_led import (
-    start_training_background,
-    get_retrain_status,
-    get_dataset_statistics,
-)
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_current_dir)
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
+if _current_dir not in sys.path:
+    sys.path.insert(0, _current_dir)
+
+try:
+    from spectrum_engine.train_spectrum_led import (
+        start_training_background,
+        get_retrain_status,
+        get_dataset_statistics,
+    )
+except ImportError:
+    from train_spectrum_led import (
+        start_training_background,
+        get_retrain_status,
+        get_dataset_statistics,
+    )
 
 import os as _os
 import json as _json
@@ -165,31 +180,32 @@ def decode_base64_image(base64_str: str) -> np.ndarray:
 def preprocess_hsv_red_led(bgr_img: np.ndarray):
     # 1. Red LED Detection
     hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-    lower_red1 = np.array([0, 100, 100])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 100, 100])
+    lower_red1 = np.array([0, 50, 50])
+    upper_red1 = np.array([15, 255, 255])
+    lower_red2 = np.array([160, 50, 50])
     upper_red2 = np.array([180, 255, 255])
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
     red_mask = cv2.bitwise_or(mask1, mask2)
 
-    # 2. Dark LCD / Ink Detection (black on light bg)
+    red_pixels = cv2.countNonZero(red_mask)
+    if red_pixels > 300:
+        # It's a red LED scale display: use the clean red mask without corrupting dark background
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        closed_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
+        dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
+        return dilated_mask
+
+    # 2. Dark LCD / Ink Detection (black on light bg fallback)
     gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
     dark_mask = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 15
     )
-    # Remove small noise from adaptive threshold
     noise_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     dark_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_OPEN, noise_kernel)
-
-    # 3. Combine both masks
-    combined_mask = cv2.bitwise_or(red_mask, dark_mask)
-
-    # 4. Standard cleanup
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    closed_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
+    closed_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_CLOSE, kernel)
     dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
-
     return dilated_mask
 
 
@@ -249,25 +265,45 @@ def apply_nms_and_overlap_filter(candidates, iou_threshold=0.3):
 def verify_7segment_geometric_rules(active_pattern: list[int], raw_digit: int | None, conf: float) -> tuple[int, float]:
     top, top_left, top_right, middle, bottom_left, bottom_right, bottom = active_pattern
 
-    # Rule C: Middle is EMPTY (0) and Top & Bottom ACTIVE -> MUST BE '0'
-    if middle == 0 and top == 1 and bottom == 1:
+    # 0: Middle empty, top & bottom active, left active
+    if middle == 0 and top == 1 and bottom == 1 and top_left == 1 and bottom_left == 1:
         return 0, max(conf, 0.96)
 
-    # Rule A: Top-Right is EMPTY (0) and Bottom-Left is ACTIVE (1) -> MUST BE '6' (Never guess '8')
+    # 4: Top & bottom empty, middle active, right active (NEVER guess 9 or 8)
+    if top == 0 and bottom == 0 and middle == 1 and (top_right == 1 or bottom_right == 1):
+        return 4, max(conf, 0.96)
+
+    # 1: Only right segments active
+    if top == 0 and bottom == 0 and middle == 0 and top_left == 0 and bottom_left == 0 and (top_right == 1 or bottom_right == 1):
+        return 1, max(conf, 0.98)
+
+    # 7: Top, top-right, bottom-right active, middle & bottom & top-left empty (NEVER guess 3)
+    if top == 1 and top_right == 1 and bottom_right == 1 and middle == 0 and bottom == 0 and top_left == 0:
+        return 7, max(conf, 0.95)
+
+    # 6: Top-right empty, bottom-left active (NEVER guess 8 or 5)
     if top_right == 0 and bottom_left == 1:
         return 6, max(conf, 0.95)
 
-    # Rule B: Bottom-Left is EMPTY (0) and Top-Right is ACTIVE (1) and Top ACTIVE (1) -> MUST BE '9' (Never guess '6')
-    if bottom_left == 0 and top_right == 1 and top == 1:
+    # 5: Top-right empty, top-left active, bottom-left empty, bottom-right active (NEVER guess 9 or 6)
+    if top_right == 0 and top_left == 1 and bottom_left == 0 and bottom_right == 1:
+        return 5, max(conf, 0.95)
+
+    # 3: Top-left empty, bottom-left empty, top-right & bottom-right active, middle active (NEVER guess 9)
+    if top_left == 0 and bottom_left == 0 and top_right == 1 and bottom_right == 1 and middle == 1:
+        return 3, max(conf, 0.95)
+
+    # 9: Top-left active, top-right active, bottom-left empty, bottom-right active, top active
+    if top_left == 1 and top_right == 1 and bottom_left == 0 and bottom_right == 1 and top == 1 and middle == 1:
         return 9, max(conf, 0.95)
 
-    # Rule D: Bottom-Left EMPTY (0) and Top-Right & Bottom-Right & Top ACTIVE -> MUST BE '3'
-    if bottom_left == 0 and top_right == 1 and bottom_right == 1 and top == 1:
-        return 3, max(conf, 0.92)
+    # 8: All 7 segments active
+    if top_left == 1 and top_right == 1 and bottom_left == 1 and bottom_right == 1 and middle == 1 and top == 1 and bottom == 1:
+        return 8, max(conf, 0.95)
 
-    # Rule E: Top, Top-Right, Bottom-Right ACTIVE, Middle & Bottom EMPTY -> MUST BE '7'
-    if top == 1 and top_right == 1 and bottom_right == 1 and middle == 0 and bottom == 0:
-        return 7, max(conf, 0.95)
+    # 2: Top-left empty, bottom-right empty, top-right active, bottom-left active
+    if top_left == 0 and bottom_right == 0 and top_right == 1 and bottom_left == 1:
+        return 2, max(conf, 0.95)
 
     if raw_digit is not None:
         return raw_digit, conf
@@ -278,6 +314,10 @@ def verify_7segment_geometric_rules(active_pattern: list[int], raw_digit: int | 
 def fix_digit_prediction(digit_crop: np.ndarray, model_prediction: int) -> int:
     h, w = digit_crop.shape[:2]
     if h < 10 or w < 4:
+        return model_prediction
+
+    # Keep confident predictions for distinct digits
+    if model_prediction in (1, 2, 4, 5, 7, 8):
         return model_prediction
 
     top_left_region = digit_crop[int(h * 0.15):int(h * 0.45), 0:int(w * 0.35)]
@@ -291,11 +331,23 @@ def fix_digit_prediction(digit_crop: np.ndarray, model_prediction: int) -> int:
     is_tl_empty = (top_left_pixels / float(top_left_total)) < 0.10
     is_bl_empty = (bottom_left_pixels / float(bottom_left_total)) < 0.10
 
-    if is_tl_empty and is_bl_empty:
-        return 3
+    # Check middle and bottom segments to distinguish 3 from 7
+    middle_region = digit_crop[int(h * 0.40):int(h * 0.60), int(w * 0.20):int(w * 0.80)]
+    mid_pixels = cv2.countNonZero(middle_region) if middle_region.size > 0 else 0
+    mid_total = middle_region.size if middle_region.size > 0 else 1
+    is_mid_active = (mid_pixels / float(mid_total)) > 0.15
 
-    if (not is_tl_empty) and is_bl_empty:
-        return 9
+    bottom_region = digit_crop[int(h * 0.80):h, int(w * 0.20):int(w * 0.80)]
+    bot_pixels = cv2.countNonZero(bottom_region) if bottom_region.size > 0 else 0
+    bot_total = bottom_region.size if bottom_region.size > 0 else 1
+    is_bot_active = (bot_pixels / float(bot_total)) > 0.15
+
+    if is_tl_empty and is_bl_empty:
+        if not is_mid_active and not is_bot_active:
+            return 7
+        if is_mid_active and is_bot_active:
+            return 3
+        return model_prediction
 
     return model_prediction
 
@@ -305,10 +357,18 @@ def recognize_digit_from_crop(digit_crop: np.ndarray) -> tuple[int, float]:
     if h < 10 or w < 4:
         return None, 0.0
 
-    # Rule for '1': If aspect ratio w/h < 0.35 (very skinny box), FORCE digit to 1
+    # Rule for '1': If aspect ratio w/h < 0.38 (skinny box), FORCE digit to 1
     aspect_w_h = w / float(h)
-    if aspect_w_h < 0.35:
+    if aspect_w_h < 0.38:
         return 1, 0.98
+
+    # Also detect '1' when left half is empty and right half is active (distinguishes 1 from 8)
+    left_half = digit_crop[:, 0:int(w * 0.45)]
+    right_half = digit_crop[:, int(w * 0.55):w]
+    left_density = (cv2.countNonZero(left_half) / float(left_half.size)) if left_half.size > 0 else 0
+    right_density = (cv2.countNonZero(right_half) / float(right_half.size)) if right_half.size > 0 else 0
+    if left_density < 0.08 and right_density > 0.20:
+        return 1, 0.96
 
     mlp_digit, mlp_conf = _mlp_classify(digit_crop)
 
@@ -349,11 +409,17 @@ def recognize_digit_from_crop(digit_crop: np.ndarray) -> tuple[int, float]:
 
     top, top_left, top_right, middle, bottom_left, bottom_right, bottom = active_pattern
 
-    # Correct MLP misclassifications for 9 vs 6
+    # Correct MLP misclassifications for 9 vs 6, 8 vs 1, 8 vs 6, 9 vs 4, 9 vs 5
     if mlp_digit == 6 and bottom_left == 0 and top_right == 1:
         mlp_digit = 9
     elif mlp_digit == 8 and top_right == 0 and bottom_left == 1:
         mlp_digit = 6
+    elif mlp_digit == 8 and bottom_left == 0 and top_left == 0:
+        mlp_digit = 1 if (middle == 0 and bottom == 0) else 3
+    elif mlp_digit == 9 and top == 0 and bottom == 0:
+        mlp_digit = 4
+    elif mlp_digit == 9 and top_right == 0:
+        mlp_digit = 5
 
     if mlp_digit is not None and mlp_conf >= 0.75:
         geo_digit, geo_conf = verify_7segment_geometric_rules(active_pattern, mlp_digit, mlp_conf)
@@ -365,15 +431,15 @@ def recognize_digit_from_crop(digit_crop: np.ndarray) -> tuple[int, float]:
     return final_d, final_conf
 
 
-def autocorrect_scale_weight(weight_digits: list[str]) -> tuple[int, float]:
+def autocorrect_scale_weight(weight_digits: list[str]) -> int:
     raw_str = "".join(weight_digits)
     cleaned_str = re.sub(r"\D", "", raw_str)
     
     if not cleaned_str:
         return 0
 
-    if len(cleaned_str) > 4:
-        cleaned_str = cleaned_str[:4]
+    if len(cleaned_str) > 5:
+        cleaned_str = cleaned_str[:5]
     
     if len(cleaned_str) > 3 and cleaned_str.startswith("0"):
         cleaned_str = cleaned_str[1:]
@@ -558,15 +624,18 @@ def process_spectrum_detection(bgr_img: np.ndarray):
     _, buffer = cv2.imencode(".png", preview_overlay)
     base64_preview = "data:image/png;base64," + base64.b64encode(buffer).decode("utf-8")
 
-    if not detected_digits:
-        return {
-            "status": "WARNING_LOW_CONFIDENCE",
-            "weight_detected": 0,
-            "confidence": 0.0,
-            "spectrum_processed_image": base64_preview,
-            "engine_version": "4.0.0 (Geometric Heuristic & NMS Active)",
-            "message": "No LED digits detected in image"
-        }
+    if detected_digits:
+        weight_val = autocorrect_scale_weight(detected_digits)
+        if weight_val > 0:
+            avg_confidence = float(np.mean(confidences)) if confidences else 0.0
+            status = "SUCCESS" if avg_confidence >= 0.75 else "WARNING_LOW_CONFIDENCE"
+            return {
+                "status": status,
+                "weight_detected": weight_val,
+                "confidence": round(avg_confidence, 4),
+                "spectrum_processed_image": base64_preview,
+                "engine_version": "5.2.0 (SPECTRUM Contour & Heuristic Active)"
+            }
 
     if fixed_slot_str and fixed_slot_str.isdigit():
         val = int(fixed_slot_str)
@@ -576,30 +645,27 @@ def process_spectrum_detection(bgr_img: np.ndarray):
             return {
                 "status": "SUCCESS",
                 "weight_detected": val,
-                "confidence": 0.98,
+                "confidence": 0.85,
                 "spectrum_processed_image": base64_preview,
-                "engine_version": "5.0.0 (Fixed-Slot 7-Segment Matrix Decoder)"
+                "engine_version": "5.2.0 (Fixed-Slot 7-Segment Decoder Fallback)"
             }
 
-    weight_val = autocorrect_scale_weight(detected_digits)
-    avg_confidence = float(np.mean(confidences)) if confidences else 0.0
-
-    status = "SUCCESS" if avg_confidence >= 0.80 else "WARNING_LOW_CONFIDENCE"
-
     return {
-        "status": status,
-        "weight_detected": weight_val,
-        "confidence": round(avg_confidence, 4),
+        "status": "WARNING_LOW_CONFIDENCE",
+        "weight_detected": 0,
+        "confidence": 0.0,
         "spectrum_processed_image": base64_preview,
-        "engine_version": "5.0.0 (Fixed-Slot 7-Segment Matrix Decoder)"
+        "engine_version": "5.2.0",
+        "message": "No LED digits detected in image"
     }
 
 
 @app.get("/")
+@app.get("/api/spectrum/health")
 def health_check():
     return {
         "engine": "SPECTRUM Engine 4.0 AI Microservice",
-        "heuristic_rules": "ACTIVE (6vs8, 9vs4, 0vs8, 3vs2)",
+        "heuristic_rules": "ACTIVE (disjoint 10-digit geometric validation)",
         "nms_status": "ACTIVE",
         "status": "ONLINE",
         "version": "4.0.0"

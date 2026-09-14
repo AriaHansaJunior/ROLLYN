@@ -460,7 +460,7 @@ export async function preprocessImage(
     const var1 = toGrayscale(cloneCanvas(invertedBase));
     variants.push({
       label: 'Dark-Var1 (Inverted Gray)',
-      canvas: var1,
+      canvas: padCanvas(var1),
       dataUrl: padCanvas(var1).toDataURL('image/png'),
       digital: false
     });
@@ -469,7 +469,7 @@ export async function preprocessImage(
     let var2 = adaptiveThresholdLocal(cloneCanvas(invertedBase), 25, 0.15);
     variants.push({
       label: 'Dark-Var2 (Adaptive Thresh)',
-      canvas: var2,
+      canvas: padCanvas(var2),
       dataUrl: padCanvas(var2).toDataURL('image/png'),
       digital: false
     });
@@ -480,20 +480,36 @@ export async function preprocessImage(
     var3 = adjustBrightnessContrast(var3, 0.1, 0.5);
     variants.push({
       label: 'Dark-Var3 (Sharpen)',
-      canvas: var3,
+      canvas: padCanvas(var3),
       dataUrl: padCanvas(var3).toDataURL('image/png'),
       digital: false
     });
 
-    // Var 4: High-Brightness Segmentation (Morphological Close)
+    // Var 4: High-Brightness Segmentation
     let var4 = adaptiveThresholdLocal(cloneCanvas(invertedBase), 15, 0.2);
-    // Simple 3x3 morphology close (dilate then erode on dark text)
-    // Actually, we can just return this for Tesseract.
     variants.push({
       label: 'Dark-Var4 (Heavy Local Thresh)',
-      canvas: var4,
+      canvas: padCanvas(var4),
       dataUrl: padCanvas(var4).toDataURL('image/png'),
       digital: false
+    });
+
+    // Digital Variants for 7-segment SegmentMatcher & TemplateClassifier
+    const varDig1 = adaptiveThresholdLocal(cloneCanvas(invertedBase), 25, 0.15);
+    variants.push({
+      label: 'Dark-Dig1 (Adaptive 7-Segment)',
+      canvas: padCanvas(varDig1),
+      dataUrl: padCanvas(varDig1).toDataURL('image/png'),
+      digital: true,
+    });
+
+    let varDig2 = adaptiveThresholdLocal(cloneCanvas(invertedBase), 15, 0.2);
+    varDig2 = morphClean(varDig2);
+    variants.push({
+      label: 'Dark-Dig2 (Cleaned 7-Segment)',
+      canvas: padCanvas(varDig2),
+      dataUrl: padCanvas(varDig2).toDataURL('image/png'),
+      digital: true,
     });
     
     return { variants, rawCanvas: invertedBase, expectedDigitCount };

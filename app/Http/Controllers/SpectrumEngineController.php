@@ -38,9 +38,10 @@ class SpectrumEngineController extends Controller
 
         $payload = !empty($images) ? ['images' => $images] : ['image' => $base64Image];
 
+        $spectrumUrl = env('SPECTRUM_ENGINE_URL', 'http://127.0.0.1:8001');
         try {
             // offload heavy inference to specialized ML microservice
-            $response = Http::timeout(5)->post('http://127.0.0.1:8001/api/spectrum/detect', $payload);
+            $response = Http::timeout(5)->post("{$spectrumUrl}/api/spectrum/detect", $payload);
 
             if ($response->successful()) {
                 return response()->json($response->json());
@@ -66,8 +67,7 @@ img = decode_base64_image(b64)
 res = process_spectrum_detection(img)
 print(json.dumps(res))
 ";
-            $engineDir = base_path('spectrum_engine');
-            $cmd = 'cmd /c cd /d ' . escapeshellarg($engineDir) . ' && python -c ' . escapeshellarg($pythonCode);
+            $cmd = 'cmd /c cd /d ' . escapeshellarg(base_path()) . ' && python -c ' . escapeshellarg($pythonCode);
             $output = shell_exec($cmd);
 
             if ($output) {
@@ -278,8 +278,9 @@ print(json.dumps(res))
 
     public function retrain(Request $request)
     {
+        $spectrumUrl = env('SPECTRUM_ENGINE_URL', 'http://127.0.0.1:8001');
         try {
-            $response = Http::timeout(8)->post('http://127.0.0.1:8001/api/spectrum/retrain');
+            $response = Http::timeout(8)->post("{$spectrumUrl}/api/spectrum/retrain");
             if ($response->successful()) {
                 return response()->json($response->json());
             }
@@ -314,8 +315,9 @@ print(json.dumps(res))
 
     public function retrainStatus()
     {
+        $spectrumUrl = env('SPECTRUM_ENGINE_URL', 'http://127.0.0.1:8001');
         try {
-            $response = Http::timeout(3)->get('http://127.0.0.1:8001/api/spectrum/retrain-status');
+            $response = Http::timeout(3)->get("{$spectrumUrl}/api/spectrum/retrain-status");
             if ($response->successful()) {
                 return response()->json($response->json());
             }
