@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class ShipmentController extends Controller
 {
@@ -144,6 +145,9 @@ class ShipmentController extends Controller
             'no_roll' => 'required|string',
         ]);
 
+        $shipment = Shipment::findOrFail($request->shipment_id);
+        Gate::authorize('qcProcess', $shipment);
+
         $roll = Roll::where('no_roll', $request->no_roll)
             ->orWhere('no', $request->no_roll)
             ->first();
@@ -191,6 +195,9 @@ class ShipmentController extends Controller
             'reject_type' => 'required|in:replace,fixed',
             'notes' => 'nullable|string',
         ]);
+
+        $shipment = Shipment::findOrFail($request->shipment_id);
+        Gate::authorize('qcProcess', $shipment);
 
         $shipmentRoll = ShipmentRoll::where('shipment_id', $request->shipment_id)
             ->where('roll_no', $request->roll_no)
@@ -241,6 +248,8 @@ class ShipmentController extends Controller
             return redirect()->back()->withErrors(['error' => 'Shipment not found.']);
         }
 
+        Gate::authorize('update', $shipment);
+
         if (in_array($shipment->status, ['completed', 'canceled'])) {
             return redirect()->back()->withErrors(['error' => 'Cannot modify a completed or canceled shipment.']);
         }
@@ -272,6 +281,7 @@ class ShipmentController extends Controller
     public function cancelShipment($id)
     {
         $shipment = Shipment::with('shipmentRolls')->findOrFail($id);
+        Gate::authorize('cancel', $shipment);
         
         if ($shipment->status === 'completed') {
             return redirect()->back()->withErrors(['error' => 'Cannot cancel a completed shipment.']);

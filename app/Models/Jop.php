@@ -7,7 +7,23 @@ use Carbon\Carbon;
 
 class Jop extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'spk',
+        'jop',
+        'po',
+        'customers_id',
+        'grades_id',
+        'gsms_id',
+        'rolls_widths_id',
+        'plybonds_id',
+        'thicknesses_id',
+        'cores_id',
+        'quantity',
+        'weight',
+        'container',
+        'noted_order',
+        'tph',
+    ];
 
     protected $appends = ['production_estimation'];
 

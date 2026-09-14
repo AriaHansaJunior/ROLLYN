@@ -12,6 +12,7 @@ use App\Models\LocationRecommendationLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class RollController extends Controller
@@ -203,6 +204,8 @@ class RollController extends Controller
             return redirect()->back()->with('error', 'Roll record not found.');
         }
 
+        Gate::authorize('update', $roll);
+
         $defaultShiftId = Shift::first()?->id ?? 1;
         $defaultGradeId = Grade::first()?->id ?? 1;
 
@@ -323,6 +326,8 @@ class RollController extends Controller
         if (!$roll) {
             return redirect()->back()->with('error', 'Roll record not found.');
         }
+
+        Gate::authorize('delete', $roll);
 
         DB::beginTransaction();
         try {

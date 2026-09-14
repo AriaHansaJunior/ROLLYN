@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plybond extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['plybonds'];
 
     public function rolls()
     {

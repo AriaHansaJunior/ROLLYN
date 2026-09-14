@@ -17,6 +17,15 @@ class User extends Authenticatable
 
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'username',
+        'role',
+        'last_login_at',
+    ];
+
     protected function casts(): array
     {
         return [

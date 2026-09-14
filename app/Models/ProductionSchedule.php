@@ -6,7 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductionSchedule extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'jops_id',
+        'tonnage',
+        'rewinder_cut',
+        'tph',
+        'production_hours',
+        'start_time',
+        'stop_time',
+        'remark',
+        'status',
+    ];
 
     protected $casts = [
         'start_time' => 'datetime',

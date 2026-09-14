@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Shipment extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'shipment_number',
+        'customers_id',
+        'admin_users_id',
+        'qc_users_id',
+        'status',
+        'shipment_date',
+    ];
 
     public function customer()
     {

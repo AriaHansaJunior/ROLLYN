@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Core extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['core'];
 
     public function rolls()
     {

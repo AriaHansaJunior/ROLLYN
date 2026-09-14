@@ -12,15 +12,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Exempt SPECTRUM AI API endpoints from CSRF verification
-        // (These are XHR POST endpoints called from Inertia React pages)
-        $middleware->validateCsrfTokens(except: [
-            'api/spectrum/detect',
-            'api/spectrum/log',
-            'api/spectrum/retrain',
-            'api/spectrum/save-dataset',
-        ]);
-
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
+import { getCsrfToken } from '@/Utils/csrf';
 import { SystemUI } from '@/Utils/SystemUI';
 import {
     CheckCircle2,
@@ -335,7 +336,11 @@ export default function Training() {
         try {
             const res = await fetch('/api/spectrum/retrain', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
             });
 
             const startData = await res.json();

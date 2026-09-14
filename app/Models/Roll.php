@@ -9,7 +9,29 @@ class Roll extends Model
     protected $primaryKey = 'no';
     public $incrementing = false;
     protected $keyType = 'int';
-    protected $guarded = [];
+    protected $fillable = [
+        'no',
+        'no_roll',
+        'form',
+        'shifts_id',
+        'entry_date',
+        'grades_id',
+        'gsms_id',
+        'plybonds_id',
+        'thicknesses_id',
+        'bulk',
+        'rolls_diameters_id',
+        'rolls_widths_id',
+        'weight',
+        'cores_id',
+        'cobbs_id',
+        'exmaterial',
+        'locations_id',
+        'visual',
+        'status',
+        'users_id',
+        'jops_id',
+    ];
 
     public function shift()
     {

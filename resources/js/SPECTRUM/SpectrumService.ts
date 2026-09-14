@@ -1,3 +1,5 @@
+import { getCsrfToken } from "../Utils/csrf";
+
 export interface SpectrumResult {
     status: "SUCCESS" | "WARNING_LOW_CONFIDENCE";
     weight_detected: number;
@@ -20,7 +22,7 @@ export interface SpectrumLogPayload {
 
 export async function detectSpectrumWeight(base64Image: string | string[]): Promise<SpectrumResult> {
     try {
-        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";
+        const csrfToken = getCsrfToken();
         const payload = Array.isArray(base64Image) ? { images: base64Image } : { image: base64Image };
 
         const response = await fetch("/api/spectrum/detect", {
@@ -54,7 +56,7 @@ export async function detectSpectrumWeight(base64Image: string | string[]): Prom
 
 export async function logSpectrumTest(payload: SpectrumLogPayload): Promise<{ status: string; message: string }> {
     try {
-        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";
+        const csrfToken = getCsrfToken();
 
         const res = await fetch("/api/spectrum/log", {
             method: "POST",
@@ -79,7 +81,7 @@ export async function logSpectrumTest(payload: SpectrumLogPayload): Promise<{ st
 
 export async function retrainSpectrumEngine(): Promise<{ status: string; samples_processed?: number; message?: string; accuracy_gain?: string }> {
     try {
-        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "";
+        const csrfToken = getCsrfToken();
 
         const response = await fetch("/api/spectrum/retrain", {
             method: "POST",

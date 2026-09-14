@@ -6,7 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class RollAuditLog extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'rolls_no',
+        'users_id',
+        'field_name',
+        'old_value',
+        'new_value',
+    ];
 
     public function roll()
     {

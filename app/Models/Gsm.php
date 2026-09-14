@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Gsm extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['gsm'];
 
     public function jops()
     {

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class RollsWidth extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['width'];
 
     public function jops()
     {

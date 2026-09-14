@@ -6,7 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class ShipmentRoll extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'shipment_id',
+        'roll_no',
+        'qc_status',
+        'qc_notes',
+        'qc_checked_at',
+    ];
 
     public function shipment()
     {

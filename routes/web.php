@@ -40,7 +40,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
         Route::get('/recommendation-logs', [RecommendationLogController::class, 'index']);
         Route::post('/api/spectrum/retrain', [SpectrumEngineController::class, 'retrain'])
-            ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
             ->middleware('throttle:5,1');
     });
 
@@ -112,8 +111,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/spectrum/retrain-status', [SpectrumEngineController::class, 'retrainStatus']);
     Route::get('/api/spectrum/insights', [SpectrumEngineController::class, 'modelInsights']);
 
-    Route::withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
-        ->middleware('throttle:60,1')
+    Route::middleware('throttle:60,1')
         ->group(function () {
             Route::post('/api/spectrum/detect', [SpectrumEngineController::class, 'detect']);
             Route::post('/api/spectrum/log', [SpectrumEngineController::class, 'logTestResult']);

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cobb extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['cobb'];
 
     public function rolls()
     {

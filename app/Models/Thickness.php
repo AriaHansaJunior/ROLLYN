@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Thickness extends Model
 {
-    protected $guarded = [];
+    protected $fillable = ['thickness'];
 
     public function rolls()
     {
