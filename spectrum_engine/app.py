@@ -934,3 +934,6 @@ def retrain_model():
 @app.get("/api/spectrum/retrain-status")
 def retrain_status():
     return get_retrain_status()
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=8001)
