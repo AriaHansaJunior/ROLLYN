@@ -9,6 +9,7 @@ const SEGMENT_PATTERNS: SegmentPattern[] = [
   { digit: '2', segments: [true,  true,  false, true,  true,  false, true]  },
   { digit: '3', segments: [true,  true,  true,  true,  false, false, true]  },
   { digit: '4', segments: [false, true,  true,  false, false, true,  true]  },
+  { digit: '4', segments: [false, true,  true,  false, false, false, true]  },
   { digit: '5', segments: [true,  false, true,  true,  false, true,  true]  },
   { digit: '6', segments: [true,  false, true,  true,  true,  true,  true]  },
   { digit: '6', segments: [false, false, true,  true,  true,  true,  true]  },
@@ -143,7 +144,7 @@ function findDigitBounds(imageData: ImageData): DigitBounds[] {
     const boxHeight = g.maxY - g.minY + 1;
     const aspectRatio = boxHeight / boxWidth;
 
-    if (boxHeight >= height * 0.20 && aspectRatio >= 0.5 && aspectRatio <= 4.5) {
+    if (boxHeight >= height * 0.20 && aspectRatio >= 0.45 && aspectRatio <= 8.0) {
       bounds.push({
         x: g.minX,
         y: g.minY,
@@ -167,21 +168,22 @@ function sampleSegments(
 ): SegmentSample {
   const { x, y, width: w, height: h } = bounds;
 
+  // Dedicated core sampling zones that do NOT overlap with adjacent segments:
   const segmentRegions: Array<[number, number, number, number]> = [
-
-    [0.20, 0.00, 0.60, 0.15],
-
-    [0.70, 0.05, 0.30, 0.40],
-
-    [0.70, 0.55, 0.30, 0.40],
-
-    [0.20, 0.85, 0.60, 0.15],
-
-    [0.00, 0.55, 0.30, 0.40],
-
-    [0.00, 0.05, 0.30, 0.40],
-
-    [0.20, 0.42, 0.60, 0.16],
+    // 0: top (center horizontally, top edge)
+    [0.25, 0.00, 0.50, 0.16],
+    // 1: top-right (pure vertical zone between top and middle bars)
+    [0.72, 0.18, 0.28, 0.22],
+    // 2: bottom-right (pure vertical zone between middle and bottom bars)
+    [0.72, 0.60, 0.28, 0.22],
+    // 3: bottom (center horizontally, bottom edge)
+    [0.25, 0.84, 0.50, 0.16],
+    // 4: bottom-left (pure vertical zone between middle and bottom bars)
+    [0.00, 0.60, 0.28, 0.22],
+    // 5: top-left (pure vertical zone between top and middle bars)
+    [0.00, 0.18, 0.28, 0.22],
+    // 6: middle (center horizontally, middle stripe)
+    [0.25, 0.42, 0.50, 0.16],
   ];
 
   const fillRatios: number[] = [];
@@ -197,9 +199,28 @@ function sampleSegments(
   }
 
   const maxFill = Math.max(...fillRatios);
-  const ON_THRESHOLD = Math.max(0.18, maxFill * 0.38);
+  const ON_THRESHOLD = Math.max(0.20, maxFill * 0.40);
 
   const segmentStates = fillRatios.map(r => r >= ON_THRESHOLD);
+
+  // Left vs Right relative validation:
+  // If top-right is active, check if top-left is legitimately active or just stray glare
+  const trRatio = fillRatios[1];
+  const tlRatio = fillRatios[5];
+  if (trRatio >= ON_THRESHOLD) {
+    if (tlRatio < 0.25 || tlRatio < 0.48 * trRatio) {
+      segmentStates[5] = false;
+    }
+  }
+
+  // If bottom-right is active, check if bottom-left is legitimately active
+  const brRatio = fillRatios[2];
+  const blRatio = fillRatios[4];
+  if (brRatio >= ON_THRESHOLD) {
+    if (blRatio < 0.25 || blRatio < 0.48 * brRatio) {
+      segmentStates[4] = false;
+    }
+  }
 
   return {
     segmentStates: segmentStates as [boolean, boolean, boolean, boolean, boolean, boolean, boolean],
@@ -227,6 +248,46 @@ function matchDigit(sample: SegmentSample): DigitMatch {
     if (distance < bestDistance) {
       bestDistance = distance;
       bestMatch = pattern;
+    }
+  }
+
+  // Explicit, foolproof 3 vs 8 disambiguation:
+  // Both 3 and 8 have Top, TR, BR, Bot, Mid active.
+  // The ONLY difference is whether the left vertical spine (TL and BL) exists!
+  const tlRatio = sample.fillRatios[5];
+  const trRatio = sample.fillRatios[1];
+  const blRatio = sample.fillRatios[4];
+  const brRatio = sample.fillRatios[2];
+
+  if (bestMatch.digit === '8') {
+    const isTlWeak = tlRatio < 0.25 || (trRatio > 0.35 && tlRatio < 0.50 * trRatio);
+    const isBlWeak = blRatio < 0.25 || (brRatio > 0.35 && blRatio < 0.50 * brRatio);
+
+    if (isTlWeak && isBlWeak) {
+      // Both left segments are absent or far weaker than right -> It is 3, NOT 8!
+      return {
+        digit: '3',
+        confidence: Math.round(Math.min(98, 75 + (trRatio + brRatio) * 12)),
+        hammingDistance: 0,
+      };
+    } else if (isTlWeak && !isBlWeak) {
+      if (trRatio < 0.35) {
+        return { digit: '6', confidence: 90, hammingDistance: 0 };
+      }
+    } else if (!isTlWeak && isBlWeak) {
+      return { digit: '9', confidence: 92, hammingDistance: 0 };
+    }
+  } else if (bestMatch.digit === '3') {
+    const isTlStrong = tlRatio >= 0.35 && (trRatio <= 0.2 || tlRatio >= 0.55 * trRatio);
+    const isBlStrong = blRatio >= 0.35 && (brRatio <= 0.2 || blRatio >= 0.55 * brRatio);
+
+    if (isTlStrong && isBlStrong) {
+      // Both left vertical strokes are solidly present -> It is 8, NOT 3!
+      return {
+        digit: '8',
+        confidence: Math.round(Math.min(98, 75 + (tlRatio + blRatio) * 12)),
+        hammingDistance: 0,
+      };
     }
   }
 

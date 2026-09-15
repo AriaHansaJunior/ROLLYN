@@ -12,8 +12,9 @@ function localAsset(path: string): string {
 function buildLocalOptions() {
   return {
     workerPath: localAsset('worker.min.js'),
-    corePath: localAsset('tesseract-core.wasm.js'),
+    corePath: `${window.location.origin}/tesseract`,
     langPath: localAsset('lang-data'),
+    workerBlobURL: false,
     logger: () => {},
   };
 }
@@ -181,7 +182,6 @@ const digitalWorker: WorkerState = { instance: null, ready: false, initialising:
 
 async function getEngWorker(): Promise<any> {
   if (engWorker.ready && engWorker.instance) return engWorker.instance;
-  if (engWorker.failed) throw new Error('eng worker previously failed');
 
   if (engWorker.initialising) {
     return new Promise((resolve, reject) => {
@@ -203,8 +203,9 @@ async function getEngWorker(): Promise<any> {
   }
 
   engWorker.initialising = true;
+  engWorker.failed = false;
   try {
-    const worker = await createWorker('eng', OEM.LSTM_ONLY);
+    const worker = await createWorker('eng', OEM.LSTM_ONLY, buildLocalOptions());
     await worker.setParameters({
       tessedit_pageseg_mode: PSM.SINGLE_LINE,
       tessedit_char_whitelist: '0123456789.,',
@@ -212,10 +213,12 @@ async function getEngWorker(): Promise<any> {
     engWorker.instance = worker;
     engWorker.ready = true;
     engWorker.initialising = false;
+    console.log('[OCR] eng worker initialized successfully!');
     return worker;
   } catch (err) {
     engWorker.initialising = false;
     engWorker.failed = true;
+    console.warn('[OCR] eng worker creation attempt failed:', err);
     throw err;
   }
 }
@@ -313,17 +316,8 @@ export async function recogniseWeight(
     console.warn('[OCR] eng worker not available');
   }
 
-  if (!workerResult) {
-    return {
-      error: {
-        title: 'OCR Engine Not Ready',
-        message: 'No OCR engine could be initialised. Please refresh the page and try again.',
-      },
-    };
-  }
-
-  const allCandidates = workerResult.candidates;
-  const allAttempts = workerResult.attempts;
+  const allCandidates = workerResult ? [...workerResult.candidates] : [];
+  const allAttempts = workerResult ? [...workerResult.attempts] : [];
   
   const digitalVariants = variants.filter(v => v.digital);
   
@@ -427,27 +421,31 @@ export async function recogniseWeight(
 
     const segmentBonus = (isSegmentMatcher && c.confidence >= 80) ? 300 : 0;
 
-    // Penalize candidates whose digit count differs from the mode (prevents false digit insertion like 123 → 1143)
+    // Penalize candidates whose digit count differs from expected/mode
     let digitCountPenalty = 0;
     
-    // Strict Structural Validation (if CV detected exact digit bounds)
-    if (expectedDigitCount !== undefined && expectedDigitCount > 0) {
+    // Structural Validation (if CV detected exact digit bounds)
+    if (expectedDigitCount !== undefined && expectedDigitCount >= 2 && expectedDigitCount <= 5) {
       if (digits !== expectedDigitCount) {
-        digitCountPenalty = -3000; // Heavy penalty if it contradicts physical structure
+        digitCountPenalty = -600;
       } else {
-        digitCountPenalty = 1000; // Bonus for structural match
+        digitCountPenalty = 600;
       }
-    } else {
+    } else if (modeDigitCount >= 2) {
       // Fallback to consensus mode
-      digitCountPenalty = (digits !== modeDigitCount) ? -2000 : 0;
+      digitCountPenalty = (digits === modeDigitCount) ? 400 : -400;
     }
 
+    // Heavy penalty for implausibly small weights (< 10 kg) which are almost always stray OCR noise on roll scales
+    const noisePenalty = c.weight < 10 ? -8000 : (c.weight < 50 ? -2000 : 0);
+
     const score =
-      (digits * 1000) +
-      (consistency * 1200) +  // Increased from 800 — consensus is more important than raw confidence
-      (isDigital * 300) +
+      (digits * 800) +
+      (consistency * 1200) +
+      (isDigital * 500) +
       segmentBonus +
       digitCountPenalty +
+      noisePenalty +
       c.confidence;
 
     return { ...c, score };
@@ -464,10 +462,10 @@ export async function recogniseWeight(
 
   const winner = scored[0];
 
-  // Minimum consistency check: require at least 2 candidates to agree on the same weight
-  // to prevent accepting a single spurious result
+  // Consistency check: require consensus only when we have many conflicting candidates (>= 4)
+  // and no single high-confidence winner (confidence < 85).
   const winnerConsistency = weightCounts.get(Math.round(winner.weight)) ?? 0;
-  if (winnerConsistency < 2 && allCandidates.length >= 3) {
+  if (winnerConsistency < 2 && allCandidates.length >= 4 && winner.confidence < 85) {
     console.warn('[OCR] No consensus reached among candidates — recognition unreliable');
     return {
       error: {

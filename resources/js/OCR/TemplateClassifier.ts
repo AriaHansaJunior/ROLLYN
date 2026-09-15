@@ -63,6 +63,44 @@ function classifyDigit(
     }
   }
 
+  // Disambiguate 3 vs 8 using physical left vertical spine
+  if (bestDigit === '8' || bestDigit === '3') {
+    let leftPixels = 0;
+    let rightPixels = 0;
+    let totalLeft = 0;
+    let totalRight = 0;
+
+    for (let ty = 10; ty <= 20; ty++) {
+      for (let tx = 2; tx <= 8; tx++) {
+        if (pixelData[ty * TEMPLATE_WIDTH + tx] === 1) leftPixels++;
+        totalLeft++;
+      }
+      for (let tx = 23; tx <= 29; tx++) {
+        if (pixelData[ty * TEMPLATE_WIDTH + tx] === 1) rightPixels++;
+        totalRight++;
+      }
+    }
+    for (let ty = 28; ty <= 38; ty++) {
+      for (let tx = 2; tx <= 8; tx++) {
+        if (pixelData[ty * TEMPLATE_WIDTH + tx] === 1) leftPixels++;
+        totalLeft++;
+      }
+      for (let tx = 23; tx <= 29; tx++) {
+        if (pixelData[ty * TEMPLATE_WIDTH + tx] === 1) rightPixels++;
+        totalRight++;
+      }
+    }
+
+    const leftDensity = leftPixels / (totalLeft || 1);
+    const rightDensity = rightPixels / (totalRight || 1);
+
+    if (bestDigit === '8' && (leftDensity < 0.25 || (rightDensity > 0.35 && leftDensity < 0.45 * rightDensity))) {
+      bestDigit = '3';
+    } else if (bestDigit === '3' && leftDensity > 0.40 && leftDensity > 0.60 * rightDensity) {
+      bestDigit = '8';
+    }
+  }
+
   const confidence = Math.min(100, Math.max(0, Math.round(bestScore * 100)));
 
   return {

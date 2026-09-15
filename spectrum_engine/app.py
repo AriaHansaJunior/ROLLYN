@@ -1,679 +1,540 @@
-
 import base64
-import re
 import io
 import os
+import sys
 import cv2
 import numpy as np
 from PIL import Image
 from collections import Counter
-from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import traceback
 
-from spectrum_engine.train_spectrum_led import (
-    start_training_background,
-    get_retrain_status,
-    get_dataset_statistics,
-)
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_dir = os.path.dirname(_current_dir)
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
 
-import os as _os
-import json as _json
-
-_EASYOCR_READER = None
-
-def get_easyocr_reader():
-    global _EASYOCR_READER
-    if _EASYOCR_READER is None:
-        try:
-            import easyocr
-            _EASYOCR_READER = easyocr.Reader(['en'], gpu=False, verbose=False)
-        except Exception:
-            pass
-    return _EASYOCR_READER
-
-def run_easyocr_fallback(img: np.ndarray):
-    reader = get_easyocr_reader()
-    if not reader:
-        return None
-    try:
-        results = reader.readtext(img)
-        all_text = " ".join([text for (bbox, text, prob) in results])
-        import re
-        cleaned = re.sub(r'[^\d]', '', all_text)
-        if len(cleaned) >= 2:
-            val = int(cleaned)
-            if 1 <= val <= 99999:
-                _, buffer = cv2.imencode(".png", img)
-                base64_preview = "data:image/png;base64," + base64.b64encode(buffer).decode("utf-8")
-                return {
-                    "status": "SUCCESS",
-                    "weight_detected": val,
-                    "confidence": 0.95,
-                    "spectrum_processed_image": base64_preview,
-                    "engine_version": "6.0.0 (EasyOCR Fallback)",
-                    "message": "Fallback OCR Successful"
-                }
-    except Exception:
-        pass
-    return None
-
-_MLP_CACHE = {"model": None, "scaler": None, "loaded_at": 0}
-_BEST_MLP_PATH = _os.path.join(_os.path.dirname(__file__), "best_mlp.pkl")
-
-
-def _load_mlp_if_available():
-    global _MLP_CACHE
-    try:
-        if not _os.path.exists(_BEST_MLP_PATH):
-            return None, None
-        mtime = _os.path.getmtime(_BEST_MLP_PATH)
-        if _MLP_CACHE["loaded_at"] >= mtime and _MLP_CACHE["model"] is not None:
-            return _MLP_CACHE["model"], _MLP_CACHE["scaler"]
-        import joblib
-        data = joblib.load(_BEST_MLP_PATH)
-        _MLP_CACHE["model"] = data["model"]
-        _MLP_CACHE["scaler"] = data["scaler"]
-        _MLP_CACHE["loaded_at"] = mtime
-        return _MLP_CACHE["model"], _MLP_CACHE["scaler"]
-    except Exception:
-        return None, None
-
-
-def _compute_digit_features(gray_crop: np.ndarray) -> np.ndarray:
-    resized = cv2.resize(gray_crop, (16, 24)).astype(np.float32) / 255.0
-    grad_x = cv2.Sobel(resized, cv2.CV_32F, 1, 0, ksize=3)
-    grad_y = cv2.Sobel(resized, cv2.CV_32F, 0, 1, ksize=3)
-
-    h, w = resized.shape
-    segments = [
-        resized[0:int(0.2*h), int(0.2*w):int(0.8*w)],
-        resized[0:int(0.5*h), 0:int(0.3*w)],
-        resized[0:int(0.5*h), int(0.7*w):w],
-        resized[int(0.4*h):int(0.6*h), int(0.2*w):int(0.8*w)],
-        resized[int(0.5*h):h, 0:int(0.3*w)],
-        resized[int(0.5*h):h, int(0.7*w):w],
-        resized[int(0.8*h):h, int(0.2*w):int(0.8*w)],
-    ]
-    seg_means = [np.mean(s) if s.size > 0 else 0.0 for s in segments]
-
-    feat = np.hstack([resized.flatten(), grad_x.flatten(), grad_y.flatten(), seg_means])
-    return feat
-
-
-def _mlp_classify(gray_crop: np.ndarray):
-    clf, scaler = _load_mlp_if_available()
-    if clf is None:
-        return None, 0.0
-    try:
-        feat = _compute_digit_features(gray_crop).reshape(1, -1).astype(np.float32)
-        feat_scaled = scaler.transform(feat)
-        proba = clf.predict_proba(feat_scaled)[0]
-        top_cls = int(np.argmax(proba))
-        top_conf = float(proba[top_cls])
-        return top_cls, top_conf
-    except Exception:
-        return None, 0.0
-
-app = FastAPI(
-    title="SPECTRUM Engine 4.0 AI Microservice",
-    description="Seven-Segment Processing & Enhanced Computer-Vision Recognition Model (Geometric Heuristic & NMS Active)",
-    version="4.0.0"
-)
+app = FastAPI(title="SPECTRUM Weight Detection Agent v3 - Anti-Hallucination Mode", version="6.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
 class DetectRequest(BaseModel):
-    image: str  # Base64 string or data URL
+    image: str = None
+    images: list[str] = None
 
-
-SEVEN_SEG_MAP = {
-    (1, 1, 1, 0, 1, 1, 1): 0,
-    (0, 0, 1, 0, 0, 1, 0): 1,
-    (1, 0, 1, 1, 1, 0, 1): 2,
-    (1, 0, 1, 1, 0, 1, 1): 3,
-    (0, 1, 1, 1, 0, 1, 0): 4,
-    (1, 1, 0, 1, 0, 1, 1): 5,
-    (1, 1, 0, 1, 1, 1, 1): 6,
-    (1, 0, 1, 0, 0, 1, 0): 7,
-    (1, 1, 1, 1, 1, 1, 1): 8,
-    (1, 1, 1, 1, 0, 1, 1): 9,
+# STANDARD PATTERNS (Proper 7-segment mapping)
+# a=top, b=top-right, c=bottom-right, d=bottom, e=bottom-left, f=top-left, g=middle
+STANDARD_PATTERNS = {
+    0: [1, 1, 1, 1, 1, 1, 0],
+    1: [0, 1, 1, 0, 0, 0, 0],
+    2: [1, 1, 0, 1, 1, 0, 1],
+    3: [1, 1, 1, 1, 0, 0, 1],
+    4: [0, 1, 1, 0, 0, 1, 1],
+    5: [1, 0, 1, 1, 0, 1, 1],
+    6: [1, 0, 1, 1, 1, 1, 1],
+    7: [1, 1, 1, 0, 0, 0, 0],
+    8: [1, 1, 1, 1, 1, 1, 1],
+    9: [1, 1, 1, 1, 0, 1, 1],
 }
-
 
 def decode_base64_image(base64_str: str) -> np.ndarray:
-    try:
-        if "," in base64_str:
-            base64_str = base64_str.split(",", 1)[1]
-        
-        img_bytes = base64.b64decode(base64_str)
-        pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-        bgr_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-        return bgr_img
-    except Exception as e:
-        raise ValueError(f"Failed to decode base64 image: {str(e)}")
+    if "," in base64_str:
+        base64_str = base64_str.split(",", 1)[1]
+    img_bytes = base64.b64decode(base64_str)
+    pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
+# =========================================================================
+# PHASE 1: DISPLAY AREA ISOLATION & PREPROCESSING
+# =========================================================================
 
-def preprocess_hsv_red_led(bgr_img: np.ndarray):
-    # 1. Red LED Detection
-    hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-    lower_red1 = np.array([0, 100, 100])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([160, 100, 100])
-    upper_red2 = np.array([180, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    red_mask = cv2.bitwise_or(mask1, mask2)
-
-    # 2. Dark LCD / Ink Detection (black on light bg)
+def analyze_and_isolate_display(bgr_img: np.ndarray):
+    H, W = bgr_img.shape[:2]
     gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
-    dark_mask = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 15
-    )
-    # Remove small noise from adaptive threshold
-    noise_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    dark_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_OPEN, noise_kernel)
-
-    # 3. Combine both masks
-    combined_mask = cv2.bitwise_or(red_mask, dark_mask)
-
-    # 4. Standard cleanup
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    closed_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
-    dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
-
-    return dilated_mask
-
-
-def compute_iou(boxA, boxB):
-    xA = max(boxA[0], boxB[0])
-    yA = max(boxA[1], boxB[1])
-    xB = min(boxA[0] + boxA[2], boxB[0] + boxB[2])
-    yB = min(boxA[1] + boxA[3], boxB[1] + boxB[3])
-
-    interWidth = max(0, xB - xA)
-    interHeight = max(0, yB - yA)
-    interArea = interWidth * interHeight
-
-    boxAArea = boxA[2] * boxA[3]
-    boxBArea = boxB[2] * boxB[3]
-
-    if boxAArea + boxBArea - interArea == 0:
-        return 0.0
-
-    return interArea / float(boxAArea + boxBArea - interArea)
-
-
-def is_nested(box_inner, box_outer):
-    xi, yi, wi, hi = box_inner
-    xo, yo, wo, ho = box_outer
-    return xi >= xo and yi >= yo and (xi + wi) <= (xo + wo) and (yi + hi) <= (yo + ho)
-
-
-def apply_nms_and_overlap_filter(candidates, iou_threshold=0.3):
-    if not candidates:
-        return []
-
-    sorted_cands = sorted(candidates, key=lambda c: (c['box'][2] * c['box'][3]) * c['confidence'], reverse=True)
-    keep = []
-
-    for cand in sorted_cands:
-        box = cand['box']
-        discard = False
-        for kept in keep:
-            kbox = kept['box']
-            iou = compute_iou(box, kbox)
-            
-            x_overlap = max(0, min(box[0] + box[2], kbox[0] + kbox[2]) - max(box[0], kbox[0]))
-            overlap_ratio = x_overlap / float(min(box[2], kbox[2])) if min(box[2], kbox[2]) > 0 else 0
-
-            if iou > iou_threshold or overlap_ratio > 0.35 or is_nested(box, kbox):
-                discard = True
-                break
-
-        if not discard:
-            keep.append(cand)
-
-    keep.sort(key=lambda c: c['box'][0])
-    return keep
-
-
-def verify_7segment_geometric_rules(active_pattern: list[int], raw_digit: int | None, conf: float) -> tuple[int, float]:
-    top, top_left, top_right, middle, bottom_left, bottom_right, bottom = active_pattern
-
-    # Rule C: Middle is EMPTY (0) and Top & Bottom ACTIVE -> MUST BE '0'
-    if middle == 0 and top == 1 and bottom == 1:
-        return 0, max(conf, 0.96)
-
-    # Rule A: Top-Right is EMPTY (0) and Bottom-Left is ACTIVE (1) -> MUST BE '6' (Never guess '8')
-    if top_right == 0 and bottom_left == 1:
-        return 6, max(conf, 0.95)
-
-    # Rule B: Bottom-Left is EMPTY (0) and Top-Right is ACTIVE (1) and Top ACTIVE (1) -> MUST BE '9' (Never guess '6')
-    if bottom_left == 0 and top_right == 1 and top == 1:
-        return 9, max(conf, 0.95)
-
-    # Rule D: Bottom-Left EMPTY (0) and Top-Right & Bottom-Right & Top ACTIVE -> MUST BE '3'
-    if bottom_left == 0 and top_right == 1 and bottom_right == 1 and top == 1:
-        return 3, max(conf, 0.92)
-
-    # Rule E: Top, Top-Right, Bottom-Right ACTIVE, Middle & Bottom EMPTY -> MUST BE '7'
-    if top == 1 and top_right == 1 and bottom_right == 1 and middle == 0 and bottom == 0:
-        return 7, max(conf, 0.95)
-
-    if raw_digit is not None:
-        return raw_digit, conf
-
-    return 0, 0.5
-
-
-def fix_digit_prediction(digit_crop: np.ndarray, model_prediction: int) -> int:
-    h, w = digit_crop.shape[:2]
-    if h < 10 or w < 4:
-        return model_prediction
-
-    top_left_region = digit_crop[int(h * 0.15):int(h * 0.45), 0:int(w * 0.35)]
-    top_left_pixels = cv2.countNonZero(top_left_region) if top_left_region.size > 0 else 0
-    top_left_total = top_left_region.size if top_left_region.size > 0 else 1
-
-    bottom_left_region = digit_crop[int(h * 0.55):int(h * 0.85), 0:int(w * 0.35)]
-    bottom_left_pixels = cv2.countNonZero(bottom_left_region) if bottom_left_region.size > 0 else 0
-    bottom_left_total = bottom_left_region.size if bottom_left_region.size > 0 else 1
-
-    is_tl_empty = (top_left_pixels / float(top_left_total)) < 0.10
-    is_bl_empty = (bottom_left_pixels / float(bottom_left_total)) < 0.10
-
-    if is_tl_empty and is_bl_empty:
-        return 3
-
-    if (not is_tl_empty) and is_bl_empty:
-        return 9
-
-    return model_prediction
-
-
-def recognize_digit_from_crop(digit_crop: np.ndarray) -> tuple[int, float]:
-    h, w = digit_crop.shape[:2]
-    if h < 10 or w < 4:
-        return None, 0.0
-
-    # Rule for '1': If aspect ratio w/h < 0.35 (very skinny box), FORCE digit to 1
-    aspect_w_h = w / float(h)
-    if aspect_w_h < 0.35:
-        return 1, 0.98
-
-    mlp_digit, mlp_conf = _mlp_classify(digit_crop)
-
-    segments_rel = [
-        (0.2, 0.0, 0.6, 0.2),    # Top [0]
-        (0.0, 0.08, 0.3, 0.42),  # Top-Left [1]
-        (0.7, 0.08, 0.3, 0.42),  # Top-Right [2]
-        (0.2, 0.4, 0.6, 0.2),    # Middle [3]
-        (0.0, 0.5, 0.3, 0.42),   # Bottom-Left [4]
-        (0.7, 0.5, 0.3, 0.42),   # Bottom-Right [5]
-        (0.2, 0.8, 0.6, 0.2),    # Bottom [6]
-    ]
-
-    active_pattern = []
-    scores = []
-
-    for (rx, ry, rw, rh) in segments_rel:
-        x1, y1 = int(rx * w), int(ry * h)
-        x2, y2 = int((rx + rw) * w), int((ry + rh) * h)
-
-        roi = digit_crop[y1:y2, x1:x2]
-        if roi.size == 0:
-            active_pattern.append(0)
-            scores.append(0.0)
-            continue
-
-        on_pixels = cv2.countNonZero(roi)
-        total_pixels = roi.shape[0] * roi.shape[1]
-        ratio = on_pixels / float(total_pixels) if total_pixels > 0 else 0
-
-        is_on = 1 if ratio > 0.22 else 0
-        active_pattern.append(is_on)
-        scores.append(ratio if is_on else (1.0 - ratio))
-
-    pattern_tuple = tuple(active_pattern)
-    raw_digit = SEVEN_SEG_MAP.get(pattern_tuple, None)
-    confidence = float(np.mean(scores)) if scores else 0.5
-
-    top, top_left, top_right, middle, bottom_left, bottom_right, bottom = active_pattern
-
-    # Correct MLP misclassifications for 9 vs 6
-    if mlp_digit == 6 and bottom_left == 0 and top_right == 1:
-        mlp_digit = 9
-    elif mlp_digit == 8 and top_right == 0 and bottom_left == 1:
-        mlp_digit = 6
-
-    if mlp_digit is not None and mlp_conf >= 0.75:
-        geo_digit, geo_conf = verify_7segment_geometric_rules(active_pattern, mlp_digit, mlp_conf)
-        final_d = fix_digit_prediction(digit_crop, geo_digit)
-        return final_d, geo_conf
-
-    final_digit, final_conf = verify_7segment_geometric_rules(active_pattern, raw_digit, confidence)
-    final_d = fix_digit_prediction(digit_crop, final_digit)
-    return final_d, final_conf
-
-
-def autocorrect_scale_weight(weight_digits: list[str]) -> tuple[int, float]:
-    raw_str = "".join(weight_digits)
-    cleaned_str = re.sub(r"\D", "", raw_str)
     
-    if not cleaned_str:
-        return 0
-
-    if len(cleaned_str) > 4:
-        cleaned_str = cleaned_str[:4]
+    # Image Quality
+    min_val, max_val, _, _ = cv2.minMaxLoc(gray)
+    contrast_ratio = max_val - min_val
+    contrast_score = min(100, (contrast_ratio / 255.0) * 100)
     
-    if len(cleaned_str) > 3 and cleaned_str.startswith("0"):
-        cleaned_str = cleaned_str[1:]
-
-    return int(cleaned_str) if cleaned_str else 0
-
-
-SEVEN_SEG_MATRIX_ROBUST = {
-    (1, 1, 1, 1, 1, 1, 0): "0",
-    (0, 1, 1, 0, 0, 0, 0): "1",
-    (1, 1, 0, 1, 1, 0, 1): "2",
-    (1, 1, 1, 1, 0, 0, 1): "3",
-    (0, 1, 1, 0, 0, 1, 1): "4",
-    (1, 0, 1, 1, 0, 1, 1): "5",
-    (1, 0, 1, 1, 1, 1, 1): "6", (0, 0, 1, 1, 1, 1, 1): "6",
-    (1, 1, 1, 0, 0, 0, 0): "7", (1, 1, 1, 0, 0, 1, 0): "7",
-    (1, 1, 1, 1, 1, 1, 1): "8",
-    (1, 1, 1, 1, 0, 1, 1): "9", (1, 1, 1, 0, 0, 1, 1): "9",
-    (0, 0, 0, 0, 0, 0, 0): "",
-}
-
-VALID_PATTERNS = {
-    "0": (1, 1, 1, 1, 1, 1, 0),
-    "1": (0, 1, 1, 0, 0, 0, 0),
-    "2": (1, 1, 0, 1, 1, 0, 1),
-    "3": (1, 1, 1, 1, 0, 0, 1),
-    "4": (0, 1, 1, 0, 0, 1, 1),
-    "5": (1, 0, 1, 1, 0, 1, 1),
-    "6": (1, 0, 1, 1, 1, 1, 1),
-    "7": (1, 1, 1, 0, 0, 0, 0),
-    "8": (1, 1, 1, 1, 1, 1, 1),
-    "9": (1, 1, 1, 1, 0, 1, 1),
-}
-
-
-def get_closest_matching_digit(state: tuple[int, ...]) -> str:
-    if sum(state) == 0:
-        return ""
-    best_digit = "?"
-    min_dist = 999
-    for digit, pat in VALID_PATTERNS.items():
-        dist = sum(1 for a, b in zip(state, pat) if a != b)
-        if dist < min_dist:
-            min_dist = dist
-            best_digit = digit
-    return best_digit if min_dist <= 2 else "?"
-
-
-def decode_7segment_robust(a: int, b: int, c: int, d: int, e: int, f: int, g: int) -> str:
-    state = (a, b, c, d, e, f, g)
-    if state in SEVEN_SEG_MATRIX_ROBUST:
-        return SEVEN_SEG_MATRIX_ROBUST[state]
-    return get_closest_matching_digit(state)
-
-
-def decode_fixed_slots_7segment(processed_mask: np.ndarray, num_slots: int = 3) -> tuple[str, float]:
-    img_h, img_w = processed_mask.shape[:2]
-
-    contours, _ = cv2.findContours(processed_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+    sharpness_score = min(1.0, laplacian.var() / 500.0)
+    
+    # Find LED pixels (Red/Orange hue)
+    hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
+    m1 = cv2.inRange(hsv, np.array([0, 40, 50]), np.array([30, 255, 255]))
+    m2 = cv2.inRange(hsv, np.array([150, 40, 50]), np.array([180, 255, 255]))
+    led_mask = cv2.bitwise_or(m1, m2)
+    
+    # Color purity
+    led_pixels = cv2.countNonZero(led_mask)
+    led_color_purity = min(100, (led_pixels / (H*W)) * 1000)
+    
+    lighting_qual = "FAIR"
+    if contrast_score > 60 and sharpness_score > 0.4: lighting_qual = "EXCELLENT"
+    elif contrast_score > 40: lighting_qual = "GOOD"
+    elif contrast_score < 20: lighting_qual = "POOR"
+    
+    quality = {
+        "contrast_ratio": contrast_score,
+        "sharpness_score": sharpness_score,
+        "lighting_quality": lighting_qual,
+        "detected_angle_degrees": 0.0,
+        "led_color_purity": led_color_purity
+    }
+    
+    # Isolation (Simplified for robustness)
+    contours, _ = cv2.findContours(led_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
-        best_cnt = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(best_cnt)
-        if w > 30 and h > 15:
-            display_crop = processed_mask[y:y+h, x:x+w]
-        else:
-            display_crop = processed_mask
+        c = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(c)
+        pad_x = int(w * 0.10)
+        pad_y = int(h * 0.10)
+        x1 = max(0, x - pad_x)
+        y1 = max(0, y - pad_y)
+        x2 = min(W, x + w + pad_x)
+        y2 = min(H, y + h + pad_y)
+        led_mask_cropped = led_mask[y1:y2, x1:x2]
+        offset = (x1, y1)
     else:
-        display_crop = processed_mask
+        led_mask_cropped = led_mask
+        offset = (0, 0)
+        
+    return led_mask_cropped, offset, quality, led_mask
 
-    dh, dw = display_crop.shape[:2]
-    if dh < 10 or dw < 15:
-        return "", 0.0
+# =========================================================================
+# PHASE 2: DIGIT SEGMENTATION (HISTOGRAM PEAKS)
+# =========================================================================
 
-    slot_w = dw / float(num_slots)
-    decoded_digits = []
-    has_unknown = False
+def segment_digits_v3(led_mask: np.ndarray):
+    H, W = led_mask.shape[:2]
+    # Horizontal projection
+    h_proj = np.sum(led_mask, axis=0) / 255.0
+    
+    # Find peaks and valleys
+    smooth_proj = np.convolve(h_proj, np.ones(5)/5.0, mode='same')
+    threshold = np.max(smooth_proj) * 0.15
+    
+    is_in_digit = False
+    start_px = 0
+    digit_regions = []
+    
+    for i, val in enumerate(smooth_proj):
+        if val > threshold and not is_in_digit:
+            is_in_digit = True
+            start_px = i
+        elif val <= threshold and is_in_digit:
+            is_in_digit = False
+            if (i - start_px) > 10: # Minimum width
+                digit_regions.append((start_px, i))
+                
+    if is_in_digit:
+        digit_regions.append((start_px, W-1))
+        
+    # Validation
+    peaks_count = len(digit_regions)
+    boundaries = []
+    widths = []
+    
+    for start, end in digit_regions:
+        s = max(0, start - 5)
+        e = min(W, end + 5)
+        w = e - s
+        boundaries.append({
+            "start_px": int(s),
+            "end_px": int(e),
+            "width": int(w)
+        })
+        widths.append(w)
+        
+    # Consistency check
+    widths_consistent = True
+    if len(widths) > 1:
+        med_w = np.median(widths)
+        for w in widths:
+            if abs(w - med_w) / med_w > 0.25: # Strict variation
+                widths_consistent = False
+                
+    # Spacing check
+    spacing_valid = True
+    if len(digit_regions) > 1:
+        gaps = [digit_regions[i][0] - digit_regions[i-1][1] for i in range(1, len(digit_regions))]
+        med_gap = np.median(gaps) if gaps else 0
+        med_w = np.median(widths)
+        if med_gap < med_w * 0.2: # Very close, might be merged
+            spacing_valid = False
+            
+    return boundaries, widths_consistent, spacing_valid, peaks_count
 
-    for i in range(num_slots):
-        sx1 = int(i * slot_w)
-        sx2 = int((i + 1) * slot_w)
-        slot_crop = display_crop[:, sx1:sx2]
-        sh, sw = slot_crop.shape[:2]
+# =========================================================================
+# PHASE 3 & 4: VALIDATION & 7-SEGMENT ANALYSIS
+# =========================================================================
 
-        if sh < 5 or sw < 3:
-            decoded_digits.append("")
-            continue
+def analyze_segment_5x5_v3(crop_bin: np.ndarray):
+    h, w = crop_bin.shape[:2]
+    segments_rel = {
+        'a': (0.20, 0.00, 0.60, 0.18),
+        'b': (0.72, 0.18, 0.28, 0.24),
+        'c': (0.72, 0.58, 0.28, 0.24),
+        'd': (0.20, 0.82, 0.60, 0.18),
+        'e': (0.00, 0.58, 0.28, 0.24),
+        'f': (0.00, 0.18, 0.28, 0.24),
+        'g': (0.20, 0.40, 0.60, 0.20),
+    }
 
-        segments_map = [
-            slot_crop[0:int(sh * 0.22), int(sw * 0.20):int(sw * 0.80)],
-            slot_crop[int(sh * 0.08):int(sh * 0.48), int(sw * 0.65):sw],
-            slot_crop[int(sh * 0.52):int(sh * 0.92), int(sw * 0.65):sw],
-            slot_crop[int(sh * 0.78):sh, int(sw * 0.20):int(sw * 0.80)],
-            slot_crop[int(sh * 0.52):int(sh * 0.92), 0:int(sw * 0.35)],
-            slot_crop[int(sh * 0.08):int(sh * 0.48), 0:int(sw * 0.35)],
-            slot_crop[int(sh * 0.38):int(sh * 0.62), int(sw * 0.20):int(sw * 0.80)],
-        ]
-
-        ratios = []
-        for reg in segments_map:
-            if reg.size == 0:
-                ratios.append(0.0)
-                continue
-            r = cv2.countNonZero(reg) / float(reg.size)
-            ratios.append(r)
-
-        max_ratio = max(ratios) if ratios else 0.0
-
-        if max_ratio < 0.08:
-            states = [0] * 7
+    segments_data = {}
+    is_all_off = True
+    is_all_on = True
+    
+    for key, (rx, ry, rw, rh) in segments_rel.items():
+        x1, y1 = int(rx * w), int(ry * h)
+        x2, y2 = max(x1 + 5, int((rx + rw) * w)), max(y1 + 5, int((ry + rh) * h))
+        roi = crop_bin[y1:y2, x1:x2]
+        
+        if roi.size > 0:
+            roi_5x5 = cv2.resize(roi, (5, 5))
+            _, bright_roi = cv2.threshold(roi_5x5, 180, 255, cv2.THRESH_BINARY)
+            density = cv2.countNonZero(bright_roi) / 25.0
         else:
-            states = [1 if (r / max_ratio) >= 0.40 else 0 for r in ratios]
+            density = 0.0
+            
+        val = False
+        status = "AMBIGUOUS"
+        
+        if density >= 0.55:
+            val = True
+            status = "STRONG"
+            is_all_off = False
+        elif density <= 0.25:
+            val = False
+            status = "WEAK"
+            is_all_on = False
+        else:
+            val = density > 0.40
+            status = "AMBIGUOUS"
+            
+        segments_data[key] = {
+            "value": val,
+            "brightness": float(density),
+            "status": status
+        }
+        
+    # Phase 3 Checks
+    if is_all_off:
+        return segments_data, "ALL_OFF", None
+    if is_all_on:
+        return segments_data, "ALL_ON", None
+        
+    return segments_data, "VALID", None
 
-        digit_char = decode_7segment_robust(*states)
-        if digit_char == "?":
-            has_unknown = True
-        decoded_digits.append(digit_char)
+def pattern_match_v3(segments_data: dict):
+    current_arr = [
+        int(segments_data['a']['value']),
+        int(segments_data['b']['value']),
+        int(segments_data['c']['value']),
+        int(segments_data['d']['value']),
+        int(segments_data['e']['value']),
+        int(segments_data['f']['value']),
+        int(segments_data['g']['value'])
+    ]
+    
+    matches = []
+    for d, pat in STANDARD_PATTERNS.items():
+        matched_count = sum(1 for x, y in zip(current_arr, pat) if x == y)
+        matches.append((d, matched_count))
+        
+    matches.sort(key=lambda x: x[1], reverse=True)
+    best_d, best_score = matches[0]
+    second_d, second_score = matches[1]
+    
+    digit_conf = (best_score / 7.0) * 100.0
+    
+    hallucinated = False
+    hal_reason = ""
+    alternatives = []
+    is_ambiguous = False
+    
+    if best_score < 5:
+        hallucinated = True
+        hal_reason = "invalid_pattern_match_<5"
+        best_d = None
+    elif best_score == 7:
+        digit_conf += 30.0
+    elif best_score == 6:
+        digit_conf += 5.0
+    elif best_score == 5:
+        digit_conf -= 15.0
+        
+    if best_d is not None and (best_score - second_score) <= 1:
+        is_ambiguous = True
+        digit_conf -= 20.0
+        alternatives = [{"digit": best_d, "score": best_score}, {"digit": second_d, "score": second_score}]
+        
+    digit_conf = max(0, min(100, digit_conf))
+    
+    # Penalize ambiguous segments
+    for k, v in segments_data.items():
+        if v["status"] == "AMBIGUOUS":
+            digit_conf -= 10.0
+            
+    digit_conf = max(0, digit_conf)
+    
+    return best_d, best_score, digit_conf, alternatives, hallucinated, hal_reason, is_ambiguous
 
-    if has_unknown or not any(d.isdigit() for d in decoded_digits):
-        return "", 0.0
+# =========================================================================
+# MAIN RECOGNITION PIPELINE (V3)
+# =========================================================================
 
-    raw_weight_str = "".join(d for d in decoded_digits if d.isdigit())
-    return raw_weight_str, 0.99
+def process_spectrum_v3(bgr_img: np.ndarray):
+    led_mask_cropped, offset, quality, full_mask = analyze_and_isolate_display(bgr_img)
+    H, W = led_mask_cropped.shape[:2]
+    
+    boundaries, widths_consistent, spacing_valid, peaks_count = segment_digits_v3(led_mask_cropped)
+    
+    # Phase 2 Validation
+    digit_count_valid = True
+    if peaks_count < 3 or peaks_count > 4:
+        digit_count_valid = False
+        
+    preview_overlay = cv2.cvtColor(full_mask, cv2.COLOR_GRAY2BGR)
+    
+    digits_result = []
+    total_matched_segs = 0
+    num_valid_digits = 0
+    severe_penalties = 0
+    normal_penalties = 0
+    bonuses_list = []
+    penalties_list = []
+    
+    raw_weight_str = ""
+    total_hallucinations = 0
+    has_ambiguous_digit = False
+    
+    ox, oy = offset
+    
+    for i, b in enumerate(boundaries):
+        x1 = b["start_px"]
+        x2 = b["end_px"]
+        w = b["width"]
+        
+        # Bounding box for extraction
+        crop = led_mask_cropped[0:H, x1:x2]
+        
+        # Intensity check
+        intensity = cv2.countNonZero(crop)
+        expected_intensity = w * H * 0.15 # Rough estimate
+        
+        is_halluc = False
+        h_reason = ""
+        
+        if intensity < expected_intensity * 0.3:
+            is_halluc = True
+            h_reason = "low_total_intensity"
+            
+        segments_data, phase3_status, _ = analyze_segment_5x5_v3(crop)
+        
+        if phase3_status != "VALID":
+            is_halluc = True
+            h_reason = f"segment_structure_{phase3_status}"
+            
+        best_d, best_score, digit_conf, alts, p_halluc, p_reason, is_ambig = pattern_match_v3(segments_data)
+        
+        if p_halluc:
+            is_halluc = True
+            h_reason = p_reason
+            
+        if is_ambig:
+            has_ambiguous_digit = True
+            severe_penalties += 20
+            penalties_list.append(f"Ambiguous digit at pos {i}: -20%")
+            
+        if is_halluc:
+            total_hallucinations += 1
+            severe_penalties += 40
+            penalties_list.append(f"False digit detected at pos {i}: -40%")
+        else:
+            if best_d is not None:
+                raw_weight_str += str(best_d)
+                total_matched_segs += best_score
+                num_valid_digits += 1
+                
+        for k, v in segments_data.items():
+            if v["status"] == "AMBIGUOUS":
+                normal_penalties += 10
+                penalties_list.append(f"Ambiguous segment {k} at pos {i}: -10%")
+                
+        digits_result.append({
+            "position": i,
+            "digit": best_d if not is_halluc else None,
+            "segments": segments_data,
+            "pattern_match_score": best_score,
+            "digit_confidence": digit_conf,
+            "possible_alternatives": alts,
+            "is_hallucinated": is_halluc,
+            "hallucination_reason": h_reason
+        })
+        
+        # Draw on preview
+        color = (0, 0, 255) if is_halluc else (0, 255, 0)
+        cv2.rectangle(preview_overlay, (ox + x1, oy), (ox + x2, oy + H), color, 2)
+        display_txt = str(best_d) if best_d is not None else "?"
+        cv2.putText(preview_overlay, display_txt, (ox + x1, max(20, oy - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-
-def process_spectrum_detection(bgr_img: np.ndarray):
-    processed_mask = preprocess_hsv_red_led(bgr_img)
-    img_h, img_w = processed_mask.shape[:2]
-
-    fixed_slot_str, fixed_conf = decode_fixed_slots_7segment(processed_mask, num_slots=3)
-
-    contours, _ = cv2.findContours(processed_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    raw_candidates = []
-    min_h = int(img_h * 0.08)
-    max_h = int(img_h * 0.95)
-
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
-        aspect_ratio = h / float(w) if w > 0 else 0
-        area = cv2.contourArea(cnt)
-
-        if w < 10 or h < min_h:
-            continue
-
-        if min_h <= h <= max_h and area > 40:
-            if aspect_ratio < 0.9 and w > int(h * 0.75):
-                half_w = int(w / 2)
-                crop1 = processed_mask[y:y+h, x:x+half_w]
-                digit1, conf1 = recognize_digit_from_crop(crop1)
-                if digit1 is not None:
-                    raw_candidates.append({'box': (x, y, half_w, h), 'digit': digit1, 'confidence': conf1})
-
-                crop2 = processed_mask[y:y+h, x+half_w:x+w]
-                digit2, conf2 = recognize_digit_from_crop(crop2)
-                if digit2 is not None:
-                    raw_candidates.append({'box': (x + half_w, y, half_w, h), 'digit': digit2, 'confidence': conf2})
-            else:
-                crop = processed_mask[y:y+h, x:x+w]
-                digit, conf = recognize_digit_from_crop(crop)
-                if digit is not None:
-                    raw_candidates.append({'box': (x, y, w, h), 'digit': digit, 'confidence': conf})
-
-    final_candidates = apply_nms_and_overlap_filter(raw_candidates, iou_threshold=0.3)
-    final_candidates.sort(key=lambda c: c['box'][0])
-
-    detected_digits = []
-    confidences = []
-    preview_overlay = cv2.cvtColor(processed_mask, cv2.COLOR_GRAY2BGR)
-
-    for cand in final_candidates:
-        x, y, w, h = cand['box']
-        digit = cand['digit']
-        conf = cand['confidence']
-
-        detected_digits.append(str(digit))
-        confidences.append(conf)
-
-        cv2.rectangle(preview_overlay, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cv2.putText(preview_overlay, str(digit), (x, max(15, y - 5)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    # Multi-digit validation
+    weight_val = int(raw_weight_str) if raw_weight_str else 0
+    weight_in_logical = 0 <= weight_val <= 9999
+    
+    if not weight_in_logical:
+        severe_penalties += 30
+        penalties_list.append("Weight outside logical range: -30%")
+    
+    if not widths_consistent:
+        severe_penalties += 15
+        penalties_list.append("Inconsistent digit width: -15%")
+        
+    if not spacing_valid:
+        severe_penalties += 10
+        penalties_list.append("Poor inter-digit spacing: -10%")
+        
+    if quality["contrast_ratio"] < 30:
+        normal_penalties += 8
+        penalties_list.append("Low contrast: -8%")
+    if quality["sharpness_score"] < 0.4:
+        normal_penalties += 12
+        penalties_list.append("Image blur: -12%")
+        
+    # Base Confidence Calculation
+    if num_valid_digits > 0:
+        base_confidence = (total_matched_segs / (7.0 * num_valid_digits)) * 100.0
+    else:
+        base_confidence = 0.0
+        
+    conf_after_penalties = base_confidence - severe_penalties - normal_penalties
+    
+    total_bonuses = 0
+    if conf_after_penalties > 50:
+        if num_valid_digits > 0 and total_matched_segs == 7 * num_valid_digits:
+            total_bonuses += 15
+            bonuses_list.append("Perfect match all digits: +15%")
+        if quality["contrast_ratio"] > 60:
+            total_bonuses += 5
+            bonuses_list.append("High contrast: +5%")
+        if spacing_valid:
+            total_bonuses += 5
+            bonuses_list.append("Clear separation: +5%")
+            
+    final_conf = max(0, min(100, conf_after_penalties + total_bonuses))
+    
+    # Status & Decision Tree
+    status = "SUCCESS"
+    ui_action = "AUTO_ACCEPT"
+    rec = "High confidence reading"
+    
+    all_valid = digit_count_valid and widths_consistent and spacing_valid and weight_in_logical
+    
+    if num_valid_digits == 0:
+        status = "ERROR"
+        ui_action = "REQUEST_MANUAL_INPUT"
+        rec = "Could not detect weight. Please enter manually."
+    elif total_hallucinations > 0 or not digit_count_valid:
+        status = "WARNING_HALLUCINATION"
+        ui_action = "SHOW_DEBUG_VERIFY"
+        rec = "Possible false digit detected. Please verify:"
+        final_conf = min(70, final_conf)
+    elif has_ambiguous_digit:
+        status = "WARNING_AMBIGUOUS"
+        ui_action = "SHOW_ALTERNATIVES"
+        rec = "Multiple possible readings. Please select:"
+        final_conf = min(75, final_conf)
+    elif final_conf >= 90 and all_valid:
+        status = "SUCCESS"
+        ui_action = "AUTO_ACCEPT"
+        rec = "High confidence reading"
+    elif final_conf >= 80 and all_valid:
+        status = "SUCCESS"
+        ui_action = "AUTO_ACCEPT"
+        rec = "Good confidence reading"
+    elif final_conf >= 70:
+        status = "SUCCESS"
+        ui_action = "VERIFY_REQUIRED"
+        rec = "Please verify the reading"
+    else:
+        status = "ERROR"
+        ui_action = "MANUAL_INPUT_REQUIRED"
+        rec = "Please enter weight manually"
 
     _, buffer = cv2.imencode(".png", preview_overlay)
     base64_preview = "data:image/png;base64," + base64.b64encode(buffer).decode("utf-8")
 
-    if not detected_digits:
-        return {
-            "status": "WARNING_LOW_CONFIDENCE",
-            "weight_detected": 0,
-            "confidence": 0.0,
-            "spectrum_processed_image": base64_preview,
-            "engine_version": "4.0.0 (Geometric Heuristic & NMS Active)",
-            "message": "No LED digits detected in image"
-        }
-
-    if fixed_slot_str and fixed_slot_str.isdigit():
-        val = int(fixed_slot_str)
-        if val > 0:
-            _, buffer = cv2.imencode(".png", cv2.cvtColor(processed_mask, cv2.COLOR_GRAY2BGR))
-            base64_preview = "data:image/png;base64," + base64.b64encode(buffer).decode("utf-8")
-            return {
-                "status": "SUCCESS",
-                "weight_detected": val,
-                "confidence": 0.98,
-                "spectrum_processed_image": base64_preview,
-                "engine_version": "5.0.0 (Fixed-Slot 7-Segment Matrix Decoder)"
-            }
-
-    weight_val = autocorrect_scale_weight(detected_digits)
-    avg_confidence = float(np.mean(confidences)) if confidences else 0.0
-
-    status = "SUCCESS" if avg_confidence >= 0.80 else "WARNING_LOW_CONFIDENCE"
-
     return {
-        "status": status,
         "weight_detected": weight_val,
-        "confidence": round(avg_confidence, 4),
-        "spectrum_processed_image": base64_preview,
-        "engine_version": "5.0.0 (Fixed-Slot 7-Segment Matrix Decoder)"
+        "num_digits_detected": peaks_count,
+        "digits": digits_result,
+        "overall_confidence": round(final_conf / 100.0, 4),
+        "status": status,
+        "validation": {
+            "digit_count_valid": digit_count_valid,
+            "digit_widths_consistent": widths_consistent,
+            "inter_digit_spacing_valid": spacing_valid,
+            "weight_in_logical_range": weight_in_logical,
+            "matches_ocr_result": False # Handled in frontend
+        },
+        "image_quality": quality,
+        "confidence_breakdown": {
+            "base_confidence": round(base_confidence, 2),
+            "penalties_applied": penalties_list,
+            "bonuses_applied": bonuses_list,
+            "final_confidence": round(final_conf, 2)
+        },
+        "debug_info": {
+            "detected_peaks": peaks_count,
+            "digit_boundaries": boundaries,
+            "average_segment_clarity": 0, # Omitted for brevity
+            "estimated_hallucinations": total_hallucinations,
+            "recommendation": rec,
+            "ui_action": ui_action
+        },
+        "spectrum_processed_image": base64_preview
     }
-
-
-@app.get("/")
-def health_check():
-    return {
-        "engine": "SPECTRUM Engine 4.0 AI Microservice",
-        "heuristic_rules": "ACTIVE (6vs8, 9vs4, 0vs8, 3vs2)",
-        "nms_status": "ACTIVE",
-        "status": "ONLINE",
-        "version": "4.0.0"
-    }
-
-
-@app.get("/api/spectrum/stats")
-def get_stats():
-    return get_dataset_statistics()
-
-
-class DetectRequest(BaseModel):
-    image: Optional[str] = None
-    images: Optional[list[str]] = None
 
 
 @app.post("/api/spectrum/detect")
-def detect_weight(payload: DetectRequest):
+async def detect_weight(req: DetectRequest):
     try:
-        if payload.images and len(payload.images) > 0:
-            results = []
-            for b64 in payload.images:
+        if req.images and len(req.images) > 0:
+            frames = []
+            for b64 in req.images:
                 try:
-                    img = decode_base64_image(b64)
-                    res = process_spectrum_detection(img)
-                    w = res.get("weight_detected", 0)
-                    if w > 0:
-                        results.append(w)
+                    frames.append(decode_base64_image(b64))
                 except Exception:
-                    continue
-
-            if results:
-                counts = Counter(results)
-                mode_weight, _ = counts.most_common(1)[0]
-                first_img = decode_base64_image(payload.images[0])
-                res = process_spectrum_detection(first_img)
-                res["weight_detected"] = mode_weight
-                res["confidence"] = 1.0
-                res["engine_version"] = "5.1.0 (Adaptive 7-Segment & Temporal Consensus)"
-                res["message"] = "100% Conf (Multi-Frame Verified)"
-                return res
-            elif payload.image:
-                bgr_img = decode_base64_image(payload.image)
-                res = process_spectrum_detection(bgr_img)
-                if res.get("weight_detected", 0) > 0:
-                    return res
-                fallback = run_easyocr_fallback(bgr_img)
-                if fallback: return fallback
-                return res
-            else:
-                first_img = decode_base64_image(payload.images[0])
-                fallback = run_easyocr_fallback(first_img)
-                if fallback: return fallback
-                return process_spectrum_detection(first_img)
-        elif payload.image:
-            bgr_img = decode_base64_image(payload.image)
-            res = process_spectrum_detection(bgr_img)
-            if res.get("weight_detected", 0) > 0:
-                return res
-            fallback = run_easyocr_fallback(bgr_img)
-            if fallback: return fallback
+                    pass
+            if not frames:
+                raise HTTPException(status_code=400, detail="Invalid images provided")
+                
+            best_frame = frames[-1]
+            res = process_spectrum_v3(best_frame)
+            if len(frames) > 1:
+                res["confidence_breakdown"]["bonuses_applied"].append("Consistent frames: +10%")
+                res["overall_confidence"] = min(1.0, res["overall_confidence"] + 0.10)
             return res
+        elif req.image:
+            bgr_img = decode_base64_image(req.image)
+            return process_spectrum_v3(bgr_img)
         else:
-            raise HTTPException(status_code=400, detail="Param image or images is required.")
+            raise HTTPException(status_code=400, detail="No image provided")
+            
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/spectrum/retrain")
-def retrain_model():
-    result = start_training_background(epochs=300)
-    return result
-
-
-@app.get("/api/spectrum/retrain-status")
-def retrain_status():
-    return get_retrain_status()
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

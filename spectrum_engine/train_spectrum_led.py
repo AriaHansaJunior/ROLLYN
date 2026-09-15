@@ -176,6 +176,22 @@ def _split_display_into_digits(bgr_img: np.ndarray, display_bbox: tuple, n_digit
 
 
 def _extract_digit_bboxes(bgr_img: np.ndarray, n_digits: int = 3) -> list:
+    try:
+        from spectrum_engine.app import preprocess_multi_mode_display, segment_display_digits
+    except ImportError:
+        from app import preprocess_multi_mode_display, segment_display_digits
+
+    mask, _ = preprocess_multi_mode_display(bgr_img, relaxed=False)
+    boxes = segment_display_digits(mask)
+    if len(boxes) != n_digits:
+        mask_rel, _ = preprocess_multi_mode_display(bgr_img, relaxed=True)
+        relaxed_boxes = segment_display_digits(mask_rel)
+        if len(relaxed_boxes) == n_digits:
+            boxes = relaxed_boxes
+
+    if len(boxes) == n_digits:
+        return boxes
+
     display_bbox = _find_led_display_region(bgr_img)
     if display_bbox is None:
         return []
@@ -312,13 +328,33 @@ def phase_train_mlp(epochs_approx: int = 300) -> dict:
             gray = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
             if gray is None or gray.size == 0:
                 continue
-            try:
-                feat = _compute_digit_features(gray)
-                X.append(feat)
-                y.append(digit_class)
-                class_counts[digit_class] += 1
-            except Exception:
-                continue
+
+            variants = [gray]
+            # Augmentation 1: slight rotation ±3 deg
+            h_g, w_g = gray.shape[:2]
+            center = (w_g // 2, h_g // 2)
+            M_pos = cv2.getRotationMatrix2D(center, 3, 1.0)
+            M_neg = cv2.getRotationMatrix2D(center, -3, 1.0)
+            variants.append(cv2.warpAffine(gray, M_pos, (w_g, h_g), borderMode=cv2.BORDER_REPLICATE))
+            variants.append(cv2.warpAffine(gray, M_neg, (w_g, h_g), borderMode=cv2.BORDER_REPLICATE))
+
+            # Augmentation 2: intensity variations
+            variants.append(np.clip(gray.astype(np.float32) * 1.15, 0, 255).astype(np.uint8))
+            variants.append(np.clip(gray.astype(np.float32) * 0.85, 0, 255).astype(np.uint8))
+
+            # Augmentation 3: morphological slight stroke variation
+            k = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+            variants.append(cv2.dilate(gray, k, iterations=1))
+            variants.append(cv2.erode(gray, k, iterations=1))
+
+            for var_img in variants:
+                try:
+                    feat = _compute_digit_features(var_img)
+                    X.append(feat)
+                    y.append(digit_class)
+                    class_counts[digit_class] += 1
+                except Exception:
+                    continue
 
     total_crops = len(X)
     if total_crops < 5:

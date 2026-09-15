@@ -17,7 +17,7 @@ export default function SlotStatus() {
   useEffect(() => {
     const interval = setInterval(() => {
       router.reload({ only: ['locations'] })
-    }, 3000);
+    }, 30000); // Poll every 30s instead of 3s to avoid overloading server
     return () => clearInterval(interval);
   }, []);
 
