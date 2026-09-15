@@ -9,6 +9,7 @@ const SEGMENT_PATTERNS: SegmentPattern[] = [
   { digit: '2', segments: [true,  true,  false, true,  true,  false, true]  },
   { digit: '3', segments: [true,  true,  true,  true,  false, false, true]  },
   { digit: '4', segments: [false, true,  true,  false, false, true,  true]  },
+  { digit: '4', segments: [false, true,  true,  false, false, false, true]  },
   { digit: '5', segments: [true,  false, true,  true,  false, true,  true]  },
   { digit: '6', segments: [true,  false, true,  true,  true,  true,  true]  },
   { digit: '6', segments: [false, false, true,  true,  true,  true,  true]  },
@@ -143,7 +144,7 @@ function findDigitBounds(imageData: ImageData): DigitBounds[] {
     const boxHeight = g.maxY - g.minY + 1;
     const aspectRatio = boxHeight / boxWidth;
 
-    if (boxHeight >= height * 0.20 && aspectRatio >= 0.5 && aspectRatio <= 4.5) {
+    if (boxHeight >= height * 0.20 && aspectRatio >= 0.45 && aspectRatio <= 8.0) {
       bounds.push({
         x: g.minX,
         y: g.minY,

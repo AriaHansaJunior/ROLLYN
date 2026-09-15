@@ -239,7 +239,7 @@ export default function Jop() {
     axios.post('/jop', payload).then(() => {
       SystemUI.toast({ message: 'JOP created successfully.', type: 'success' })
       setShowModal(false)
-      window.location.reload()
+      router.reload() // Use Inertia reload instead of full browser reload
     }).catch((err) => {
       if (err.response?.status === 422) {
         const apiErrors = err.response.data?.errors || err.response.data?.data || {}

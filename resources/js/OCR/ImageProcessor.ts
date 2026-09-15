@@ -434,7 +434,7 @@ function extractAndStraightenDigits(srcCanvas: HTMLCanvasElement, targetW: numbe
 export async function preprocessImage(
   video: HTMLVideoElement,
   roi: ROI = DEFAULT_ROI,
-): Promise<{ variants: PreprocessedVariant[]; rawCanvas: HTMLCanvasElement; expectedDigitCount?: number }> {
+): Promise<{ variants: PreprocessedVariant[]; rawCanvas: HTMLCanvasElement; colorCanvas?: HTMLCanvasElement; expectedDigitCount?: number }> {
 
   const [fullCanvas, fullCtx] = makeCanvas(video.videoWidth || 640, video.videoHeight || 480);
   fullCtx.drawImage(video, 0, 0);
@@ -512,7 +512,7 @@ export async function preprocessImage(
       digital: true,
     });
     
-    return { variants, rawCanvas: invertedBase, expectedDigitCount };
+    return { variants, rawCanvas: invertedBase, colorCanvas: baseCanvas, expectedDigitCount };
   }
 
   const rawCanvas = cloneCanvas(baseCanvas);
@@ -805,5 +805,5 @@ export async function preprocessImage(
   varO = morphClean(varO);
   variants.push({ label: 'O: LED morph-cleaned (2px)', dataUrl: padCanvas(varO).toDataURL('image/png'), digital: true, canvas: padCanvas(varO) });
 
-  return { variants, rawCanvas };
+  return { variants, rawCanvas, colorCanvas: baseCanvas };
 }

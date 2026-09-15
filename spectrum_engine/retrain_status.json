@@ -1,0 +1,7 @@
+{
+  "status": "RUNNING",
+  "phase": "SAVING_MODEL",
+  "progress_pct": 92.0,
+  "message": "Menyimpan model best_mlp.pkl & scaler...",
+  "timestamp": 1789374387
+}

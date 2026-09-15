@@ -186,15 +186,17 @@ export default function SpectrumWeightDetectionEngine({
 
         try {
             const captureBase64 = async () => {
-                const { rawCanvas } = await preprocessImage(video, roi);
-                return rawCanvas.toDataURL("image/jpeg", 0.9);
+                const { colorCanvas, rawCanvas } = await preprocessImage(video, roi);
+                const target = colorCanvas || rawCanvas;
+                return target.toDataURL("image/jpeg", 0.95);
             };
 
             const frames: string[] = [];
-            const { variants, rawCanvas, expectedDigitCount } = await preprocessImage(video, roi);
+            const { variants, rawCanvas, colorCanvas, expectedDigitCount } = await preprocessImage(video, roi);
             latestVariantsRef.current = variants;
 
-            const frameBase64 = rawCanvas.toDataURL("image/jpeg", 0.9);
+            const spectrumCanvas = colorCanvas || rawCanvas;
+            const frameBase64 = spectrumCanvas.toDataURL("image/jpeg", 0.95);
             currentFrameBase64Ref.current = frameBase64;
             frames.push(frameBase64);
 
