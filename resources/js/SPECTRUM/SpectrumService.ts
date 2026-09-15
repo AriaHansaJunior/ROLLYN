@@ -1,10 +1,68 @@
 import { getCsrfToken } from "../Utils/csrf";
 
 export interface SpectrumResult {
-    status: "SUCCESS" | "WARNING_LOW_CONFIDENCE";
+    status: "SUCCESS" | "WARNING_AMBIGUOUS" | "WARNING_HALLUCINATION" | "ERROR" | "WARNING_LOW_CONFIDENCE" | "WARNING_ANOMALY_DETECTED";
     weight_detected: number;
-    confidence: number;
+    num_digits_detected: number;
+    overall_confidence: number;
     spectrum_processed_image: string;
+    
+    digits?: Array<{
+        position: number;
+        digit: number | null;
+        digit_confidence: number;
+        is_hallucinated: boolean;
+        hallucination_reason?: string;
+        possible_alternatives?: Array<{digit: number, score: number}>;
+        anomaly_flags?: string[];
+        pattern_match_score?: number;
+        pattern_match_distance?: number;
+        segments: Record<string, {
+            value: boolean;
+            brightness: number;
+            status: "STRONG" | "WEAK" | "AMBIGUOUS";
+            confidence?: number;
+        }>;
+        breakdown?: any;
+    }>;
+    
+    validation?: {
+        digit_count_valid: boolean;
+        digit_widths_consistent: boolean;
+        inter_digit_spacing_valid: boolean;
+        weight_in_logical_range: boolean;
+        matches_ocr_result: boolean;
+    };
+    
+    image_quality?: {
+        contrast_ratio: number;
+        sharpness_score: number;
+        lighting_quality: string;
+        estimated_angle_degrees?: number;
+        detected_angle_degrees?: number;
+        led_color_purity?: number;
+        lighting_uniformity?: number;
+    };
+    
+    confidence_breakdown?: {
+        base_confidence: number;
+        bonuses_applied: string[];
+        penalties_applied: string[];
+        final_confidence: number;
+    };
+    
+    debug_info?: {
+        detected_peaks?: number;
+        digit_boundaries?: Array<{start_px: number, end_px: number, width: number}>;
+        total_digits_detected?: number;
+        average_segment_clarity: number;
+        lighting_quality?: string;
+        estimated_hallucinations?: number;
+        detected_anomalies?: string[];
+        recommendation: string;
+        ui_action?: "AUTO_ACCEPT" | "VERIFY_MANUAL" | "RETRY_CAMERA" | "MANUAL_INPUT" | "SHOW_DEBUG_VERIFY" | "SHOW_ALTERNATIVES" | "VERIFY_REQUIRED" | "MANUAL_INPUT_REQUIRED" | "REQUEST_MANUAL_INPUT";
+    };
+    
     engine_version?: string;
     message?: string;
 }
@@ -46,9 +104,10 @@ export async function detectSpectrumWeight(base64Image: string | string[]): Prom
         return {
             status: "WARNING_LOW_CONFIDENCE",
             weight_detected: 0,
-            confidence: 0,
+            num_digits_detected: 0,
+            overall_confidence: 0,
             spectrum_processed_image: Array.isArray(base64Image) ? base64Image[0] : base64Image,
-            engine_version: "5.1.0 (Adaptive 7-Segment & Temporal Consensus)",
+            engine_version: "6.0.0 (Anti-Hallucination Mode)",
             message: "SPECTRUM Engine microservice unreachable",
         };
     }

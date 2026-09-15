@@ -377,8 +377,7 @@ export default function SpectrumWeightDetectionEngine({
 
         onWeightConfirmed(numericWeight, display, effectiveSource);
     }
-
-    const isSpectrumLowConf = spectrumResult && (spectrumResult.confidence < 0.80 || spectrumResult.status === "WARNING_LOW_CONFIDENCE");
+    const isSpectrumLowConf = spectrumResult && (spectrumResult.overall_confidence < 0.80 || spectrumResult.status === "WARNING_LOW_CONFIDENCE");
 
     return (
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
@@ -620,8 +619,8 @@ export default function SpectrumWeightDetectionEngine({
                                             border: isSpectrumLowConf ? "1px solid #fde047" : "none",
                                         }}>
                                             {isSpectrumLowConf
-                                                ? `LOW CONF (<80%) — ${(spectrumResult.confidence * 100).toFixed(0)}%`
-                                                : `${(spectrumResult.confidence * 100).toFixed(0)}% Conf`}
+                                                ? `LOW CONF (<80%) — ${(spectrumResult.overall_confidence * 100).toFixed(0)}%`
+                                                : `${(spectrumResult.overall_confidence * 100).toFixed(0)}% Conf`}
                                         </span>
                                     )}
                                 </div>
@@ -652,6 +651,21 @@ export default function SpectrumWeightDetectionEngine({
                                                 style={{ width: "100%", height: 50, objectFit: "contain", marginTop: 4, background: "#000", borderRadius: 4 }}
                                             />
                                         </div>
+
+                                        {(spectrumResult.status === "WARNING_HALLUCINATION" || spectrumResult.status === "WARNING_AMBIGUOUS" || spectrumResult.status === "WARNING_ANOMALY_DETECTED") && (
+                                            <div style={{ marginTop: 8, padding: 8, borderRadius: 4, background: spectrumResult.status === "WARNING_HALLUCINATION" ? "#fef2f2" : "#fffbeb", border: spectrumResult.status === "WARNING_HALLUCINATION" ? "1px solid #fecaca" : "1px solid #fde68a", fontSize: 10, color: spectrumResult.status === "WARNING_HALLUCINATION" ? "#991b1b" : "#92400e" }}>
+                                                <strong>{spectrumResult.status === "WARNING_HALLUCINATION" ? "⚠️ Hallucination Warning" : "⚠️ Ambiguous Reading"}</strong>
+                                                <div style={{ marginTop: 4 }}>{spectrumResult.debug_info?.recommendation}</div>
+                                            </div>
+                                        )}
+
+                                        {spectrumResult.debug_info && (
+                                            <div style={{ marginTop: 8, fontSize: 9, color: "#94a3b8", display: "flex", justifyContent: "space-between", gap: "4px", flexWrap: "wrap" }}>
+                                                <span>Peaks: {spectrumResult.debug_info.detected_peaks ?? "-"}</span>
+                                                <span>Action: {spectrumResult.debug_info.ui_action}</span>
+                                                {spectrumResult.debug_info.estimated_hallucinations ? <span>False Digits: {spectrumResult.debug_info.estimated_hallucinations}</span> : null}
+                                            </div>
+                                        )}
                                     </>
                                 ) : (
                                     <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "16px 0" }}>
