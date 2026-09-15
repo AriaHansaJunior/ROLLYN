@@ -257,7 +257,7 @@ export default function SpectrumWeightDetectionEngine({
                 "result" in legacyOutcome &&
                 legacyOutcome.result.weight > 0;
 
-            if (hasSpectrum && spectrumData.confidence >= 0.8) {
+            if (hasSpectrum && spectrumData.overall_confidence >= 0.8) {
                 setSelectedEngine("spectrum");
                 setEditedWeight(String(spectrumData.weight_detected));
                 if (
