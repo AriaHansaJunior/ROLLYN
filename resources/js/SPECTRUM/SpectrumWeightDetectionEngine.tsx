@@ -62,18 +62,13 @@ export default function SpectrumWeightDetectionEngine({
     const streamRef = useRef<MediaStream | null>(null);
     const currentFrameBase64Ref = useRef<string>("");
 
-    const [engineState, setEngineState] =
-        useState<EngineState>("permission_modal");
+    const [engineState, setEngineState] = useState<EngineState>("permission_modal");
 
     const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
     const [ocrError, setOcrError] = useState<OcrError | null>(null);
-    const [spectrumResult, setSpectrumResult] = useState<SpectrumResult | null>(
-        null,
-    );
+    const [spectrumResult, setSpectrumResult] = useState<SpectrumResult | null>(null);
 
-    const [selectedEngine, setSelectedEngine] = useState<"spectrum" | "ocr">(
-        "spectrum",
-    );
+    const [selectedEngine, setSelectedEngine] = useState<"spectrum" | "ocr">("spectrum");
 
     const [editedWeight, setEditedWeight] = useState<string>("");
     const [isManuallyEdited, setIsManuallyEdited] = useState(false);
@@ -111,7 +106,7 @@ export default function SpectrumWeightDetectionEngine({
             setEngineState("camera_active");
             try {
                 localStorage.setItem("rollyn_camera_permission", "granted");
-            } catch (e) {}
+            } catch (e) { }
             SystemUI.toast({
                 message: "Camera active. Point at display to capture weight.",
                 type: "info",
@@ -122,7 +117,7 @@ export default function SpectrumWeightDetectionEngine({
             setEngineState("camera_denied");
             try {
                 localStorage.removeItem("rollyn_camera_permission");
-            } catch (e) {}
+            } catch (e) { }
         }
     }, []);
 
@@ -134,9 +129,7 @@ export default function SpectrumWeightDetectionEngine({
 
             try {
                 if (navigator.permissions && navigator.permissions.query) {
-                    const status = await navigator.permissions.query({
-                        name: "camera" as PermissionName,
-                    });
+                    const status = await navigator.permissions.query({ name: "camera" as PermissionName });
                     if (status.state === "granted") {
                         alreadyGranted = true;
                     } else if (status.state === "denied") {
@@ -144,17 +137,14 @@ export default function SpectrumWeightDetectionEngine({
                         return;
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             if (!alreadyGranted) {
                 try {
-                    if (
-                        localStorage.getItem("rollyn_camera_permission") ===
-                        "granted"
-                    ) {
+                    if (localStorage.getItem("rollyn_camera_permission") === "granted") {
                         alreadyGranted = true;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
 
             if (alreadyGranted) {
@@ -196,17 +186,13 @@ export default function SpectrumWeightDetectionEngine({
 
         try {
             const captureBase64 = async () => {
-                const { colorCanvas, rawCanvas } = await preprocessImage(
-                    video,
-                    roi,
-                );
+                const { colorCanvas, rawCanvas } = await preprocessImage(video, roi);
                 const target = colorCanvas || rawCanvas;
                 return target.toDataURL("image/jpeg", 0.95);
             };
 
             const frames: string[] = [];
-            const { variants, rawCanvas, colorCanvas, expectedDigitCount } =
-                await preprocessImage(video, roi);
+            const { variants, rawCanvas, colorCanvas, expectedDigitCount } = await preprocessImage(video, roi);
             latestVariantsRef.current = variants;
 
             const spectrumCanvas = colorCanvas || rawCanvas;
@@ -227,12 +213,10 @@ export default function SpectrumWeightDetectionEngine({
                     console.warn("[SPECTRUM] Detection failed:", err);
                     return null;
                 }),
-                recogniseWeight(variants, quality, expectedDigitCount).catch(
-                    (err) => {
-                        console.warn("[Legacy OCR] Recognition failed:", err);
-                        return null;
-                    },
-                ),
+                recogniseWeight(variants, quality, expectedDigitCount).catch((err) => {
+                    console.warn("[Legacy OCR] Recognition failed:", err);
+                    return null;
+                }),
             ]);
 
             setSpectrumResult(spectrumData);
@@ -250,20 +234,13 @@ export default function SpectrumWeightDetectionEngine({
                 setOcrError(null);
             }
 
-            const hasSpectrum =
-                spectrumData && spectrumData.weight_detected > 0;
-            const hasLegacy =
-                legacyOutcome &&
-                "result" in legacyOutcome &&
-                legacyOutcome.result.weight > 0;
+            const hasSpectrum = spectrumData && spectrumData.weight_detected > 0;
+            const hasLegacy = legacyOutcome && "result" in legacyOutcome && legacyOutcome.result.weight > 0;
 
-            if (hasSpectrum && spectrumData.overall_confidence >= 0.8) {
+            if (hasSpectrum && spectrumData.confidence >= 0.80) {
                 setSelectedEngine("spectrum");
                 setEditedWeight(String(spectrumData.weight_detected));
-                if (
-                    hasLegacy &&
-                    legacyOutcome.result.weight === spectrumData.weight_detected
-                ) {
+                if (hasLegacy && legacyOutcome.result.weight === spectrumData.weight_detected) {
                     SystemUI.toast({
                         message: `Dual Verification Match: ${spectrumData.weight_detected} kg!`,
                         type: "success",
@@ -285,22 +262,19 @@ export default function SpectrumWeightDetectionEngine({
                 setSelectedEngine("spectrum");
                 setEditedWeight(String(spectrumData.weight_detected));
                 SystemUI.toast({
-                    message:
-                        "SPECTRUM detected weight. Please verify detected reading.",
+                    message: "SPECTRUM detected weight. Please verify detected reading.",
                     type: "warning",
                 });
             } else if (hasLegacy) {
                 setSelectedEngine("ocr");
                 setEditedWeight(String(legacyOutcome.result.weight));
                 SystemUI.toast({
-                    message:
-                        "Legacy OCR candidate used. Please verify reading.",
+                    message: "Legacy OCR candidate used. Please verify reading.",
                     type: "warning",
                 });
             } else {
                 SystemUI.toast({
-                    message:
-                        "No weight detected. Please enter the weight manually.",
+                    message: "No weight detected. Please enter the weight manually.",
                     type: "error",
                 });
             }
@@ -310,8 +284,7 @@ export default function SpectrumWeightDetectionEngine({
         } catch (err) {
             console.error("[OCR] Error during recognition:", err);
             const errorTitle = "Processing Error";
-            const errorMessage =
-                "An unexpected error occurred while processing image.";
+            const errorMessage = "An unexpected error occurred while processing image.";
             setOcrError({ title: errorTitle, message: errorMessage });
             setEngineState("error");
             SystemUI.alert({ title: errorTitle, message: errorMessage });
@@ -321,11 +294,7 @@ export default function SpectrumWeightDetectionEngine({
     const handleEngineToggle = (choice: "spectrum" | "ocr") => {
         setSelectedEngine(choice);
         setIsManuallyEdited(false);
-        if (
-            choice === "spectrum" &&
-            spectrumResult &&
-            spectrumResult.weight_detected > 0
-        ) {
+        if (choice === "spectrum" && spectrumResult && spectrumResult.weight_detected > 0) {
             setEditedWeight(String(spectrumResult.weight_detected));
         } else if (choice === "ocr" && ocrResult) {
             setEditedWeight(String(ocrResult.weight));
@@ -334,25 +303,18 @@ export default function SpectrumWeightDetectionEngine({
 
     const handleAutoTeach = async () => {
         setIsRetraining(true);
-        SystemUI.toast({
-            message: "Updating scale reading system…",
-            type: "info",
-        });
+        SystemUI.toast({ message: "Updating scale reading system…", type: "info" });
         try {
             const res = await retrainSpectrumEngine();
             if (res.status === "SUCCESS") {
                 SystemUI.toast({
-                    message:
-                        res.message ||
-                        "Scale reading system updated successfully!",
+                    message: res.message || "Scale reading system updated successfully!",
                     type: "success",
                     duration: 5000,
                 });
             } else {
                 SystemUI.toast({
-                    message:
-                        res.message ||
-                        "No new dataset found in sample storage.",
+                    message: res.message || "No new dataset found in sample storage.",
                     type: "warning",
                     duration: 5000,
                 });
@@ -383,39 +345,26 @@ export default function SpectrumWeightDetectionEngine({
 
         const logRes = await logSpectrumTest({
             image_base64: currentFrameBase64Ref.current,
-            spectrum_processed_image: spectrumResult
-                ? spectrumResult.spectrum_processed_image
-                : undefined,
+            spectrum_processed_image: spectrumResult ? spectrumResult.spectrum_processed_image : undefined,
             ocr_legacy_result: ocrResult ? String(ocrResult.weight) : undefined,
             ocr_legacy_confidence: ocrResult ? ocrResult.confidence : undefined,
-            spectrum_result: spectrumResult
-                ? String(spectrumResult.weight_detected)
-                : undefined,
-            spectrum_confidence: spectrumResult
-                ? spectrumResult.confidence * 100
-                : undefined,
+            spectrum_result: spectrumResult ? String(spectrumResult.weight_detected) : undefined,
+            spectrum_confidence: spectrumResult ? (spectrumResult.confidence * 100) : undefined,
             actual_manual_input: numericWeight,
             selected_source: effectiveSource,
         });
 
-        const toastMsg =
-            logRes.message ||
-            `Thank you! Photo & Weight Correction [${numericWeight} kg] saved to sample data.`;
+        const toastMsg = logRes.message || `Thank you! Photo & Weight Correction [${numericWeight} kg] saved to sample data.`;
         SystemUI.toast({
             message: toastMsg,
             type: "success",
             duration: 5000,
         });
 
-        const digitalVariant = latestVariantsRef.current.find(
-            (v) => v.digital && v.canvas,
-        );
+        const digitalVariant = latestVariantsRef.current.find((v) => v.digital && v.canvas);
         if (digitalVariant && digitalVariant.canvas) {
             try {
-                calibrateScaleFont(
-                    digitalVariant.canvas,
-                    String(numericWeight),
-                );
+                calibrateScaleFont(digitalVariant.canvas, String(numericWeight));
             } catch (err) {
                 console.warn("[OCR] Calibration skipped:", err);
             }
@@ -428,22 +377,13 @@ export default function SpectrumWeightDetectionEngine({
 
         onWeightConfirmed(numericWeight, display, effectiveSource);
     }
-    const isSpectrumLowConf =
-        spectrumResult &&
-        (spectrumResult.overall_confidence < 0.8 ||
-            spectrumResult.status === "WARNING_LOW_CONFIDENCE");
+
+    const isSpectrumLowConf = spectrumResult && (spectrumResult.confidence < 0.80 || spectrumResult.status === "WARNING_LOW_CONFIDENCE");
 
     return (
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             <div className="card p-4 sm:p-5">
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 12,
-                    }}
-                >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <h3 className="section-title" style={{ margin: 0 }}>
                         Live Camera Preview
                     </h3>
@@ -474,9 +414,9 @@ export default function SpectrumWeightDetectionEngine({
                             objectFit: "cover",
                             display:
                                 engineState === "camera_active" ||
-                                engineState === "processing" ||
-                                engineState === "success" ||
-                                engineState === "error"
+                                    engineState === "processing" ||
+                                    engineState === "success" ||
+                                    engineState === "error"
                                     ? "block"
                                     : "none",
                         }}
@@ -537,76 +477,29 @@ export default function SpectrumWeightDetectionEngine({
                         </div>
                     )}
 
-                    {(engineState === "permission_modal" ||
-                        engineState === "requesting") && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                gap: 10,
-                            }}
-                        >
+                    {(engineState === "permission_modal" || engineState === "requesting") && (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                             {engineState === "requesting" ? (
-                                <Loader
-                                    size={32}
-                                    style={{
-                                        color: "rgba(255,255,255,0.5)",
-                                        animation: "spin 1s linear infinite",
-                                    }}
-                                />
+                                <Loader size={32} style={{ color: "rgba(255,255,255,0.5)", animation: "spin 1s linear infinite" }} />
                             ) : (
-                                <Camera
-                                    size={40}
-                                    style={{ color: "rgba(255,255,255,0.3)" }}
-                                />
+                                <Camera size={40} style={{ color: "rgba(255,255,255,0.3)" }} />
                             )}
-                            <span
-                                style={{
-                                    color: "rgba(255,255,255,0.5)",
-                                    fontSize: 13,
-                                }}
-                            >
-                                {engineState === "requesting"
-                                    ? "Requesting camera access…"
-                                    : "Camera permission pending"}
+                            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>
+                                {engineState === "requesting" ? "Requesting camera access…" : "Camera permission pending"}
                             </span>
                         </div>
                     )}
 
                     {engineState === "camera_denied" && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                gap: 10,
-                                padding: 20,
-                                textAlign: "center",
-                            }}
-                        >
-                            <AlertCircle
-                                size={36}
-                                style={{ color: "#e74c3c" }}
-                            />
-                            <span
-                                style={{
-                                    color: "#e74c3c",
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                }}
-                            >
-                                Camera access denied
-                            </span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 20, textAlign: "center" }}>
+                            <AlertCircle size={36} style={{ color: "#e74c3c" }} />
+                            <span style={{ color: "#e74c3c", fontSize: 13, fontWeight: 600 }}>Camera access denied</span>
                         </div>
                     )}
                 </div>
 
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    {(engineState === "camera_active" ||
-                        engineState === "processing" ||
-                        engineState === "success" ||
-                        engineState === "error") && (
+                    {(engineState === "camera_active" || engineState === "processing" || engineState === "success" || engineState === "error") && (
                         <button
                             id="ocr-take-photo-btn"
                             className="btn btn-primary"
@@ -647,540 +540,176 @@ export default function SpectrumWeightDetectionEngine({
             </div>
 
             <div className="card p-4 sm:p-5">
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 12,
-                    }}
-                >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <h3 className="section-title" style={{ margin: 0 }}>
                         Scale Reading Result
                     </h3>
                 </div>
 
-                {(engineState === "permission_modal" ||
-                    engineState === "requesting" ||
-                    engineState === "camera_active" ||
-                    engineState === "camera_denied") && (
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            textAlign: "center",
-                            padding: "40px 20px",
-                            color: "#999",
-                            fontSize: 13,
-                        }}
-                    >
-                        <Camera
-                            size={36}
-                            style={{ color: "#ddd", marginBottom: 12 }}
-                        />
+                {(engineState === "permission_modal" || engineState === "requesting" || engineState === "camera_active" || engineState === "camera_denied") && (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "40px 20px", color: "#999", fontSize: 13 }}>
+                        <Camera size={36} style={{ color: "#ddd", marginBottom: 12 }} />
                         <p style={{ margin: 0 }}>
-                            Point camera at scale LED display, then click{" "}
-                            <strong>Take Photo</strong>.
+                            Point camera at scale LED display, then click <strong>Take Photo</strong>.
                         </p>
                     </div>
                 )}
 
                 {engineState === "processing" && (
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            height: 160,
-                            gap: 10,
-                            color: "#777",
-                            fontSize: 13,
-                        }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 160, gap: 10, color: "#777", fontSize: 13 }}>
                         <Loader size={22} style={{ color: "#2563EB" }} />
                         Processing precision scale LED detection…
                     </div>
                 )}
 
                 {engineState === "success" && (
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 14,
-                        }}
-                    >
-                        <div
-                            style={{
-                                background: "#f8fafc",
-                                border: "1px solid #e2e8f0",
-                                borderRadius: 8,
-                                padding: 10,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.05em",
-                                    color: "#64748b",
-                                    marginBottom: 6,
-                                }}
-                            >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+                        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 10 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>
                                 Select Scale Weight Engine:
                             </div>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    gap: 10,
-                                    flexWrap: "wrap",
-                                }}
-                            >
-                                <label
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 6,
-                                        cursor: "pointer",
-                                        fontSize: 12,
-                                        fontWeight: 600,
-                                        color:
-                                            selectedEngine === "spectrum"
-                                                ? "#1e40af"
-                                                : "#475569",
-                                    }}
-                                >
+                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: selectedEngine === "spectrum" ? "#1e40af" : "#475569" }}>
                                     <input
                                         type="radio"
                                         name="engineChoice"
                                         checked={selectedEngine === "spectrum"}
-                                        onChange={() =>
-                                            handleEngineToggle("spectrum")
-                                        }
+                                        onChange={() => handleEngineToggle("spectrum")}
                                     />
-                                    <Zap
-                                        size={14}
-                                        style={{ color: "#2563EB" }}
-                                    />
-                                    SPECTRUM
+                                    <Zap size={14} style={{ color: "#2563EB" }} />
+                                    SPECTRUM 4.0
                                 </label>
-                                <label
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 6,
-                                        cursor: "pointer",
-                                        fontSize: 12,
-                                        fontWeight: 600,
-                                        color:
-                                            selectedEngine === "ocr"
-                                                ? "#166534"
-                                                : "#475569",
-                                    }}
-                                >
+                                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: selectedEngine === "ocr" ? "#166534" : "#475569" }}>
                                     <input
                                         type="radio"
                                         name="engineChoice"
                                         checked={selectedEngine === "ocr"}
-                                        onChange={() =>
-                                            handleEngineToggle("ocr")
-                                        }
+                                        onChange={() => handleEngineToggle("ocr")}
                                     />
-                                    <Cpu
-                                        size={14}
-                                        style={{ color: "#16A34A" }}
-                                    />
+                                    <Cpu size={14} style={{ color: "#16A34A" }} />
                                     Legacy OCR (Tesseract)
                                 </label>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div
-                                style={{
-                                    padding: 12,
-                                    borderRadius: 8,
-                                    border:
-                                        selectedEngine === "spectrum"
-                                            ? isSpectrumLowConf
-                                                ? "2px solid #eab308"
-                                                : "2px solid #2563eb"
-                                            : "1px solid #cbd5e1",
-                                    background: isSpectrumLowConf
-                                        ? "#fefce8"
-                                        : selectedEngine === "spectrum"
-                                          ? "#eff6ff"
-                                          : "#fff",
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        marginBottom: 6,
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            fontSize: 11,
-                                            fontWeight: 700,
-                                            color: isSpectrumLowConf
-                                                ? "#854d0e"
-                                                : "#1e3a8a",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 4,
-                                        }}
-                                    >
-                                        <Zap
-                                            size={12}
-                                            style={{
-                                                color: isSpectrumLowConf
-                                                    ? "#ca8a04"
-                                                    : "#2563eb",
-                                            }}
-                                        />{" "}
-                                        SPECTRUM
+
+                            <div style={{
+                                padding: 12,
+                                borderRadius: 8,
+                                border: selectedEngine === "spectrum"
+                                    ? isSpectrumLowConf ? "2px solid #eab308" : "2px solid #2563eb"
+                                    : "1px solid #cbd5e1",
+                                background: isSpectrumLowConf
+                                    ? "#fefce8"
+                                    : selectedEngine === "spectrum" ? "#eff6ff" : "#fff",
+                            }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: isSpectrumLowConf ? "#854d0e" : "#1e3a8a", display: "flex", alignItems: "center", gap: 4 }}>
+                                        <Zap size={12} style={{ color: isSpectrumLowConf ? "#ca8a04" : "#2563eb" }} /> SPECTRUM 4.0
                                     </span>
                                     {spectrumResult && (
-                                        <span
-                                            style={{
-                                                fontSize: 10,
-                                                fontWeight: 700,
-                                                padding: "2px 6px",
-                                                borderRadius: 4,
-                                                background: isSpectrumLowConf
-                                                    ? "#fef08a"
-                                                    : "#dcfce7",
-                                                color: isSpectrumLowConf
-                                                    ? "#a16207"
-                                                    : "#166534",
-                                                border: isSpectrumLowConf
-                                                    ? "1px solid #fde047"
-                                                    : "none",
-                                            }}
-                                        >
+                                        <span style={{
+                                            fontSize: 10,
+                                            fontWeight: 700,
+                                            padding: "2px 6px",
+                                            borderRadius: 4,
+                                            background: isSpectrumLowConf ? "#fef08a" : "#dcfce7",
+                                            color: isSpectrumLowConf ? "#a16207" : "#166534",
+                                            border: isSpectrumLowConf ? "1px solid #fde047" : "none",
+                                        }}>
                                             {isSpectrumLowConf
-                                                ? `LOW CONF (<80%) — ${(spectrumResult.overall_confidence * 100).toFixed(0)}%`
-                                                : `${(spectrumResult.overall_confidence * 100).toFixed(0)}% Conf`}
+                                                ? `LOW CONF (<80%) — ${(spectrumResult.confidence * 100).toFixed(0)}%`
+                                                : `${(spectrumResult.confidence * 100).toFixed(0)}% Conf`}
                                         </span>
                                     )}
                                 </div>
 
                                 {spectrumResult ? (
                                     <>
-                                        <div
-                                            style={{
-                                                textAlign: "center",
-                                                padding: "8px 0",
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    fontSize: 32,
-                                                    fontWeight: 900,
-                                                    color: isSpectrumLowConf
-                                                        ? "#ca8a04"
-                                                        : "#1e40af",
-                                                    fontFamily:
-                                                        "JetBrains Mono, monospace",
-                                                    background:
-                                                        isSpectrumLowConf
-                                                            ? "#fef9c3"
-                                                            : "transparent",
-                                                    borderRadius: 4,
-                                                    display: "inline-block",
-                                                    padding: "0 8px",
-                                                }}
-                                            >
+                                        <div style={{ textAlign: "center", padding: "8px 0" }}>
+                                            <div style={{
+                                                fontSize: 32,
+                                                fontWeight: 900,
+                                                color: isSpectrumLowConf ? "#ca8a04" : "#1e40af",
+                                                fontFamily: "JetBrains Mono, monospace",
+                                                background: isSpectrumLowConf ? "#fef9c3" : "transparent",
+                                                borderRadius: 4,
+                                                display: "inline-block",
+                                                padding: "0 8px",
+                                            }}>
                                                 {spectrumResult.weight_detected}
                                             </div>
-                                            <div
-                                                style={{
-                                                    fontSize: 12,
-                                                    fontWeight: 600,
-                                                    color: "#64748b",
-                                                }}
-                                            >
-                                                kg
-                                            </div>
+                                            <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>kg</div>
                                         </div>
 
-                                        <div
-                                            style={{
-                                                fontSize: 10,
-                                                color: "#64748b",
-                                            }}
-                                        >
+                                        <div style={{ fontSize: 10, color: "#64748b" }}>
                                             <strong>Geometric 5x5 Mask:</strong>
                                             <img
-                                                src={
-                                                    spectrumResult.spectrum_processed_image
-                                                }
+                                                src={spectrumResult.spectrum_processed_image}
                                                 alt="SPECTRUM 4.0 Output"
-                                                style={{
-                                                    width: "100%",
-                                                    height: 50,
-                                                    objectFit: "contain",
-                                                    marginTop: 4,
-                                                    background: "#000",
-                                                    borderRadius: 4,
-                                                }}
+                                                style={{ width: "100%", height: 50, objectFit: "contain", marginTop: 4, background: "#000", borderRadius: 4 }}
                                             />
                                         </div>
-
-                                        {(spectrumResult.status ===
-                                            "WARNING_HALLUCINATION" ||
-                                            spectrumResult.status ===
-                                                "WARNING_AMBIGUOUS" ||
-                                            spectrumResult.status ===
-                                                "WARNING_ANOMALY_DETECTED") && (
-                                            <div
-                                                style={{
-                                                    marginTop: 8,
-                                                    padding: 8,
-                                                    borderRadius: 4,
-                                                    background:
-                                                        spectrumResult.status ===
-                                                        "WARNING_HALLUCINATION"
-                                                            ? "#fef2f2"
-                                                            : "#fffbeb",
-                                                    border:
-                                                        spectrumResult.status ===
-                                                        "WARNING_HALLUCINATION"
-                                                            ? "1px solid #fecaca"
-                                                            : "1px solid #fde68a",
-                                                    fontSize: 10,
-                                                    color:
-                                                        spectrumResult.status ===
-                                                        "WARNING_HALLUCINATION"
-                                                            ? "#991b1b"
-                                                            : "#92400e",
-                                                }}
-                                            >
-                                                <strong>
-                                                    {spectrumResult.status ===
-                                                    "WARNING_HALLUCINATION"
-                                                        ? "⚠️ Hallucination Warning"
-                                                        : "⚠️ Ambiguous Reading"}
-                                                </strong>
-                                                <div style={{ marginTop: 4 }}>
-                                                    {
-                                                        spectrumResult
-                                                            .debug_info
-                                                            ?.recommendation
-                                                    }
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {spectrumResult.debug_info && (
-                                            <div
-                                                style={{
-                                                    marginTop: 8,
-                                                    fontSize: 9,
-                                                    color: "#94a3b8",
-                                                    display: "flex",
-                                                    justifyContent:
-                                                        "space-between",
-                                                    gap: "4px",
-                                                    flexWrap: "wrap",
-                                                }}
-                                            >
-                                                <span>
-                                                    Peaks:{" "}
-                                                    {spectrumResult.debug_info
-                                                        .detected_peaks ?? "-"}
-                                                </span>
-                                                <span>
-                                                    Action:{" "}
-                                                    {
-                                                        spectrumResult
-                                                            .debug_info
-                                                            .ui_action
-                                                    }
-                                                </span>
-                                                {spectrumResult.debug_info
-                                                    .estimated_hallucinations ? (
-                                                    <span>
-                                                        False Digits:{" "}
-                                                        {
-                                                            spectrumResult
-                                                                .debug_info
-                                                                .estimated_hallucinations
-                                                        }
-                                                    </span>
-                                                ) : null}
-                                            </div>
-                                        )}
                                     </>
                                 ) : (
-                                    <div
-                                        style={{
-                                            fontSize: 11,
-                                            color: "#94a3b8",
-                                            textAlign: "center",
-                                            padding: "16px 0",
-                                        }}
-                                    >
-                                        Processing SPECTRUM…
+                                    <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "16px 0" }}>
+                                        Processing SPECTRUM 4.0…
                                     </div>
                                 )}
                             </div>
 
-                            <div
-                                style={{
-                                    padding: 12,
-                                    borderRadius: 8,
-                                    border:
-                                        selectedEngine === "ocr"
-                                            ? "2px solid #16a34a"
-                                            : "1px solid #cbd5e1",
-                                    background:
-                                        selectedEngine === "ocr"
-                                            ? "#f0fdf4"
-                                            : "#fff",
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        marginBottom: 6,
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            fontSize: 11,
-                                            fontWeight: 700,
-                                            color: "#14532d",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 4,
-                                        }}
-                                    >
-                                        <Cpu
-                                            size={12}
-                                            style={{ color: "#16a34a" }}
-                                        />{" "}
-                                        Legacy OCR
+                            <div style={{
+                                padding: 12,
+                                borderRadius: 8,
+                                border: selectedEngine === "ocr" ? "2px solid #16a34a" : "1px solid #cbd5e1",
+                                background: selectedEngine === "ocr" ? "#f0fdf4" : "#fff",
+                            }}>
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#14532d", display: "flex", alignItems: "center", gap: 4 }}>
+                                        <Cpu size={12} style={{ color: "#16a34a" }} /> Legacy OCR
                                     </span>
                                     {ocrResult && (
-                                        <span
-                                            style={{
-                                                fontSize: 10,
-                                                fontWeight: 700,
-                                                padding: "2px 6px",
-                                                borderRadius: 4,
-                                                background: "#dcfce7",
-                                                color: "#166534",
-                                            }}
-                                        >
-                                            {ocrResult.confidence.toFixed(0)}%
-                                            Conf
+                                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "#dcfce7", color: "#166534" }}>
+                                            {ocrResult.confidence.toFixed(0)}% Conf
                                         </span>
                                     )}
                                 </div>
 
                                 {ocrResult ? (
                                     <>
-                                        <div
-                                            style={{
-                                                textAlign: "center",
-                                                padding: "8px 0",
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    fontSize: 32,
-                                                    fontWeight: 900,
-                                                    color: "#15803d",
-                                                    fontFamily:
-                                                        "JetBrains Mono, monospace",
-                                                }}
-                                            >
+                                        <div style={{ textAlign: "center", padding: "8px 0" }}>
+                                            <div style={{ fontSize: 32, fontWeight: 900, color: "#15803d", fontFamily: "JetBrains Mono, monospace" }}>
                                                 {ocrResult.weightDisplay}
                                             </div>
-                                            <div
-                                                style={{
-                                                    fontSize: 12,
-                                                    fontWeight: 600,
-                                                    color: "#64748b",
-                                                }}
-                                            >
-                                                kg
-                                            </div>
+                                            <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>kg</div>
                                         </div>
 
-                                        <div
-                                            style={{
-                                                fontSize: 10,
-                                                color: "#64748b",
-                                            }}
-                                        >
+                                        <div style={{ fontSize: 10, color: "#64748b" }}>
                                             <strong>Tesseract Variant:</strong>
                                             <img
                                                 src={ocrResult.variantDataUrl}
                                                 alt="Legacy OCR Output"
-                                                style={{
-                                                    width: "100%",
-                                                    height: 50,
-                                                    objectFit: "contain",
-                                                    marginTop: 4,
-                                                    background: "#f1f5f9",
-                                                    borderRadius: 4,
-                                                }}
+                                                style={{ width: "100%", height: 50, objectFit: "contain", marginTop: 4, background: "#f1f5f9", borderRadius: 4 }}
                                             />
                                         </div>
                                     </>
                                 ) : (
-                                    <div
-                                        style={{
-                                            fontSize: 11,
-                                            color: "#94a3b8",
-                                            textAlign: "center",
-                                            padding: "16px 0",
-                                        }}
-                                    >
-                                        {ocrError
-                                            ? ocrError.title
-                                            : "No result"}
+                                    <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "16px 0" }}>
+                                        {ocrError ? ocrError.title : "No result"}
                                     </div>
                                 )}
                             </div>
+
                         </div>
 
                         <div>
-                            <label
-                                style={{
-                                    fontSize: 11,
-                                    color: "#475569",
-                                    display: "block",
-                                    marginBottom: 4,
-                                }}
-                            >
-                                <Edit3
-                                    size={11}
-                                    style={{
-                                        marginRight: 4,
-                                        verticalAlign: "middle",
-                                    }}
-                                />
-                                Formatted Weight (Admin editable - 3 to 4 pure
-                                digits):
+                            <label style={{ fontSize: 11, color: "#475569", display: "block", marginBottom: 4 }}>
+                                <Edit3 size={11} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                                Formatted Weight (Admin editable - 3 to 4 pure digits):
                             </label>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                }}
-                            >
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <input
                                     id="ocr-weight-edit-input"
                                     type="number"
@@ -1194,26 +723,11 @@ export default function SpectrumWeightDetectionEngine({
                                     className="form-input"
                                     style={{ flex: 1 }}
                                 />
-                                <span
-                                    style={{
-                                        fontSize: 13,
-                                        color: "#475569",
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    kg
-                                </span>
+                                <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>kg</span>
                             </div>
                             {isManuallyEdited && (
-                                <div
-                                    style={{
-                                        fontSize: 10,
-                                        color: "#d97706",
-                                        marginTop: 2,
-                                    }}
-                                >
-                                    Edited manually by administrator (will be
-                                    saved to Active Learning dataset).
+                                <div style={{ fontSize: 10, color: "#d97706", marginTop: 2 }}>
+                                    Edited manually by administrator (will be saved to Active Learning dataset).
                                 </div>
                             )}
                         </div>
@@ -1223,77 +737,27 @@ export default function SpectrumWeightDetectionEngine({
                             className="btn btn-primary"
                             style={{ width: "100%", justifyContent: "center" }}
                             onClick={confirmWeight}
-                            disabled={
-                                !editedWeight || parseFloat(editedWeight) <= 0
-                            }
+                            disabled={!editedWeight || parseFloat(editedWeight) <= 0}
                         >
                             Continue to Roll Data Entry →
                         </button>
+
                     </div>
                 )}
 
                 {engineState === "error" && ocrError && (
                     <div>
-                        <div
-                            style={{
-                                padding: "12px 14px",
-                                background: "#fef2f2",
-                                border: "1px solid #fecaca",
-                                borderRadius: 6,
-                                marginBottom: 12,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 6,
-                                    marginBottom: 4,
-                                }}
-                            >
-                                <AlertCircle
-                                    size={15}
-                                    style={{ color: "#dc2626" }}
-                                />
-                                <span
-                                    style={{
-                                        fontWeight: 700,
-                                        fontSize: 13,
-                                        color: "#991b1b",
-                                    }}
-                                >
-                                    {ocrError.title}
-                                </span>
+                        <div style={{ padding: "12px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, marginBottom: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                <AlertCircle size={15} style={{ color: "#dc2626" }} />
+                                <span style={{ fontWeight: 700, fontSize: 13, color: "#991b1b" }}>{ocrError.title}</span>
                             </div>
-                            <p
-                                style={{
-                                    fontSize: 12,
-                                    color: "#475569",
-                                    margin: 0,
-                                }}
-                            >
-                                {ocrError.message}
-                            </p>
+                            <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{ocrError.message}</p>
                         </div>
 
                         <div style={{ marginBottom: 12 }}>
-                            <label
-                                style={{
-                                    fontSize: 12,
-                                    color: "#475569",
-                                    display: "block",
-                                    marginBottom: 4,
-                                }}
-                            >
-                                Enter weight manually (kg)
-                            </label>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                }}
-                            >
+                            <label style={{ fontSize: 12, color: "#475569", display: "block", marginBottom: 4 }}>Enter weight manually (kg)</label>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <input
                                     id="ocr-manual-weight-input"
                                     type="number"
@@ -1308,15 +772,7 @@ export default function SpectrumWeightDetectionEngine({
                                     className="form-input"
                                     style={{ flex: 1 }}
                                 />
-                                <span
-                                    style={{
-                                        fontSize: 13,
-                                        color: "#475569",
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    kg
-                                </span>
+                                <span style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>kg</span>
                             </div>
                         </div>
 
@@ -1324,10 +780,7 @@ export default function SpectrumWeightDetectionEngine({
                             <button
                                 id="ocr-manual-continue-btn"
                                 className="btn btn-primary"
-                                style={{
-                                    width: "100%",
-                                    justifyContent: "center",
-                                }}
+                                style={{ width: "100%", justifyContent: "center" }}
                                 onClick={confirmWeight}
                             >
                                 Continue with Manual Weight →
