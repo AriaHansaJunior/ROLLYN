@@ -114,6 +114,7 @@ class ProductionScheduleController extends Controller
             'tph'          => 'sometimes|numeric|gt:0',
             'start_time'   => 'sometimes|date',
             'remark'       => 'nullable|string',
+            'status'       => 'sometimes|string|in:OPEN,CLOSED',
         ]);
 
         // Recalculate if tonnage or tph changed

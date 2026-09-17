@@ -32,7 +32,7 @@ interface Shipment {
   shipment_number: string
   shipment_date: string
   status: string
-  customer: { id: number; customer: string }
+  customer: { id: number | number[]; customer: string }
   admin: { id: number; username: string }
   qc: { id: number; username: string }
   shipment_rolls: ShipmentRoll[]

@@ -772,9 +772,7 @@ export default function IncomingRoll() {
                                         <th style={{ textAlign: "center" }}>
                                             Est. Finish
                                         </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Est. COP/GSM
-                                        </th>
+
                                         <th style={{ textAlign: "center" }}>
                                             Select JOP
                                         </th>
@@ -1034,16 +1032,7 @@ export default function IncomingRoll() {
                                                             ?.estimated_finish_time ??
                                                             "N/A"}
                                                     </td>
-                                                    <td
-                                                        className="font-mono text-slate-600 text-[11px]"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.est
-                                                            ?.cop_gsm_change_estimate ??
-                                                            "N/A"}
-                                                    </td>
+
                                                     <td
                                                         style={{
                                                             textAlign: "center",

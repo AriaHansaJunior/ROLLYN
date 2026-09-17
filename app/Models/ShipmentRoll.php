@@ -11,7 +11,12 @@ class ShipmentRoll extends Model
         'roll_no',
         'qc_status',
         'qc_notes',
+        'qc_issues',
         'qc_checked_at',
+    ];
+
+    protected $casts = [
+        'qc_issues' => 'array',
     ];
 
     public function shipment()

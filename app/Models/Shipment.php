@@ -8,16 +8,17 @@ class Shipment extends Model
 {
     protected $fillable = [
         'shipment_number',
-        'customers_id',
+
         'admin_users_id',
         'qc_users_id',
         'status',
         'shipment_date',
+        'qc_report_notes',
     ];
 
-    public function customer()
+    public function customers()
     {
-        return $this->belongsTo(Customer::class, 'customers_id');
+        return $this->belongsToMany(Customer::class);
     }
 
     public function admin()

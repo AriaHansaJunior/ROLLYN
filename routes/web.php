@@ -64,10 +64,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/locations/bulk-update', [LocationController::class, 'bulkUpdate']);
         Route::put('/locations/{id}', [LocationController::class, 'update']);
 
-        // Production Schedule — Admin + PPIC only
-        Route::get('/production-schedule', [ProductionScheduleController::class, 'index']);
         Route::post('/production-schedule', [ProductionScheduleController::class, 'store']);
-        Route::put('/production-schedule/{id}', [ProductionScheduleController::class, 'update']);
         Route::delete('/production-schedule/{id}', [ProductionScheduleController::class, 'destroy']);
     });
 
@@ -81,17 +78,22 @@ Route::middleware('auth')->group(function () {
         Route::post('/api/spectrum/recommend-location', [SpectrumEngineController::class, 'recommendLocation']);
     });
 
-    // 5. PRODUCTION ACCESSIBLE JOP VIEW & EXPORT
+    // 5. PRODUCTION ACCESSIBLE JOP VIEW & EXPORT & PRODUCTION SCHEDULE
     Route::middleware('role:admin,ppic,production')->group(function () {
         Route::get('/jop', [JopController::class, 'index']);
         Route::get('/jop/export-excel', [JopController::class, 'exportExcel']);
         Route::get('/jop-master-data', [JopController::class, 'masterData']);
+
+        // Production Schedule
+        Route::get('/production-schedule', [ProductionScheduleController::class, 'index']);
+        Route::put('/production-schedule/{id}', [ProductionScheduleController::class, 'update']);
     });
 
     // 6. ADMIN + QC
     Route::middleware('role:admin,qc')->group(function () {
         Route::post('/shipments/qc/scan', [ShipmentController::class, 'qcScan']);
         Route::post('/shipments/qc/reject', [ShipmentController::class, 'qcReject']);
+        Route::post('/shipments/{id}/qc-report', [ShipmentController::class, 'submitQcReport']);
     });
 
     // 7. ADMIN + PPIC + QC + PRODUCTION (Roll History & Inventory)
@@ -101,6 +103,9 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:admin,ppic,qc')->group(function () {
+        Route::get('/shipments/{id}/print', [ShipmentController::class, 'print']);
+        Route::get('/shipments/{id}/print-qc', [ShipmentController::class, 'printQc']);
+        
         Route::put('/rolls/{id}', [RollController::class, 'update']);
         Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
         Route::post('/rolls/ship', [RollController::class, 'confirmShipments']);

@@ -17,7 +17,7 @@ class JopController extends Controller
     public function index(Request $request)
     {
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules'])->get();
+            $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules', 'rwTargets.rollsWidth'])->get();
             return response()->json($jops);
         }
 
@@ -41,6 +41,7 @@ class JopController extends Controller
             'rolls.cobb',
             'rolls.location',
             'rolls.user',
+            'rwTargets.rollsWidth',
         ])->latest()->get();
 
         return Inertia::render('Jop', ['jopData' => $orders]);
@@ -56,7 +57,7 @@ class JopController extends Controller
 
     public function targetOrder()
     {
-        $orders = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules'])->latest()->get();
+        $orders = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules', 'rwTargets.rollsWidth'])->latest()->get();
         return Inertia::render('TargetOrder', ['targetOrders' => $orders]);
     }
 
@@ -69,6 +70,7 @@ class JopController extends Controller
             'plybonds'    => Plybond::select('id', 'plybonds')->orderBy('plybonds')->get(),
             'thicknesses' => Thickness::select('id', 'thickness')->orderBy('thickness')->get(),
             'cores'       => Core::select('id', 'core')->orderBy('core')->get(),
+            'rolls_widths'=> \App\Models\RollsWidth::select('id', 'width')->orderBy('width')->get(),
         ]);
     }
 
@@ -115,11 +117,34 @@ class JopController extends Controller
             'weight' => 'nullable|integer',
             'container' => 'nullable|integer',
             'noted_order' => 'nullable|string',
-            'tph' => 'nullable|numeric'
+            'tph' => 'nullable|numeric',
+            'rw_targets' => 'nullable|array',
+            'rw_targets.*.width' => 'required_with:rw_targets|numeric|min:1',
+            'rw_targets.*.quantity' => 'required_with:rw_targets|integer|min:1',
         ]);
 
+        if (isset($validated['rw_targets']) && is_array($validated['rw_targets'])) {
+            $totalQty = 0;
+            foreach ($validated['rw_targets'] as $tgt) {
+                $totalQty += (int)$tgt['quantity'];
+            }
+            $validated['quantity'] = $totalQty;
+        }
+
+        $rwTargets = $validated['rw_targets'] ?? [];
+        unset($validated['rw_targets']);
+
         $jop = Jop::create($validated);
-        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules']);
+
+        foreach ($rwTargets as $tgt) {
+            $rw = \App\Models\RollsWidth::firstOrCreate(['width' => floatval($tgt['width'])]);
+            $jop->rwTargets()->create([
+                'rolls_width_id' => $rw->id,
+                'qty' => $tgt['quantity'],
+            ]);
+        }
+
+        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules', 'rwTargets.rollsWidth']);
 
         return response()->json([
             'status' => 'success',
@@ -172,11 +197,37 @@ class JopController extends Controller
             'weight' => 'nullable|integer',
             'container' => 'nullable|integer',
             'noted_order' => 'nullable|string',
-            'tph' => 'nullable|numeric'
+            'tph' => 'nullable|numeric',
+            'rw_targets' => 'nullable|array',
+            'rw_targets.*.width' => 'required_with:rw_targets|numeric|min:1',
+            'rw_targets.*.quantity' => 'required_with:rw_targets|integer|min:1',
         ]);
 
+        if (isset($validated['rw_targets']) && is_array($validated['rw_targets'])) {
+            $totalQty = 0;
+            foreach ($validated['rw_targets'] as $tgt) {
+                $totalQty += (int)$tgt['quantity'];
+            }
+            $validated['quantity'] = $totalQty;
+        }
+
+        $rwTargets = $validated['rw_targets'] ?? null;
+        unset($validated['rw_targets']);
+
         $jop->update($validated);
-        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules']);
+
+        if ($rwTargets !== null) {
+            $jop->rwTargets()->delete();
+            foreach ($rwTargets as $tgt) {
+                $rw = \App\Models\RollsWidth::firstOrCreate(['width' => floatval($tgt['width'])]);
+                $jop->rwTargets()->create([
+                    'rolls_width_id' => $rw->id,
+                    'qty' => $tgt['quantity'],
+                ]);
+            }
+        }
+
+        $jop->load(['customer', 'grade', 'gsm', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules', 'rwTargets.rollsWidth']);
         return response()->json(['message' => 'JOP updated successfully', 'data' => $jop]);
     }
 
@@ -209,7 +260,7 @@ class JopController extends Controller
 
     public function getDetails($id)
     {
-        $jop = Jop::with(['grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core'])->findOrFail($id);
+        $jop = Jop::with(['grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rwTargets.rollsWidth'])->findOrFail($id);
         return response()->json($jop);
     }
 

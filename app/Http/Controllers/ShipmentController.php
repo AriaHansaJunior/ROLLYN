@@ -25,7 +25,7 @@ class ShipmentController extends Controller
         $date = $request->input('date', now()->format('Y-m-d'));
         
         $shipments = Shipment::with([
-                'customer', 
+                'customers', 
                 'admin', 
                 'qc', 
                 'shipmentRolls.roll.grade',
@@ -42,7 +42,7 @@ class ShipmentController extends Controller
                     'shipment_number' => $shipment->shipment_number,
                     'shipment_date' => $shipment->shipment_date,
                     'status' => $shipment->status,
-                    'customer' => ['id' => $shipment->customers_id, 'customer' => $shipment->customer->customer ?? '—'],
+                    'customer' => ['id' => $shipment->customers->pluck('id')->toArray(), 'customer' => $shipment->customers->pluck('customer')->join(', ') ?: '—'],
                     'admin' => ['id' => $shipment->admin_users_id, 'username' => $shipment->admin->username ?? '—'],
                     'qc' => ['id' => $shipment->qc_users_id, 'username' => $shipment->qc->username ?? '—'],
                     'shipment_rolls' => $shipment->shipmentRolls->map(function ($sr) {
@@ -85,7 +85,8 @@ class ShipmentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'customers_id' => 'required|exists:customers,id',
+            'customers_id' => 'required|array|min:1',
+            'customers_id.*' => 'exists:customers,id',
             'qc_users_id' => 'required|exists:users,id',
             'rolls' => 'required|array|min:1',
             'shipment_date' => 'required|date',
@@ -106,12 +107,13 @@ class ShipmentController extends Controller
 
             $shipment = Shipment::create([
                 'shipment_number' => $shipmentNumber,
-                'customers_id' => $request->customers_id,
                 'admin_users_id' => Auth::id(),
                 'qc_users_id' => $request->qc_users_id,
                 'status' => 'pending',
                 'shipment_date' => $request->shipment_date,
             ]);
+
+            $shipment->customers()->sync($request->customers_id);
 
             $affectedLocations = [];
             foreach ($dbRolls as $roll) {
@@ -143,6 +145,7 @@ class ShipmentController extends Controller
         $request->validate([
             'shipment_id' => 'required|exists:shipments,id',
             'no_roll' => 'required|string',
+            'qc_issues' => 'nullable|array',
         ]);
 
         $shipment = Shipment::findOrFail($request->shipment_id);
@@ -167,6 +170,7 @@ class ShipmentController extends Controller
         try {
             $shipmentRoll->update([
                 'qc_status' => 'passed',
+                'qc_issues' => $request->has('qc_issues') ? json_encode($request->qc_issues) : null,
                 'qc_checked_at' => now()
             ]);
 
@@ -185,6 +189,33 @@ class ShipmentController extends Controller
             DB::rollBack();
             return redirect()->back()->withErrors(['error' => 'Failed to update QC status: ' . $e->getMessage()]);
         }
+    }
+
+    public function submitQcReport(Request $request, $id)
+    {
+        $request->validate([
+            'qc_report_notes' => 'required|array',
+        ]);
+
+        $shipment = Shipment::findOrFail($id);
+        Gate::authorize('qcProcess', $shipment);
+
+        // Optional: Check if all rolls are scanned
+        $unscanned = ShipmentRoll::where('shipment_id', $shipment->id)
+            ->where('qc_status', 'pending')
+            ->count();
+        
+        if ($unscanned > 0) {
+            return redirect()->back()->withErrors(['error' => 'Cannot submit report. Some rolls are not scanned yet.']);
+        }
+
+        $shipment->update([
+            'qc_report_notes' => json_encode($request->qc_report_notes),
+            // The status might have been set to 'completed' automatically by updateShipmentStatus, but just in case:
+            'status' => 'completed'
+        ]);
+
+        return redirect()->back()->with('success', 'QC Report submitted successfully.');
     }
 
     public function qcReject(Request $request)
@@ -315,10 +346,34 @@ class ShipmentController extends Controller
         if ($checkedRolls === 0) {
             $shipment->update(['status' => 'pending']);
         } else {
-            $newStatus = ($checkedRolls === $totalRolls) ? 'completed' : 'qc_in_progress';
-            if ($shipment->status !== $newStatus) {
+            // Even if all rolls are checked, it remains qc_in_progress until the final QC report is submitted.
+            // The final report submission will change it to 'completed'.
+            $newStatus = 'qc_in_progress';
+            if ($shipment->status !== $newStatus && $shipment->status !== 'completed') {
                 $shipment->update(['status' => $newStatus]);
             }
         }
+    }
+
+    public function print($id)
+    {
+        $shipment = Shipment::with([
+            'customers',
+            'shipmentRolls.roll.grade',
+            'shipmentRolls.roll.gsm',
+            'shipmentRolls.roll.jop',
+            'shipmentRolls.roll.location',
+            'shipmentRolls.roll.rollsWidth',
+            'shipmentRolls.roll.rollsDiameter'
+        ])->findOrFail($id);
+
+        return view('print.weight_list', compact('shipment'));
+    }
+
+    public function printQc($id)
+    {
+        $shipment = Shipment::with(['customers', 'qc'])->findOrFail($id);
+        
+        return view('print.qc_report', compact('shipment'));
     }
 }
