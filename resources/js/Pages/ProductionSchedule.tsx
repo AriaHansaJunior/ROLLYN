@@ -55,6 +55,7 @@ const EMPTY_FORM = {
     tph: "20",
     start_time: "",
     remark: "",
+    status: "OPEN",
 };
 
 export default function ProductionSchedule() {
@@ -127,6 +128,7 @@ export default function ProductionSchedule() {
                 ? row.start_time.replace(" ", "T").slice(0, 16)
                 : "",
             remark: row.remark || "",
+            status: row.status || "OPEN",
         });
         setFormErrors({});
         setShowModal(true);
@@ -157,7 +159,7 @@ export default function ProductionSchedule() {
         if (!validate()) return;
         setSaving(true);
         try {
-            const payload = {
+            const payload: any = {
                 jops_id: Number(form.jops_id),
                 tonnage: Number(form.tonnage),
                 rewinder_cut: form.rewinder_cut || null,
@@ -166,6 +168,7 @@ export default function ProductionSchedule() {
                 remark: form.remark || null,
             };
             if (editId) {
+                payload.status = form.status;
                 await axios.put(`/production-schedule/${editId}`, payload);
                 SystemUI.toast({
                     message: "Schedule updated successfully.",
@@ -198,6 +201,35 @@ export default function ProductionSchedule() {
             }
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleToggleStatus(row: ScheduleRow) {
+        const nextStatus = row.status === "OPEN" ? "CLOSED" : "OPEN";
+        const isClosing = nextStatus === "CLOSED";
+        const confirmed = await SystemUI.confirm({
+            title: isClosing ? "Close Schedule" : "Re-open Schedule",
+            message: isClosing
+                ? `Are you sure you want to close production schedule for SPK ${row.spk || row.jop}?`
+                : `Are you sure you want to re-open production schedule for SPK ${row.spk || row.jop}?`,
+            confirmText: isClosing ? "Close Schedule" : "Re-open Schedule",
+            cancelText: "Cancel",
+        });
+        if (!confirmed) return;
+        try {
+            await axios.put(`/production-schedule/${row.id}`, {
+                status: nextStatus,
+            });
+            SystemUI.toast({
+                message: `Schedule marked as ${nextStatus}.`,
+                type: "success",
+            });
+            router.reload();
+        } catch {
+            SystemUI.toast({
+                message: "Failed to update schedule status.",
+                type: "error",
+            });
         }
     }
 
@@ -401,15 +433,52 @@ export default function ProductionSchedule() {
                                         {r.remark || "No notes"}
                                     </td>
                                     <td style={{ textAlign: "center" }}>
-                                        <span className="px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-green-100 text-green-700 border border-green-200">
+                                        <span
+                                            className={`px-2.5 py-0.5 rounded font-bold text-[10px] uppercase tracking-wider inline-flex items-center gap-1 ${
+                                                r.status === "CLOSED"
+                                                    ? "bg-red-100 text-red-700 border border-red-200"
+                                                    : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                                            }`}
+                                        >
+                                            <span
+                                                className={`w-1.5 h-1.5 rounded-full ${
+                                                    r.status === "CLOSED"
+                                                        ? "bg-red-500"
+                                                        : "bg-emerald-500"
+                                                }`}
+                                            />
                                             {r.status}
                                         </span>
                                     </td>
                                     <td style={{ textAlign: "center" }}>
                                         <div className="flex items-center justify-center gap-1.5">
+                                            {r.status === "OPEN" ? (
+                                                <button
+                                                    onClick={() =>
+                                                        handleToggleStatus(r)
+                                                    }
+                                                    className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 cursor-pointer font-semibold"
+                                                    title="Close this production schedule"
+                                                >
+                                                    <X size={11} />
+                                                    <span>Close</span>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() =>
+                                                        handleToggleStatus(r)
+                                                    }
+                                                    className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800 cursor-pointer font-semibold"
+                                                    title="Re-open this production schedule"
+                                                >
+                                                    <Clock size={11} />
+                                                    <span>Re-open</span>
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => openEditModal(r)}
                                                 className="btn btn-secondary btn-sm py-1 px-2 text-[11px] flex items-center gap-1 cursor-pointer"
+                                                title="Edit Schedule"
                                             >
                                                 <Edit3 size={11} />
                                                 <span>Edit</span>
@@ -419,6 +488,7 @@ export default function ProductionSchedule() {
                                                     handleDelete(r.id)
                                                 }
                                                 className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer"
+                                                title="Delete Schedule"
                                             >
                                                 <Trash2 size={11} />
                                             </button>
@@ -794,7 +864,60 @@ export default function ProductionSchedule() {
                                 />
                             </div>
 
-                            {/* Status */}
+                            {/* Status (Edit only) */}
+                            {editId && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                        Schedule Status
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        <label
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                                                form.status === "OPEN"
+                                                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="sched_status"
+                                                value="OPEN"
+                                                checked={form.status === "OPEN"}
+                                                onChange={() =>
+                                                    setForm((f) => ({
+                                                        ...f,
+                                                        status: "OPEN",
+                                                    }))
+                                                }
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            <span>OPEN</span>
+                                        </label>
+                                        <label
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                                                form.status === "CLOSED"
+                                                    ? "bg-red-50 border-red-300 text-red-800"
+                                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="sched_status"
+                                                value="CLOSED"
+                                                checked={form.status === "CLOSED"}
+                                                onChange={() =>
+                                                    setForm((f) => ({
+                                                        ...f,
+                                                        status: "CLOSED",
+                                                    }))
+                                                }
+                                                className="text-red-600 focus:ring-red-500"
+                                            />
+                                            <span>CLOSED</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex justify-end gap-2 p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">

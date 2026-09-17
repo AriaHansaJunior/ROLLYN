@@ -1316,10 +1316,10 @@ export default function RollInventory({
                               {s.shipment_number}
                             </span>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isCanceled
-                                ? 'bg-slate-200 text-slate-600'
+                                ? 'bg-red-100 text-red-700 border border-red-200'
                                 : isComplete
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-amber-100 text-amber-700'
+                                  ? 'bg-green-100 text-green-700 border border-green-200'
+                                  : 'bg-amber-100 text-amber-700 border border-amber-200'
                               }`}>
                               {isCanceled ? 'Canceled' : isComplete ? 'Completed' : 'QC Pending'}
                             </span>
@@ -1379,7 +1379,7 @@ export default function RollInventory({
                             {activeShipment.shipment_number}
                           </h3>
                           <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${activeShipment.status === 'canceled'
-                              ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                              ? 'bg-red-100 text-red-700 border border-red-200'
                               : activeShipment.status === 'completed'
                                 ? 'bg-green-100 text-green-800 border border-green-200'
                                 : 'bg-amber-100 text-amber-800 border border-amber-200'

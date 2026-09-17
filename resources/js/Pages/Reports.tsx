@@ -353,9 +353,24 @@ export default function Reports() {
                   <td className="font-medium" style={{ textAlign: 'center' }}>{s.total_rolls} Roll</td>
                   <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
-                      <span className="badge inline-flex justify-center px-2.5 py-1 text-xs font-semibold whitespace-nowrap rounded-md uppercase" style={{ backgroundColor: '#d4edda', color: '#3C763D' }}>
-                        {s.status}
-                      </span>
+                      {(() => {
+                        const st = (s.status || '').toLowerCase();
+                        const isCanceled = st === 'canceled' || st === 'cancelled' || st === 'rejected';
+                        const isCompleted = st === 'completed' || st === 'passed';
+                        return (
+                          <span
+                            className={`badge inline-flex justify-center px-2.5 py-1 text-xs font-semibold whitespace-nowrap rounded-md uppercase ${
+                              isCanceled
+                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                : isCompleted
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            {s.status}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
@@ -450,9 +465,24 @@ export default function Reports() {
                           <td style={{ textAlign: 'center' }} className="font-medium">{roll.weight}</td>
                           <td style={{ textAlign: 'center' }} className="text-slate-600">{roll.entry_date}</td>
                           <td style={{ textAlign: 'center' }}>
-                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${roll.qc_status === 'passed' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                              {roll.qc_status || 'pending'}
-                            </span>
+                            {(() => {
+                              const qc = (roll.qc_status || '').toLowerCase();
+                              const isPassed = qc === 'passed';
+                              const isRejected = qc.includes('reject');
+                              return (
+                                <span
+                                  className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${
+                                    isPassed
+                                      ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                      : isRejected
+                                      ? 'bg-red-100 text-red-700 border border-red-200'
+                                      : 'bg-amber-100 text-amber-700 border border-amber-200'
+                                  }`}
+                                >
+                                  {roll.qc_status || 'pending'}
+                                </span>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))

@@ -989,9 +989,22 @@ ${pageBlocks.join('\n')}
                           <td style={{ textAlign: 'center' }}>{roll.gsm?.gsm || roll.gsm || '-'}</td>
                           <td style={{ textAlign: 'center' }} className="font-medium">{roll.weight}</td>
                           <td style={{ textAlign: 'center' }}>
-                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${roll.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                              {roll.status || 'OK'}
-                            </span>
+                            {(() => {
+                              const st = (roll.status || 'OK').toUpperCase();
+                              const isHold = st === 'HOLD';
+                              const isBad = st === 'REJECT' || st === 'REJECTED' || st === 'DEFECT' || st === 'CANCEL' || st === 'CANCELED';
+                              return (
+                                <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${
+                                  isHold
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : isBad
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-green-100 text-green-700'
+                                }`}>
+                                  {roll.status || 'OK'}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <button
@@ -1048,9 +1061,18 @@ ${pageBlocks.join('\n')}
                     <h3 className="text-base font-extrabold text-slate-900">
                       Roll Detail — {selectedRollPopup.no_roll || `R-${selectedRollPopup.no}`}
                     </h3>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${selectedRollPopup.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                      {selectedRollPopup.status || 'OK'}
-                    </span>
+                    {(() => {
+                      const st = (selectedRollPopup.status || 'OK').toUpperCase();
+                      const isHold = st === 'HOLD';
+                      const isBad = st === 'REJECT' || st === 'REJECTED' || st === 'DEFECT' || st === 'CANCEL' || st === 'CANCELED';
+                      return (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          isHold ? 'bg-amber-100 text-amber-700' : isBad ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                        }`}>
+                          {selectedRollPopup.status || 'OK'}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <p className="text-[11px] text-slate-500">
                     Technical specifications & roll inspection without leaving the JOP page
@@ -1112,7 +1134,21 @@ ${pageBlocks.join('\n')}
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Ex Material</span><span className="font-semibold text-slate-800">{selectedRollPopup.exmaterial || 'IMPORT'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Visual</span><span className="font-semibold text-slate-800">{selectedRollPopup.visual || 'OK'}</span></div>
                     <div className="flex justify-between py-1 border-b border-slate-50"><span className="text-slate-500">Warehouse Location</span><span className="font-bold text-slate-800">{selectedRollPopup.location?.location || 'Not Assigned'}</span></div>
-                    <div className="flex justify-between py-1"><span className="text-slate-500">Roll Status</span><span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${selectedRollPopup.status === 'HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{selectedRollPopup.status || 'OK'}</span></div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-500">Roll Status</span>
+                      {(() => {
+                        const st = (selectedRollPopup.status || 'OK').toUpperCase();
+                        const isHold = st === 'HOLD';
+                        const isBad = st === 'REJECT' || st === 'REJECTED' || st === 'DEFECT' || st === 'CANCEL' || st === 'CANCELED';
+                        return (
+                          <span className={`px-2 py-0.5 rounded font-bold text-[10px] uppercase ${
+                            isHold ? 'bg-amber-100 text-amber-700' : isBad ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                          }`}>
+                            {selectedRollPopup.status || 'OK'}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
 

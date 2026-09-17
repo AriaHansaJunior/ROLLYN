@@ -85,16 +85,27 @@ export default function SystemUIContainer() {
                                         {modal.cancelText || 'Cancel'}
                                     </button>
                                 )}
-                                <button
-                                    onClick={handleConfirm}
-                                    className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer ${
-                                        modal.confirmText?.toLowerCase().includes('delete')
-                                            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                                            : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-                                    }`}
-                                >
-                                    {modal.confirmText || (modal.type === 'alert' ? 'OK' : 'Confirm')}
-                                </button>
+                                {(() => {
+                                    const confirmLabel = (modal.confirmText || (modal.type === 'alert' ? 'OK' : 'Confirm')).toLowerCase();
+                                    const titleLower = (modal.title || '').toLowerCase();
+                                    const isDestructive = /(delete|hapus|reject|tolak|cancel|batal|remove|close|tutup)/i.test(confirmLabel) || /(delete|reject|cancel|close)/i.test(titleLower);
+                                    const isAcceptance = /(accept|approve|setuju|pass|terima|complete|selesai|re-open|reopen|activate|aktifkan)/i.test(confirmLabel) || /(accept|approve|re-open|reopen|activate)/i.test(titleLower);
+
+                                    return (
+                                        <button
+                                            onClick={handleConfirm}
+                                            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer ${
+                                                isDestructive
+                                                    ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                                                    : isAcceptance
+                                                    ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
+                                                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                                            }`}
+                                        >
+                                            {modal.confirmText || (modal.type === 'alert' ? 'OK' : 'Confirm')}
+                                        </button>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>

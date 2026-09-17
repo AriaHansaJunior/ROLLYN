@@ -245,7 +245,7 @@ export default function UserManagement({ users = [] }: Props) {
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <div className="flex w-full justify-center">
-                      <span className={`badge inline-flex min-w-[70px] justify-center ${user.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                      <span className={`badge inline-flex min-w-[70px] justify-center ${user.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                         {user.status}
                       </span>
                     </div>
