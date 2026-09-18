@@ -13,9 +13,8 @@
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["resources/js/*"]
+      "@/*": ["./resources/js/*"]
     }
   },
   "include": [
