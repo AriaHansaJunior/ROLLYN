@@ -8,6 +8,9 @@ import {
     TrendingUp,
     Edit3,
     Trash2,
+    Settings,
+    Printer,
+    CheckCircle,
 } from "lucide-react";
 import { SystemUI } from "@/Utils/SystemUI";
 import axios from "axios";
@@ -63,7 +66,144 @@ export default function ProductionSchedule() {
         schedules = [],
         jops = [],
         totalTonnage = 0,
+        auth,
     } = usePage<any>().props;
+
+    const currentUserRole = (auth?.user?.role || "").toLowerCase();
+    const isPpicOrAdmin = currentUserRole === "ppic" || currentUserRole === "admin";
+    const isProduksi = currentUserRole === "production";
+    const [selectedSchedules, setSelectedSchedules] = useState<number[]>([]);
+
+    const [globalTph, setGlobalTph] = useState(() => {
+        return localStorage.getItem("rollyn_global_tph") || "20";
+    });
+    const updateGlobalTph = (val: string) => {
+        setGlobalTph(val);
+        localStorage.setItem("rollyn_global_tph", val);
+    };
+
+    const toggleSchedule = (id: number) => {
+        setSelectedSchedules(prev => 
+            prev.includes(id) ? prev.filter(sId => sId !== id) : [...prev, id]
+        );
+    };
+
+    async function handleUpdateStatus(id: number, newStatus: string) {
+        const confirmed = await SystemUI.confirm({
+            title: "Update Status",
+            message: `Are you sure you want to mark this schedule as ${newStatus}?`,
+            confirmText: "Yes, Update",
+            cancelText: "Cancel",
+        });
+        if (!confirmed) return;
+        setSaving(true);
+        try {
+            await axios.put(`/production-schedule/${id}`, { status: newStatus });
+            SystemUI.toast({
+                message: `Schedule status updated to ${newStatus}.`,
+                type: "success",
+            });
+            router.reload();
+        } catch (err: any) {
+            SystemUI.toast({
+                message: err.response?.data?.message || "Failed to update status.",
+                type: "error",
+            });
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    const toggleAllSchedules = () => {
+        const pagedRows = schedules.slice((page - 1) * perPage, page * perPage);
+        if (selectedSchedules.length === pagedRows.length && pagedRows.length > 0) {
+            setSelectedSchedules([]);
+        } else {
+            setSelectedSchedules(pagedRows.map((r: any) => r.id));
+        }
+    };
+    
+    function printSelectedSchedules() {
+        const selectedRows = schedules.filter((r: any) => selectedSchedules.includes(r.id));
+        if (selectedRows.length === 0) return;
+        
+        function formatDt(dt: string | null) {
+            if (!dt) return "-";
+            const d = new Date(dt);
+            if (isNaN(d.getTime())) return dt;
+            return d.toLocaleString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+            });
+        }
+        
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Production Schedule Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
+                h2 { text-align: center; margin-bottom: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
+                th { background-color: #f4f4f5; }
+                @media print {
+                    @page { size: landscape; margin: 10mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <h2>Production Schedule Report</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>SPK</th>
+                        <th>PO</th>
+                        <th>Grade</th>
+                        <th>GSM</th>
+                        <th>Tonnage (MT)</th>
+                        <th>Rewinder Cut</th>
+                        <th>Prod. Hours</th>
+                        <th>Start Time</th>
+                        <th>Stop Time</th>
+                        <th>Customer</th>
+                        <th>Remark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${selectedRows.map((r: any) => `
+                        <tr>
+                            <td>${r.spk || '-'}</td>
+                            <td>${r.po || '-'}</td>
+                            <td>${r.grade || '-'}</td>
+                            <td>${r.gsm || '-'}</td>
+                            <td>${Number(r.tonnage).toFixed(2)}</td>
+                            <td>${r.rewinder_cut || '-'}</td>
+                            <td>${r.production_hours}h</td>
+                            <td>${formatDt(r.start_time)}</td>
+                            <td>${formatDt(r.stop_time)}</td>
+                            <td>${r.customer || '-'}</td>
+                            <td>${r.remark || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <script>window.onload = () => { window.print(); }</script>
+        </body>
+        </html>
+        `;
+        
+        const w = window.open('', '_blank');
+        if (w) {
+            w.document.write(html);
+            w.document.close();
+        }
+    }
 
     const [showModal, setShowModal] = useState(false);
     const [editId, setEditId] = useState<number | null>(null);
@@ -100,15 +240,24 @@ export default function ProductionSchedule() {
         setForm((f) => ({
             ...f,
             jops_id: id,
-            tph: found?.tph ? String(found.tph) : f.tph,
         }));
         if (formErrors.jops_id) setFormErrors((e) => ({ ...e, jops_id: "" }));
-        if (found?.tph && formErrors.tph) setFormErrors((e) => ({ ...e, tph: "" }));
     }
 
     function openAddModal() {
         setEditId(null);
-        setForm({ ...EMPTY_FORM });
+        let latestStop = "";
+        if (schedules && schedules.length > 0) {
+            const sorted = [...schedules].sort((a: any, b: any) => {
+                const dateA = a.stop_time ? new Date(a.stop_time).getTime() : 0;
+                const dateB = b.stop_time ? new Date(b.stop_time).getTime() : 0;
+                return dateB - dateA;
+            });
+            if (sorted[0].stop_time) {
+                latestStop = sorted[0].stop_time.replace(" ", "T").slice(0, 16);
+            }
+        }
+        setForm({ ...EMPTY_FORM, tph: globalTph, start_time: latestStop });
         setSelectedJop(null);
         setFormErrors({});
         setShowModal(true);
@@ -286,17 +435,43 @@ export default function ProductionSchedule() {
                         Order Production data
                     </p>
                 </div>
-                <button
-                    onClick={openAddModal}
-                    className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0"
-                >
-                    <Plus size={15} />
-                    <span>Add Schedule</span>
-                </button>
+                {!isProduksi && (
+                    <button
+                        onClick={openAddModal}
+                        className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                        <Plus size={15} />
+                        <span>Add Schedule</span>
+                    </button>
+                )}
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className={`grid grid-cols-1 ${isProduksi ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
+                {!isProduksi && (
+                    <div className="card p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                            <Settings size={18} />
+                        </div>
+                        <div className="w-full">
+                            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                Default TPH
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={globalTph}
+                                    onChange={(e) => updateGlobalTph(e.target.value)}
+                                    className="form-input text-xs w-20 py-1"
+                                    placeholder="20"
+                                />
+                                <span className="text-[10px] font-semibold text-slate-500">Ton/Hour</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div className="card p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                         <Calendar size={18} />
@@ -346,6 +521,15 @@ export default function ProductionSchedule() {
                 <table className="data-table w-full min-w-[1100px] text-xs">
                     <thead>
                         <tr>
+                            {isPpicOrAdmin && (
+                                <th style={{ textAlign: "center", width: "40px" }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={pagedRows.length > 0 && selectedSchedules.length === pagedRows.length}
+                                        onChange={toggleAllSchedules}
+                                    />
+                                </th>
+                            )}
                             <th style={{ textAlign: "left" }}>SPK</th>
                             <th style={{ textAlign: "center" }}>PO</th>
                             <th style={{ textAlign: "center" }}>Grade</th>
@@ -370,6 +554,15 @@ export default function ProductionSchedule() {
                                     key={r.id}
                                     className="hover:bg-slate-50 transition-colors"
                                 >
+                                    {isPpicOrAdmin && (
+                                        <td style={{ textAlign: "center" }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedSchedules.includes(r.id)}
+                                                onChange={() => toggleSchedule(r.id)}
+                                            />
+                                        </td>
+                                    )}
                                     <td
                                         className="font-bold text-blue-700 font-mono"
                                         style={{ textAlign: "left" }}
@@ -451,48 +644,67 @@ export default function ProductionSchedule() {
                                         </span>
                                     </td>
                                     <td style={{ textAlign: "center" }}>
-                                        <div className="flex items-center justify-center gap-1.5">
-                                            {r.status === "OPEN" ? (
+                                        {isProduksi ? (
+                                            r.status === "OPEN" ? (
                                                 <button
                                                     onClick={() =>
-                                                        handleToggleStatus(r)
+                                                        handleUpdateStatus(r.id, "CLOSED")
                                                     }
-                                                    className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 cursor-pointer font-semibold"
+                                                    className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 mx-auto bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 cursor-pointer font-semibold"
                                                     title="Close this production schedule"
                                                 >
                                                     <X size={11} />
-                                                    <span>Close</span>
+                                                    <span>Set Close</span>
                                                 </button>
                                             ) : (
+                                                <span className="text-[10px] font-bold text-slate-400 italic">
+                                                    CLOSED
+                                                </span>
+                                            )
+                                        ) : (
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                {r.status === "OPEN" ? (
+                                                    <button
+                                                        onClick={() =>
+                                                            handleToggleStatus(r)
+                                                        }
+                                                        className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 cursor-pointer font-semibold"
+                                                        title="Close this production schedule"
+                                                    >
+                                                        <X size={11} />
+                                                        <span>Close</span>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() =>
+                                                            handleToggleStatus(r)
+                                                        }
+                                                        className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800 cursor-pointer font-semibold"
+                                                        title="Re-open this production schedule"
+                                                    >
+                                                        <Clock size={11} />
+                                                        <span>Re-open</span>
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => openEditModal(r)}
+                                                    className="btn btn-secondary btn-sm py-1 px-2 text-[11px] flex items-center gap-1 cursor-pointer"
+                                                    title="Edit Schedule"
+                                                >
+                                                    <Edit3 size={11} />
+                                                    <span>Edit</span>
+                                                </button>
                                                 <button
                                                     onClick={() =>
-                                                        handleToggleStatus(r)
+                                                        handleDelete(r.id)
                                                     }
-                                                    className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800 cursor-pointer font-semibold"
-                                                    title="Re-open this production schedule"
+                                                    className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer"
+                                                    title="Delete Schedule"
                                                 >
-                                                    <Clock size={11} />
-                                                    <span>Re-open</span>
+                                                    <Trash2 size={11} />
                                                 </button>
-                                            )}
-                                            <button
-                                                onClick={() => openEditModal(r)}
-                                                className="btn btn-secondary btn-sm py-1 px-2 text-[11px] flex items-center gap-1 cursor-pointer"
-                                                title="Edit Schedule"
-                                            >
-                                                <Edit3 size={11} />
-                                                <span>Edit</span>
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    handleDelete(r.id)
-                                                }
-                                                className="btn btn-sm py-1 px-2 text-[11px] flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer"
-                                                title="Delete Schedule"
-                                            >
-                                                <Trash2 size={11} />
-                                            </button>
-                                        </div>
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ))
@@ -512,7 +724,7 @@ export default function ProductionSchedule() {
                         <tfoot>
                             <tr className="bg-amber-50 font-bold text-amber-900">
                                 <td
-                                    colSpan={5}
+                                    colSpan={isPpicOrAdmin ? 6 : 5}
                                     className="py-2 px-3 text-left text-xs font-bold"
                                 >
                                     Total Tonnage
@@ -528,6 +740,17 @@ export default function ProductionSchedule() {
             </div>
 
             {/* Pagination */}
+            {selectedSchedules.length > 0 && isPpicOrAdmin && (
+                <div className="flex justify-start pt-2">
+                    <button 
+                        onClick={printSelectedSchedules}
+                        className="btn btn-primary flex items-center gap-2 text-xs"
+                    >
+                        <Printer size={15} />
+                        Print Selected Schedules ({selectedSchedules.length})
+                    </button>
+                </div>
+            )}
             <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
                 <div className="flex items-center gap-3">
                     <span className="text-xs text-slate-500">

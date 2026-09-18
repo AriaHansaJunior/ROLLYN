@@ -79,7 +79,7 @@ class RollController extends Controller
         $userRole = strtolower($user->role ?? '');
 
         $shipmentsQuery = \App\Models\Shipment::with([
-            'customer',
+            'customers',
             'admin',
             'qc',
             'shipmentRolls.roll.grade',
@@ -94,7 +94,7 @@ class RollController extends Controller
             return [
                 'id' => $shipment->id,
                 'shipment_number' => $shipment->shipment_number,
-                'customer' => $shipment->customer->customer ?? '—',
+                'customer' => $shipment->customers->pluck('customer')->join(', ') ?: '—',
                 'admin' => $shipment->admin->username ?? '—',
                 'qc_officer' => $shipment->qc->username ?? '—',
                 'qc_users_id' => $shipment->qc_users_id,
@@ -111,10 +111,18 @@ class RollController extends Controller
                         'no_roll' => $sr->roll->no_roll ?? ('R-' . $sr->roll_no),
                         'grade' => $sr->roll->grade->grade ?? '—',
                         'gsm' => $sr->roll->jop->gsm->gsm ?? ($sr->roll->gsm ?? 0),
+                        'plybond' => $sr->roll->plybond->plybonds ?? '—',
+                        'thickness' => $sr->roll->thickness->thickness ?? '—',
+                        'bulk' => $sr->roll->bulk ?? '—',
+                        'roll_width' => $sr->roll->rollsWidth->width ?? '—',
+                        'roll_diameter' => $sr->roll->rollsDiameter->diameter ?? '—',
+                        'core' => $sr->roll->core->core ?? '—',
                         'weight' => $sr->roll->weight ?? 0,
+                        'cobb' => $sr->roll->cobb->cobb ?? '—',
                         'location' => $sr->roll->location->location ?? '—',
                         'qc_status' => $sr->qc_status,
                         'qc_notes' => $sr->qc_notes,
+                        'qc_issues' => $sr->qc_issues,
                         'qc_checked_at' => $sr->qc_checked_at ? \Carbon\Carbon::parse($sr->qc_checked_at)->format('d/m/Y H:i') : null,
                     ];
                 }),

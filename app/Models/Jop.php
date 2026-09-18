@@ -72,6 +72,11 @@ class Jop extends Model
         return $this->hasMany(ProductionSchedule::class, 'jops_id');
     }
 
+    public function rwTargets()
+    {
+        return $this->hasMany(JopRwTarget::class, 'jop_id');
+    }
+
     public function getProductionEstimationAttribute()
     {
         $scheduleTonnage = $this->relationLoaded('productionSchedules') 

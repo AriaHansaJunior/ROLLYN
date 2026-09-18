@@ -7,6 +7,13 @@ import SystemUIContainer from './Components/SystemUI/SystemUIContainer';
 import '../css/app.css';
 
 createInertiaApp({
+    // Progress bar — gives visual feedback during page navigation so users
+    // don't double-click and cause conflicting requests that cause "stuck" behavior
+    progress: {
+        color: '#3b82f6',
+        showSpinner: false,
+        delay: 0,
+    },
     resolve: async (name) => {
         const page = await resolvePageComponent(`./Pages/${name}.tsx`, import.meta.glob('./Pages/**/*.tsx'));
         if (name !== 'Login') {

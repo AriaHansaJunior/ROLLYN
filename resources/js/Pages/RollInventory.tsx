@@ -3,7 +3,7 @@ import {
   Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X,
   Download, MapPin, Package, Camera, QrCode, CheckCircle2, XCircle, Clock,
   AlertTriangle, UserCheck, Calendar, Building2, Truck, Check, RefreshCw, Layers,
-  Ban, ShieldCheck, ShieldAlert
+  Ban, ShieldCheck, ShieldAlert, Printer, FileText, Info
 } from 'lucide-react'
 import { router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
@@ -39,6 +39,12 @@ interface RollItem {
   shipment_queue_qc_status?: string | null
   exMaterial: string
   visual: string
+  plybond?: number
+  thickness?: number
+  bulk?: number
+  diameter?: number
+  core?: string
+  cobb?: string
 }
 
 interface OptionItem {
@@ -99,6 +105,51 @@ const statusColors: Record<string, { bg: string; color: string }> = {
   'Incoming': { bg: '#fff3cd', color: '#8A6D3B' },
 }
 
+const QC_CHECKLIST = [
+  {
+    category: "Identitas Produk",
+    items: [
+      "Label produk sesuai dengan spesifikasi",
+      "Lebar produk sesuai dengan spesifikasi",
+      "Diameter produk sesuai dengan spesifikasi",
+      "Thickness, Plybond sesuai dengan spesifikasi"
+    ]
+  },
+  {
+    category: "Kondisi Fisik Roll",
+    items: [
+      "Tidak cembung/cekung berlebihan",
+      "Roll tidak sobek",
+      "Roll tidak terdapat lipatan mati",
+      "Roll tidak basah/lembab",
+      "Roll tidak ada kontaminasi (debu, sawang, dll)"
+    ]
+  },
+  {
+    category: "Packing & Proteksi",
+    items: [
+      "Wrapping dalam kondisi bagus",
+      "Core tidak rusak/penyok",
+      "Strap/pallet/pengganjal dalam kondisi tidak rusak",
+      "Penataan Roll diatas kendaraan tidak saling menekan"
+    ]
+  },
+  {
+    category: "Proses Loading",
+    items: [
+      "Penggunaan forklift clam untuk produk roll",
+      "Penggunaan forklift garpu untuk produk slitting",
+      "Arah roll sesuai dengan standar (vertical)"
+    ]
+  },
+  {
+    category: "Dokumen",
+    items: [
+      "Roll yang dimuat sesuai dengan weight list"
+    ]
+  }
+]
+
 export default function RollInventory({
   rolls = [],
   shifts = [],
@@ -134,13 +185,30 @@ export default function RollInventory({
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
 
+  const [advFilters, setAdvFilters] = useState({
+    width: '',
+    grade: '',
+    gsm: '',
+    plybond: '',
+    thickness: '',
+    bulk: '',
+    diameter: '',
+    core: '',
+    weight: '',
+    cobb: ''
+  })
+
   // Checkboxes for creating new shipment
   const [checkedRollIds, setCheckedRollIds] = useState<string[]>([])
 
   // Shipment Creation Modal
   const [showShipmentModal, setShowShipmentModal] = useState(false)
-  const [shipmentForm, setShipmentForm] = useState({
-    customers_id: '',
+  const [shipmentForm, setShipmentForm] = useState<{
+    customers_id: string[],
+    qc_users_id: string,
+    shipment_date: string,
+  }>({
+    customers_id: [''],
     qc_users_id: '',
     shipment_date: new Date().toISOString().slice(0, 10),
   })
@@ -180,10 +248,40 @@ export default function RollInventory({
   // SHIPMENTS & QC TAB STATE
   // ----------------------------------------------------
   const [activeShipmentId, setActiveShipmentId] = useState<number | null>(shipments[0]?.id || null)
+  const activeShipment = shipments.find(s => s.id === activeShipmentId) || null
   const [shipmentSearch, setShipmentSearch] = useState('')
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'pending' | 'completed' | 'canceled'>('all')
   const [manualScanInput, setManualScanInput] = useState('')
   const [isProcessingScan, setIsProcessingScan] = useState(false)
+  const [showQcReportModal, setShowQcReportModal] = useState(false)
+
+  // New states for QC Evaluation Flow
+  const [activeQcRoll, setActiveQcRoll] = useState<any>(null)
+  const [qcEvaluationMode, setQcEvaluationMode] = useState<'decision' | 'checklist'>('decision')
+  const [selectedQcIssues, setSelectedQcIssues] = useState<string[]>([])
+  const [qcReportNotes, setQcReportNotes] = useState<Record<string, string>>({})
+  const [qcReportMeta, setQcReportMeta] = useState({
+    customer: '',
+    jenis_kendaraan: '',
+    no_kendaraan: '',
+    tujuan: '',
+    tanggal: new Date().toISOString().split('T')[0]
+  })
+
+  useEffect(() => {
+    if (activeShipment && showQcReportModal) {
+      setQcReportMeta({
+        customer: activeShipment.customer || '',
+        jenis_kendaraan: '',
+        no_kendaraan: '',
+        tujuan: '',
+        tanggal: activeShipment.date ? activeShipment.date.split(' ')[0] : new Date().toISOString().split('T')[0]
+      })
+    }
+  }, [activeShipment, showQcReportModal])
+
+  const [qcIssueSearch, setQcIssueSearch] = useState('')
+  const [expandedQcCategories, setExpandedQcCategories] = useState<string[]>([])
 
   const lastScannedThrottleRef = useRef<{ code: string; time: number }>({ code: '', time: 0 })
 
@@ -209,7 +307,16 @@ export default function RollInventory({
     }
   }, [shipments])
 
-  const activeShipment = shipments.find(s => s.id === activeShipmentId) || null
+  // Derived state for QC Report Modal
+  const aggregatedQcIssues = Array.from(new Set(
+    (activeShipment?.rolls || []).flatMap((r: any) => {
+      try {
+        return typeof r.qc_issues === 'string' ? JSON.parse(r.qc_issues) : (r.qc_issues || [])
+      } catch (e) {
+        return []
+      }
+    })
+  ))
 
   const statuses = ['All', 'Slotted', 'Shipment Plan', 'Incoming', 'Hold']
 
@@ -251,9 +358,10 @@ export default function RollInventory({
   }
 
   function handleConfirmShipments() {
-    if (!shipmentForm.customers_id || !shipmentForm.qc_users_id || !shipmentForm.shipment_date) {
+    const validCustomers = shipmentForm.customers_id.filter(c => c.trim() !== '')
+    if (validCustomers.length === 0 || !shipmentForm.qc_users_id || !shipmentForm.shipment_date) {
       setShipmentErrors({
-        customers_id: !shipmentForm.customers_id ? 'Customer is required' : '',
+        customers_id: validCustomers.length === 0 ? 'At least one Customer is required' : '',
         qc_users_id: !shipmentForm.qc_users_id ? 'QC Officer is required' : '',
         shipment_date: !shipmentForm.shipment_date ? 'Shipment date is required' : '',
       })
@@ -263,7 +371,7 @@ export default function RollInventory({
     setIsSubmittingShipment(true)
     router.post('/shipments', {
       rolls: checkedRollIds,
-      customers_id: shipmentForm.customers_id,
+      customers_id: validCustomers,
       qc_users_id: shipmentForm.qc_users_id,
       shipment_date: shipmentForm.shipment_date
     }, {
@@ -349,7 +457,20 @@ export default function RollInventory({
 
     const matchQcStatus = qcStatusFilter === 'All' || r.roll_status === qcStatusFilter
 
-    return matchSearch && matchStatus && matchQueue && matchQcStatus
+    const matchAdv = (
+      (!advFilters.width || String(r.width || '') === advFilters.width) &&
+      (!advFilters.grade || String(r.grade || '') === advFilters.grade) &&
+      (!advFilters.gsm || String(r.gsm || '') === advFilters.gsm) &&
+      (!advFilters.plybond || String(r.plybond || '') === advFilters.plybond) &&
+      (!advFilters.thickness || String(r.thickness || '') === advFilters.thickness) &&
+      (!advFilters.bulk || String(r.bulk || '') === advFilters.bulk) &&
+      (!advFilters.diameter || String(r.diameter || '') === advFilters.diameter) &&
+      (!advFilters.core || String(r.core || '') === advFilters.core) &&
+      (!advFilters.weight || String(r.weight || '') === advFilters.weight) &&
+      (!advFilters.cobb || String(r.cobb || '') === advFilters.cobb)
+    )
+
+    return matchSearch && matchStatus && matchQueue && matchQcStatus && matchAdv
   }).sort((a, b) => {
     const key = sortKey as keyof RollItem
     const va = a[key] ?? ''
@@ -563,23 +684,13 @@ export default function RollInventory({
         return
       }
 
-      setIsProcessingScan(true)
-      router.post('/shipments/qc/scan', {
-        shipment_id: activeShipment.id,
-        no_roll: targetRoll.no_roll
-      }, {
-        preserveScroll: true,
-        onSuccess: () => {
-          setIsProcessingScan(false)
-          setManualScanInput('')
-
-          SystemUI.toast({ message: `✓ Roll ${targetRoll.no_roll} PASSED QC inspection!`, type: 'success' })
-        },
-        onError: () => {
-          setIsProcessingScan(false)
-          SystemUI.toast({ message: 'Failed to record QC scan.', type: 'error' })
-        }
-      })
+      // Instead of submitting immediately, we open the QC Roll Detail Evaluator
+      setActiveQcRoll(targetRoll)
+      setQcEvaluationMode('decision')
+      setSelectedQcIssues([])
+      setQcIssueSearch('')
+      setExpandedQcCategories([])
+      setManualScanInput('')
     } else {
       // Check if roll belongs to another shipment
       const otherShipment = shipments.find(s =>
@@ -616,10 +727,63 @@ export default function RollInventory({
     }
   }
 
+  function submitQcScan(issues: string[] = []) {
+    if (!activeShipment || !activeQcRoll || isProcessingScan) return
+
+    setIsProcessingScan(true)
+    router.post('/shipments/qc/scan', {
+      shipment_id: activeShipment.id,
+      no_roll: activeQcRoll.no_roll,
+      qc_issues: issues.length > 0 ? issues : null
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setIsProcessingScan(false)
+        setActiveQcRoll(null)
+        setManualScanInput('')
+        SystemUI.toast({ message: `✓ Roll ${activeQcRoll.no_roll} PASSED QC inspection!`, type: 'success' })
+      },
+      onError: () => {
+        setIsProcessingScan(false)
+        SystemUI.toast({ message: 'Failed to record QC scan.', type: 'error' })
+      }
+    })
+  }
+
   function handleManualScanSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!manualScanInput.trim()) return
-    handleQCScan(manualScanInput.trim())
+    handleQCScan(manualScanInput)
+  }
+
+  function submitQcReport(e: React.FormEvent) {
+    e.preventDefault()
+    if (!activeShipment || isProcessingScan) return
+
+    setIsProcessingScan(true)
+
+    const payload = {
+      meta: qcReportMeta,
+      issues: qcReportNotes,
+      all_issues_found: aggregatedQcIssues
+    }
+
+    router.post(`/shipments/${activeShipment.id}/qc-report`, {
+      qc_report_notes: payload
+    }, {
+      onSuccess: () => {
+        setIsProcessingScan(false)
+        setShowQcReportModal(false)
+        window.open(`/shipments/${activeShipment.id}/print-qc`, '_blank')
+        setActiveShipmentId(null)
+        setQcReportNotes({})
+        SystemUI.toast({ message: `QC Report submitted successfully!`, type: 'success' })
+      },
+      onError: (err) => {
+        setIsProcessingScan(false)
+        SystemUI.toast({ message: 'Failed to submit QC report.', type: 'error' })
+      }
+    })
   }
 
   function handleManualPassRoll(roll: ShipmentRollItem) {
@@ -862,6 +1026,50 @@ export default function RollInventory({
                   </select>
                 </div>
               </div>
+            </div>
+
+            {/* Advanced Filters */}
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+              <select value={advFilters.width} onChange={e => {setAdvFilters(f => ({...f, width: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All Width</option>
+                {Array.from(new Set(rolls.map(r => String(r.width || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.grade} onChange={e => {setAdvFilters(f => ({...f, grade: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All Grade</option>
+                {Array.from(new Set(rolls.map(r => String(r.grade || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.gsm} onChange={e => {setAdvFilters(f => ({...f, gsm: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All GSM</option>
+                {Array.from(new Set(rolls.map(r => String(r.gsm || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.plybond} onChange={e => {setAdvFilters(f => ({...f, plybond: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All PlyBond</option>
+                {Array.from(new Set(rolls.map(r => String(r.plybond || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.thickness} onChange={e => {setAdvFilters(f => ({...f, thickness: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All Thickness</option>
+                {Array.from(new Set(rolls.map(r => String(r.thickness || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.bulk} onChange={e => {setAdvFilters(f => ({...f, bulk: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All BULK</option>
+                {Array.from(new Set(rolls.map(r => String(r.bulk || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.diameter} onChange={e => {setAdvFilters(f => ({...f, diameter: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All Diameter</option>
+                {Array.from(new Set(rolls.map(r => String(r.diameter || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.core} onChange={e => {setAdvFilters(f => ({...f, core: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All Core</option>
+                {Array.from(new Set(rolls.map(r => String(r.core || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.weight} onChange={e => {setAdvFilters(f => ({...f, weight: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All Weight</option>
+                {Array.from(new Set(rolls.map(r => String(r.weight || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+              <select value={advFilters.cobb} onChange={e => {setAdvFilters(f => ({...f, cobb: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
+                <option value="">All Cobb</option>
+                {Array.from(new Set(rolls.map(r => String(r.cobb || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
             </div>
 
             {/* Shipment Queue Switch Filter Pills */}
@@ -1407,9 +1615,27 @@ export default function RollInventory({
                           <div className="text-xs font-bold text-blue-700">{activeShipment.qc_officer}</div>
                         </div>
 
-                        {/* Admin/PPIC Cancel Shipment Button */}
-                        {!isQC && activeShipment.status !== 'canceled' && activeShipment.status !== 'completed' && (
-                          <div className="pl-2 border-l border-slate-200">
+                        {/* Action Buttons */}
+                        <div className="pl-2 border-l border-slate-200 flex gap-2">
+                          <button
+                            onClick={() => window.open(`/shipments/${activeShipment.id}/print`, '_blank')}
+                            className="btn btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                            title="Print Weight List"
+                          >
+                            <Printer size={13} />
+                            Print Weight List
+                          </button>
+                          <button
+                            onClick={() => window.open(`/shipments/${activeShipment.id}/print-qc`, '_blank')}
+                            className="btn btn-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                            title="Print QC Report"
+                          >
+                            <Printer size={13} />
+                            Print QC Report
+                          </button>
+                          
+                          {/* Admin/PPIC Cancel Shipment Button */}
+                          {!isQC && activeShipment.status !== 'canceled' && activeShipment.status !== 'completed' && (
                             <button
                               onClick={() => handleCancelShipment(activeShipment)}
                               className="btn btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
@@ -1418,8 +1644,8 @@ export default function RollInventory({
                               <Ban size={13} />
                               Cancel Shipment
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1450,44 +1676,59 @@ export default function RollInventory({
                         </div>
                       </div>
                     )}
+                    
+                    {/* QC Report Trigger */}
+                    {isQC && activeShipment.status === 'qc_in_progress' && activeShipment.total_rolls === activeShipment.checked_rolls && activeShipment.total_rolls > 0 && (
+                      <div className="pt-2 border-t border-slate-100 mt-3">
+                        <button
+                          onClick={() => setShowQcReportModal(true)}
+                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm text-sm flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <FileText size={18} />
+                          Buat Laporan QC
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  {/* QR Scanner Station (Shown for QC users when shipment is active) */}
+                  {/* QR Scanner Station */}
                   {isQC && activeShipment.status !== 'completed' && activeShipment.status !== 'canceled' && (
-                    <div className="card p-0 overflow-hidden border border-blue-200 shadow-xs">
-                      <div className="bg-blue-600 px-4 py-2.5 text-white flex items-center justify-between">
-                        <span className="text-xs font-bold flex items-center gap-1.5">
-                          <Camera size={15} />
-                          Live QC Barcode Scanner
-                        </span>
-                        <span className="text-[11px] text-blue-100">
-                          Scan barcode to verify quality
-                        </span>
-                      </div>
+                    <>
+                      <div className="card p-0 overflow-hidden border border-blue-200 shadow-xs">
+                        <div className="bg-blue-600 px-4 py-2.5 text-white flex items-center justify-between">
+                          <span className="text-xs font-bold flex items-center gap-1.5">
+                            <Camera size={15} />
+                            Live QC Barcode Scanner
+                          </span>
+                          <span className="text-[11px] text-blue-100">
+                            Scan barcode to verify quality
+                          </span>
+                        </div>
 
-                      <div className="p-3 bg-slate-900">
-                        <EmbeddedQRScanner onScanSuccess={handleQCScan} />
-                      </div>
+                        <div className="p-3 bg-slate-900">
+                          <EmbeddedQRScanner onScanSuccess={handleQCScan} />
+                        </div>
 
-                      {/* Manual Barcode Input Fallback */}
-                      <form onSubmit={handleManualScanSubmit} className="p-3 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
-                        <QrCode size={16} className="text-slate-400 shrink-0" />
-                        <input
-                          value={manualScanInput}
-                          onChange={e => setManualScanInput(e.target.value)}
-                          placeholder="Or type roll barcode (e.g. 260731-11.04.04) and press Enter..."
-                          disabled={isProcessingScan}
-                          className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-500"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!manualScanInput.trim() || isProcessingScan}
-                          className="btn btn-primary text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                        >
-                          Verify Roll
-                        </button>
-                      </form>
-                    </div>
+                        {/* Manual Barcode Input Fallback */}
+                        <form onSubmit={handleManualScanSubmit} className="p-3 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
+                          <QrCode size={16} className="text-slate-400 shrink-0" />
+                          <input
+                            value={manualScanInput}
+                            onChange={e => setManualScanInput(e.target.value)}
+                            placeholder="Or type roll barcode (e.g. 260731-11.04.04) and press Enter..."
+                            disabled={isProcessingScan}
+                            className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-500"
+                          />
+                          <button
+                            type="submit"
+                            disabled={!manualScanInput.trim() || isProcessingScan}
+                            className="btn btn-primary text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            Verify Roll
+                          </button>
+                        </form>
+                      </div>
+                    </>
                   )}
 
                   {/* Rolls Table for Active Shipment */}
@@ -1651,18 +1892,47 @@ export default function RollInventory({
             <div className="space-y-3.5 text-sm">
               <div>
                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
-                  Select Customer <span className="text-red-500">*</span>
+                  Select Customer(s) <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={shipmentForm.customers_id}
-                  onChange={e => setShipmentForm(f => ({ ...f, customers_id: e.target.value }))}
-                  className="form-input w-full text-xs"
-                >
-                  <option value="">-- Choose Customer --</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>{c.customer}</option>
+                <div className="space-y-2">
+                  {shipmentForm.customers_id.map((customerId, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <select
+                        value={customerId}
+                        onChange={e => {
+                          const newCustomers = [...shipmentForm.customers_id];
+                          newCustomers[index] = e.target.value;
+                          setShipmentForm(f => ({ ...f, customers_id: newCustomers }));
+                        }}
+                        className="form-input w-full text-xs"
+                      >
+                        <option value="">-- Choose Customer --</option>
+                        {customers.map(c => (
+                          <option key={c.id} value={c.id}>{c.customer}</option>
+                        ))}
+                      </select>
+                      {shipmentForm.customers_id.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newCustomers = shipmentForm.customers_id.filter((_, i) => i !== index);
+                            setShipmentForm(f => ({ ...f, customers_id: newCustomers }));
+                          }}
+                          className="text-red-500 hover:bg-red-50 p-1.5 rounded-md cursor-pointer shrink-0"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
                   ))}
-                </select>
+                  <button
+                    type="button"
+                    onClick={() => setShipmentForm(f => ({ ...f, customers_id: [...f.customers_id, ''] }))}
+                    className="text-blue-600 text-[11px] font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
+                  >
+                    + Add Customer
+                  </button>
+                </div>
                 {shipmentErrors.customers_id && <p className="text-red-600 text-[11px] mt-0.5">{shipmentErrors.customers_id}</p>}
               </div>
 
@@ -2013,6 +2283,297 @@ export default function RollInventory({
         onScanSuccess={handleStorageQRScanSuccess}
       />
 
+      {/* Final QC Report Modal (Simple View) */}
+      {showQcReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
+                  <FileText className="text-blue-600" size={20} />
+                  QC Inspection Report
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">Shipment: <span className="font-bold text-slate-700">{activeShipment?.shipment_number}</span></p>
+              </div>
+              <button 
+                onClick={() => setShowQcReportModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={submitQcReport}>
+              <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                {aggregatedQcIssues.length > 0 ? (
+                  <>
+                    <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-xl border border-amber-100 mb-6 flex gap-3">
+                      <AlertTriangle className="shrink-0 text-amber-600" size={18} />
+                      <p>The following issues were reported during scanning. Please provide a brief note or action taken for each category before submitting the final report.</p>
+                    </div>
+
+                    <div className="space-y-6">
+                      {aggregatedQcIssues.map((issue, idx) => (
+                        <div key={idx}>
+                          <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
+                            <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                            {issue}
+                          </label>
+                          <textarea 
+                            className="w-full border-slate-200 rounded-xl text-sm p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-y min-h-[80px]"
+                            placeholder={`Enter remarks for: ${issue}`}
+                            value={qcReportNotes[issue] || ''}
+                            onChange={e => setQcReportNotes({...qcReportNotes, [issue]: e.target.value})}
+                            required
+                          ></textarea>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle2 size={32} />
+                    </div>
+                    <h4 className="font-bold text-slate-800 text-lg mb-2">All Clear!</h4>
+                    <p className="text-slate-500 text-sm">No issues were reported during the QC scanning process for this shipment.</p>
+                  </div>
+                )}
+                
+                {/* General Notes Field (Optional) */}
+                <div className="mt-6 border-t border-slate-100 pt-6">
+                  <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
+                    <FileText size={16} className="text-slate-400" />
+                    Notes (Optional)
+                  </label>
+                  <textarea 
+                    className="w-full border-slate-200 rounded-xl text-sm p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-y min-h-[80px]"
+                    placeholder="Enter any additional notes here..."
+                    value={qcReportNotes['General Note'] || ''}
+                    onChange={e => setQcReportNotes({...qcReportNotes, ['General Note']: e.target.value})}
+                  ></textarea>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowQcReportModal(false)}
+                  className="px-4 py-2 font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessingScan || (aggregatedQcIssues.length > 0 && aggregatedQcIssues.some(issue => !qcReportNotes[issue]?.trim()))}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isProcessingScan ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    'Submit Report & Complete Shipment'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QC Roll Evaluator Full Modal */}
+      {activeQcRoll && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="bg-blue-600 px-6 py-4 text-white flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <CheckCircle2 size={20} />
+                Roll Quality Control
+              </h3>
+              <div className="flex items-center gap-3">
+                <div className="text-sm bg-blue-700/50 px-3 py-1 rounded-lg font-mono font-bold tracking-wider">{activeQcRoll.no_roll}</div>
+                <button 
+                  onClick={() => setActiveQcRoll(null)}
+                  className="p-1 hover:bg-blue-700 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            
+            <div className="overflow-y-auto custom-scrollbar flex-1 p-6">
+              {qcEvaluationMode === 'decision' ? (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider mb-3 border-b border-slate-100 pb-2">Specification</h4>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Grade</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.grade}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">GSM</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.gsm} g/m²</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Plybond</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.plybond}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Thickness</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.thickness} µm</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Bulk</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.bulk}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Roll Width</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.roll_width} mm</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Roll Diameter</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.roll_diameter} mm</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Core</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.core} inch</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Weight</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.weight} kg</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+                        <span className="text-slate-500 text-sm">Cobb</span>
+                        <span className="font-bold text-slate-800">{activeQcRoll.cobb}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex gap-4 border-t border-slate-100 mt-2">
+                    <button
+                      onClick={() => submitQcScan([])}
+                      className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 size={20} />
+                      OK
+                    </button>
+                    <button
+                      onClick={() => setQcEvaluationMode('checklist')}
+                      className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+                    >
+                      <XCircle size={20} />
+                      NOT OK
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Select issues found</h4>
+                    <button 
+                      onClick={() => setQcEvaluationMode('decision')}
+                      className="text-blue-600 hover:underline text-sm font-semibold flex items-center gap-1"
+                    >
+                      <ChevronDown className="rotate-90" size={16} />
+                      Back to Specs
+                    </button>
+                  </div>
+                  
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input 
+                      type="text"
+                      placeholder="Search issues..."
+                      value={qcIssueSearch}
+                      onChange={(e) => setQcIssueSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none bg-slate-50 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    {QC_CHECKLIST.map((category, idx) => {
+                      const filteredItems = category.items.filter(item => 
+                        item.toLowerCase().includes(qcIssueSearch.toLowerCase())
+                      )
+                      if (filteredItems.length === 0 && qcIssueSearch) return null
+                      
+                      const isExpanded = expandedQcCategories.includes(category.category) || qcIssueSearch !== ''
+                      
+                      return (
+                        <div key={idx} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                          <button 
+                            type="button"
+                            className="w-full flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100 text-left transition-colors"
+                            onClick={() => {
+                              if (isExpanded) {
+                                setExpandedQcCategories([])
+                              } else {
+                                setExpandedQcCategories([category.category])
+                              }
+                            }}
+                          >
+                            <span className="font-bold text-slate-800 text-sm">{category.category}</span>
+                            <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                              <ChevronDown size={16} className="text-slate-400" />
+                            </div>
+                          </button>
+                          
+                          <div 
+                            className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                          >
+                            <div className="overflow-hidden">
+                              <div className="p-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {filteredItems.map((item, iIdx) => (
+                                  <label key={iIdx} className="flex items-start gap-3 cursor-pointer group p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                                    <input 
+                                      type="checkbox" 
+                                      className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                      checked={selectedQcIssues.includes(item)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedQcIssues([...selectedQcIssues, item])
+                                        } else {
+                                          setSelectedQcIssues(selectedQcIssues.filter(i => i !== item))
+                                        }
+                                      }}
+                                    />
+                                    <span className="text-sm text-slate-600 group-hover:text-slate-900 leading-tight">
+                                      {item}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  
+                  <div className="pt-4 flex gap-3 border-t border-slate-100 mt-6">
+                    <button
+                      onClick={() => setActiveQcRoll(null)}
+                      className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-bold transition-colors"
+                    >
+                      Cancel Scan
+                    </button>
+                    <button
+                      onClick={() => submitQcScan(selectedQcIssues)}
+                      disabled={selectedQcIssues.length === 0}
+                      className="flex-[2] py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
+                    >
+                      Submit Issues & Pass Roll
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

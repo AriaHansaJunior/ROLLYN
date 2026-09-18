@@ -19,7 +19,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const userRole = (authUser?.role ?? 'admin').toLowerCase()
   const hideSidebar = false
 
-  const activePage = url === '/' ? 'dashboard' : url.split('/')[1] || 'dashboard'
+  // Strip query string before determining active page segment
+  const activePage = (() => {
+    const pathOnly = url.split('?')[0]
+    return pathOnly === '/' ? 'dashboard' : pathOnly.split('/')[1] || 'dashboard'
+  })()
 
   const sidebarWidth = hideSidebar ? 0 : (sidebarCollapsed ? 56 : 280)
 

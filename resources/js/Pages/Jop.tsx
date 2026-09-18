@@ -16,6 +16,7 @@ export default function Jop() {
   const { jopData = [], auth } = usePage<any>().props;
   const currentUserName = auth?.user?.name || auth?.user?.username || '';
   const currentUserRole = (auth?.user?.role || '').toLowerCase();
+  const isProduksi = currentUserRole === 'production';
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [page, setPage] = useState(1)
@@ -27,8 +28,10 @@ export default function Jop() {
   const [plybondsList, setPlybondsList] = useState<PlybondItem[]>([])
   const [thicknessesList, setThicknessesList] = useState<ThicknessItem[]>([])
   const [coresList, setCoresList] = useState<CoreItem[]>([])
+  const [rollsWidthsList, setRollsWidthsList] = useState<any[]>([])
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [selectedJopDetail, setSelectedJopDetail] = useState<any>(null)
+  const [selectedRWFilter, setSelectedRWFilter] = useState<string>('')
   const [selectedRollPopup, setSelectedRollPopup] = useState<any>(null)
 
   const [form, setForm] = useState({
@@ -44,6 +47,7 @@ export default function Jop() {
     quantity: '1',
     tph: '',
     noted_order: '',
+    rw_targets: [{ id: Date.now(), width: '', quantity: '1' }],
   })
 
   // Custom manual input states
@@ -86,6 +90,7 @@ export default function Jop() {
       barBg,
       est,
       noted_order: r.noted_order || '',
+      rwTargets: r.rw_targets || [],
     }
   })
 
@@ -118,7 +123,8 @@ export default function Jop() {
       cores_id: '',
       quantity: '1',
       tph: '',
-      noted_order: ''
+      noted_order: '',
+      rw_targets: [{ id: Date.now(), width: '', quantity: '1' }]
     })
     setCustomCustomer('')
     setCustomGrade('')
@@ -135,6 +141,7 @@ export default function Jop() {
       if (res.data?.plybonds) setPlybondsList(res.data.plybonds)
       if (res.data?.thicknesses) setThicknessesList(res.data.thicknesses)
       if (res.data?.cores) setCoresList(res.data.cores)
+      if (res.data?.rolls_widths) setRollsWidthsList(res.data.rolls_widths)
     }).catch(() => {
       axios.get('/api/v1/customers').then(res => setCustomers(res.data?.data || [])).catch(() => { })
       axios.get('/api/v1/grades').then(res => setGradesList(res.data?.data || [])).catch(() => { })
@@ -142,6 +149,7 @@ export default function Jop() {
       axios.get('/api/v1/plybonds').then(res => setPlybondsList(res.data?.data || [])).catch(() => { })
       axios.get('/api/v1/thicknesses').then(res => setThicknessesList(res.data?.data || [])).catch(() => { })
       axios.get('/api/v1/cores').then(res => setCoresList(res.data?.data || [])).catch(() => { })
+      axios.get('/api/v1/rolls-widths').then(res => setRollsWidthsList(res.data?.data || [])).catch(() => { })
     })
 
     setShowModal(true)
@@ -184,8 +192,19 @@ export default function Jop() {
       errs.gsms_id = 'Please enter new GSM value.'
     }
 
-    if (!form.quantity || Number(form.quantity) < 1) {
-      errs.quantity = 'Target rolls must be at least 1.'
+    let totalQty = 0;
+    form.rw_targets.forEach((tgt, idx) => {
+      if (!tgt.width) {
+        errs[`rw_targets_${idx}`] = 'RW is required.'
+      }
+      if (!tgt.quantity || Number(tgt.quantity) < 1) {
+        errs[`rw_targets_${idx}_qty`] = 'Min 1.'
+      }
+      totalQty += Number(tgt.quantity) || 0;
+    });
+
+    if (totalQty < 1) {
+      errs.quantity = 'Total target rolls must be at least 1.'
     }
 
     setFormErrors(errs)
@@ -195,9 +214,10 @@ export default function Jop() {
       spk: form.spk,
       jop: form.jop,
       po: form.po,
-      quantity: Number(form.quantity) || 1,
+      quantity: totalQty || 1,
       tph: form.tph ? Number(form.tph) : null,
       noted_order: form.noted_order,
+      rw_targets: form.rw_targets,
     }
 
     if (form.customers_id === 'NEW_CUSTOM') {
@@ -239,7 +259,7 @@ export default function Jop() {
     axios.post('/jop', payload).then(() => {
       SystemUI.toast({ message: 'JOP created successfully.', type: 'success' })
       setShowModal(false)
-      window.location.reload()
+      router.reload() // Use Inertia reload instead of full browser reload
     }).catch((err) => {
       if (err.response?.status === 422) {
         const apiErrors = err.response.data?.errors || err.response.data?.data || {}
@@ -456,6 +476,14 @@ ${pageBlocks.join('\n')}
   }
 
 
+  const uniqueRWs = selectedJopDetail?.rollsList 
+    ? Array.from(new Set(selectedJopDetail.rollsList.map((r: any) => String(r.rolls_width?.width || r.rollsWidth?.width)).filter((w: string) => w && w !== 'undefined')))
+    : [];
+
+  const filteredRolls = selectedJopDetail?.rollsList
+    ? selectedJopDetail.rollsList.filter((r: any) => String(r.rolls_width?.width || r.rollsWidth?.width) === selectedRWFilter)
+    : [];
+
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-2">
@@ -464,17 +492,21 @@ ${pageBlocks.join('\n')}
           <p className="text-xs text-slate-500 mt-0.5">Manufacturing execution tracking and completion status by production order</p>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href="/jop/export-excel"
-            className="btn btn-secondary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0 flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 font-semibold cursor-pointer transition-colors shadow-xs"
-            title="Export entire JOP database to Excel"
-          >
-            <FileSpreadsheet size={15} className="text-emerald-600" />
-            <span>Export Excel</span>
-          </a>
-          <button className="btn btn-primary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0 cursor-pointer" onClick={openAddModal}>
-            <Plus size={13} className="sm:w-3.5 sm:h-3.5" /> <span>Add JOP</span>
-          </button>
+          {!isProduksi && (
+            <>
+              <a
+                href="/jop/export-excel"
+                className="btn btn-secondary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0 flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400 font-semibold cursor-pointer transition-colors shadow-xs"
+                title="Export entire JOP database to Excel"
+              >
+                <FileSpreadsheet size={15} className="text-emerald-600" />
+                <span>Export Excel</span>
+              </a>
+              <button className="btn btn-primary text-xs py-1.5 px-3 sm:text-[13px] sm:py-[7px] sm:px-[14px] shrink-0 cursor-pointer" onClick={openAddModal}>
+                <Plus size={13} className="sm:w-3.5 sm:h-3.5" /> <span>Add JOP</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -564,7 +596,7 @@ ${pageBlocks.join('\n')}
                 </td>
                 <td style={{ textAlign: 'center' }}>
                   <button
-                    onClick={() => setSelectedJopDetail(r)}
+                    onClick={() => { setSelectedJopDetail(r); setSelectedRWFilter(''); }}
                     className="btn btn-secondary btn-sm flex items-center gap-1.5 mx-auto py-1 px-2"
                   >
                     <Eye size={13} />
@@ -691,8 +723,8 @@ ${pageBlocks.join('\n')}
 
                 </div>
 
-                {/* Grade & GSM */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                {/* Grade, GSM, TPH Target */}
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px] gap-3">
                   <div>
                     <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Grade <span className="text-red-500">*</span></label>
                     <select
@@ -741,6 +773,20 @@ ${pageBlocks.join('\n')}
                       />
                     )}
                     {formErrors.gsms_id && <p className="text-red-600 text-[11px] mt-1">{formErrors.gsms_id}</p>}
+                  </div>
+
+                  <div>
+                    <label className="form-label text-xs font-semibold text-slate-700 block mb-1">TPH Target</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={form.tph}
+                      onChange={e => { setForm(f => ({ ...f, tph: e.target.value })); if (formErrors.tph) setFormErrors(err => ({ ...err, tph: '' })) }}
+                      className={`form-input w-full ${formErrors.tph ? 'border-red-500 focus:ring-red-200' : ''}`}
+                      placeholder="e.g. 5.00"
+                    />
+                    {formErrors.tph && <p className="text-red-600 text-[11px] mt-1">{formErrors.tph}</p>}
                   </div>
                 </div>
 
@@ -820,35 +866,68 @@ ${pageBlocks.join('\n')}
                 </div>
               </div>
 
-              {/* Target Rolls Input */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Target Rolls <span className="text-red-500">*</span></label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.quantity}
-                    onChange={e => { setForm(f => ({ ...f, quantity: e.target.value })); if (formErrors.quantity) setFormErrors(err => ({ ...err, quantity: '' })) }}
-                    className={`form-input w-full ${formErrors.quantity ? 'border-red-500 focus:ring-red-200' : ''}`}
-                    placeholder="e.g. 10"
-                  />
-                  {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
+              {/* Dynamic RW Targets Input */}
+              <div className="pt-2">
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-2">RW Targets <span className="text-red-500">*</span></label>
+                <div className="space-y-2">
+                  {form.rw_targets.map((tgt, idx) => (
+                    <div key={tgt.id} className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="number"
+                          value={tgt.width}
+                          onChange={(e) => {
+                            const newTargets = [...form.rw_targets];
+                            newTargets[idx].width = e.target.value;
+                            setForm(f => ({ ...f, rw_targets: newTargets }));
+                            if (formErrors[`rw_targets_${idx}`]) setFormErrors(err => ({ ...err, [`rw_targets_${idx}`]: '' }));
+                          }}
+                          className={`form-input w-full text-xs ${formErrors[`rw_targets_${idx}`] ? 'border-red-500' : ''}`}
+                          placeholder="e.g. 1200..."
+                        />
+                        {formErrors[`rw_targets_${idx}`] && <p className="text-red-600 text-[10px] mt-0.5">{formErrors[`rw_targets_${idx}`]}</p>}
+                      </div>
+                      <div className="w-[100px]">
+                        <input
+                          type="number"
+                          min="1"
+                          value={tgt.quantity}
+                          onChange={(e) => {
+                            const newTargets = [...form.rw_targets];
+                            newTargets[idx].quantity = e.target.value;
+                            setForm(f => ({ ...f, rw_targets: newTargets }));
+                            if (formErrors[`rw_targets_${idx}_qty`]) setFormErrors(err => ({ ...err, [`rw_targets_${idx}_qty`]: '' }));
+                          }}
+                          className={`form-input w-full text-xs ${formErrors[`rw_targets_${idx}_qty`] ? 'border-red-500' : ''}`}
+                          placeholder="Rolls"
+                        />
+                        {formErrors[`rw_targets_${idx}_qty`] && <p className="text-red-600 text-[10px] mt-0.5">{formErrors[`rw_targets_${idx}_qty`]}</p>}
+                      </div>
+                      {form.rw_targets.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTargets = form.rw_targets.filter((_, i) => i !== idx);
+                            setForm(f => ({ ...f, rw_targets: newTargets }));
+                          }}
+                          className="btn btn-secondary p-1.5 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-
-                <div>
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">TPH Target</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.tph}
-                    onChange={e => { setForm(f => ({ ...f, tph: e.target.value })); if (formErrors.tph) setFormErrors(err => ({ ...err, tph: '' })) }}
-                    className={`form-input w-full ${formErrors.tph ? 'border-red-500 focus:ring-red-200' : ''}`}
-                    placeholder="e.g. 5.00"
-                  />
-                  {formErrors.tph && <p className="text-red-600 text-[11px] mt-1">{formErrors.tph}</p>}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, rw_targets: [...f.rw_targets, { id: Date.now(), width: '', quantity: '1' }] }))}
+                  className="mt-2 text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={12} /> Add another RW
+                </button>
+                {formErrors.quantity && <p className="text-red-600 text-[11px] mt-1">{formErrors.quantity}</p>}
               </div>
+
 
               {/* Notes Input */}
               <div>
@@ -910,7 +989,7 @@ ${pageBlocks.join('\n')}
               <span><strong>Core:</strong> {selectedJopDetail.core}&quot;</span>
             </div>
 
-            <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-[11px]">
+            <div className="p-4 bg-white border-b border-slate-100 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3 text-[11px]">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                 <span className="block text-slate-500 mb-1">Target Tonnage</span>
                 <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.target_tonnage ?? "-"} Ton</strong>
@@ -924,32 +1003,72 @@ ${pageBlocks.join('\n')}
                 <strong className="text-amber-700 text-xs">{selectedJopDetail.est?.remaining_tonnage ?? "-"} Ton</strong>
               </div>
               <div className="p-2.5 rounded-lg bg-blue-50/50 border border-blue-100">
-                <span className="block text-blue-600 font-semibold mb-1">TPH Input</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  defaultValue={selectedJopDetail.est?.tph ?? ""}
-                  placeholder="5.00"
-                  className="form-input text-xs w-full text-center p-1 h-6"
-                  onBlur={(e) => {
-                    if (e.target.value && e.target.value !== String(selectedJopDetail.est?.tph)) {
-                      handleUpdateTph(selectedJopDetail.id, e.target.value);
-                    }
-                  }}
-                />
+                <span className="block text-blue-600 font-semibold mb-1">Select RW</span>
+                <select
+                  value={selectedRWFilter}
+                  onChange={(e) => setSelectedRWFilter(e.target.value)}
+                  className="form-input text-xs w-full py-1 px-2 bg-white"
+                >
+                  <option value="">-- Select RW --</option>
+                  {uniqueRWs.map((rw: any) => (
+                    <option key={rw} value={rw}>{rw} mm</option>
+                  ))}
+                </select>
               </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="block text-slate-500 mb-1">Est. Duration</span>
-                <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.estimated_duration_formatted ?? "N/A"}</strong>
-              </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="block text-slate-500 mb-1">Est. Finish</span>
-                <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.estimated_finish_time ?? "N/A"}</strong>
-              </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="block text-slate-500 mb-1">COP/GSM Change</span>
-                <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.cop_gsm_change_estimate ?? "N/A"}</strong>
-              </div>
+
+              {selectedRWFilter ? (() => {
+                const selectedRWTarget = selectedJopDetail?.rwTargets?.find((tgt: any) => String(tgt.rolls_width?.width || tgt.rollsWidth?.width) === selectedRWFilter)?.qty || 0;
+                const realizedRollsForRW = filteredRolls.length;
+                const remainingRollsForRW = Math.max(0, selectedRWTarget - realizedRollsForRW);
+                
+                return (
+                  <>
+                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="block text-slate-500 mb-1">Target Roll</span>
+                      <strong className="text-slate-900 text-xs">{selectedRWTarget} Rolls</strong>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="block text-slate-500 mb-1">Realized Roll</span>
+                      <strong className="text-slate-900 text-xs">{realizedRollsForRW} Rolls</strong>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="block text-slate-500 mb-1">Remaining Roll</span>
+                      <strong className="text-amber-700 font-bold text-xs">{remainingRollsForRW} Rolls</strong>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="block text-slate-500 mb-1">Est. Duration</span>
+                      <strong className="text-slate-900 text-xs">{selectedJopDetail.est?.estimated_duration_formatted ?? "N/A"}</strong>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="block text-slate-500 mb-1">Est. Finish</span>
+                      <strong className="text-slate-900 font-mono text-[10px]">{selectedJopDetail.est?.estimated_finish_time ?? "N/A"}</strong>
+                    </div>
+                  </>
+                );
+              })() : (
+                <>
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 opacity-50">
+                    <span className="block text-slate-500 mb-1">Target Roll</span>
+                    <strong className="text-slate-900 text-xs">N/A</strong>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 opacity-50">
+                    <span className="block text-slate-500 mb-1">Realized Roll</span>
+                    <strong className="text-slate-900 text-xs">N/A</strong>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 opacity-50">
+                    <span className="block text-slate-500 mb-1">Remaining Roll</span>
+                    <strong className="text-amber-700 font-mono text-[10px]">N/A</strong>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 opacity-50">
+                    <span className="block text-slate-500 mb-1">Est. Duration</span>
+                    <strong className="text-slate-900 text-xs">N/A</strong>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 opacity-50">
+                    <span className="block text-slate-500 mb-1">Est. Finish</span>
+                    <strong className="text-slate-900 font-mono text-[10px]">N/A</strong>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-4 overflow-y-auto bg-slate-50 flex-1">
@@ -969,8 +1088,14 @@ ${pageBlocks.join('\n')}
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedJopDetail.rollsList && selectedJopDetail.rollsList.length > 0 ? (
-                      selectedJopDetail.rollsList.map((roll: any, index: number) => (
+                    {!selectedRWFilter ? (
+                      <tr>
+                        <td colSpan={9} className="text-center py-8 text-slate-500">
+                          Please select an RW to view the rolls.
+                        </td>
+                      </tr>
+                    ) : filteredRolls.length > 0 ? (
+                      filteredRolls.map((roll: any, index: number) => (
                         <tr key={roll.no || index} className="hover:bg-slate-50">
                           <td style={{ textAlign: 'center' }} className="text-slate-500">{index + 1}</td>
                           <td className="font-bold text-blue-700 font-mono" style={{ textAlign: 'left' }}>
@@ -1021,7 +1146,7 @@ ${pageBlocks.join('\n')}
                     ) : (
                       <tr>
                         <td colSpan={9} className="text-center py-8 text-slate-500">
-                          No rolls generated for this JOP yet.
+                          No rolls found for this RW.
                         </td>
                       </tr>
                     )}

@@ -1,4 +1,3 @@
-
 import base64
 import re
 import io
@@ -33,10 +32,10 @@ except ImportError:
         get_dataset_statistics,
     )
 
-import os as _os
-import json as _json
-
+_MLP_CACHE = {"model": None, "scaler": None, "loaded_at": 0}
+_BEST_MLP_PATH = os.path.join(_current_dir, "best_mlp.pkl")
 _EASYOCR_READER = None
+
 
 def get_easyocr_reader():
     global _EASYOCR_READER
@@ -48,6 +47,7 @@ def get_easyocr_reader():
             pass
     return _EASYOCR_READER
 
+
 def run_easyocr_fallback(img: np.ndarray):
     reader = get_easyocr_reader()
     if not reader:
@@ -55,7 +55,6 @@ def run_easyocr_fallback(img: np.ndarray):
     try:
         results = reader.readtext(img)
         all_text = " ".join([text for (bbox, text, prob) in results])
-        import re
         cleaned = re.sub(r'[^\d]', '', all_text)
         if len(cleaned) >= 2:
             val = int(cleaned)
@@ -74,22 +73,19 @@ def run_easyocr_fallback(img: np.ndarray):
         pass
     return None
 
-_MLP_CACHE = {"model": None, "scaler": None, "loaded_at": 0}
-_BEST_MLP_PATH = _os.path.join(_os.path.dirname(__file__), "best_mlp.pkl")
-
 
 def _load_mlp_if_available():
     global _MLP_CACHE
     try:
-        if not _os.path.exists(_BEST_MLP_PATH):
+        if not os.path.exists(_BEST_MLP_PATH):
             return None, None
-        mtime = _os.path.getmtime(_BEST_MLP_PATH)
+        mtime = os.path.getmtime(_BEST_MLP_PATH)
         if _MLP_CACHE["loaded_at"] >= mtime and _MLP_CACHE["model"] is not None:
             return _MLP_CACHE["model"], _MLP_CACHE["scaler"]
         import joblib
         data = joblib.load(_BEST_MLP_PATH)
-        _MLP_CACHE["model"] = data["model"]
-        _MLP_CACHE["scaler"] = data["scaler"]
+        _MLP_CACHE["model"] = data.get("model")
+        _MLP_CACHE["scaler"] = data.get("scaler")
         _MLP_CACHE["loaded_at"] = mtime
         return _MLP_CACHE["model"], _MLP_CACHE["scaler"]
     except Exception:
@@ -119,340 +115,527 @@ def _compute_digit_features(gray_crop: np.ndarray) -> np.ndarray:
 
 def _mlp_classify(gray_crop: np.ndarray):
     clf, scaler = _load_mlp_if_available()
-    if clf is None:
-        return None, 0.0
+    if clf is None or scaler is None:
+        return None, 0.0, {d: 0.1 for d in range(10)}
     try:
         feat = _compute_digit_features(gray_crop).reshape(1, -1).astype(np.float32)
+        if getattr(clf, "n_features_in_", 1159) != feat.shape[1]:
+            return None, 0.0, {d: 0.1 for d in range(10)}
         feat_scaled = scaler.transform(feat)
         proba = clf.predict_proba(feat_scaled)[0]
         top_cls = int(np.argmax(proba))
         top_conf = float(proba[top_cls])
-        return top_cls, top_conf
+        prob_dict = {i: float(proba[i]) if i < len(proba) else 0.0 for i in range(10)}
+        return top_cls, top_conf, prob_dict
     except Exception:
-        return None, 0.0
-
-app = FastAPI(
-    title="SPECTRUM Engine 4.0 AI Microservice",
-    description="Seven-Segment Processing & Enhanced Computer-Vision Recognition Model (Geometric Heuristic & NMS Active)",
-    version="4.0.0"
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
-)
+        return None, 0.0, {d: 0.1 for d in range(10)}
 
 
-class DetectRequest(BaseModel):
-    image: str  # Base64 string or data URL
+# =========================================================================
+# ENGINE C: 7-SEGMENT TEMPLATE MATCHING (MULTI-VARIANT 0-9)
+# =========================================================================
+
+def _build_7seg_templates(w: int = 32, h: int = 48) -> dict:
+    digit_segs_variants = {
+        0: [['a', 'b', 'c', 'd', 'e', 'f']],
+        1: [['b', 'c']],
+        2: [['a', 'b', 'g', 'e', 'd']],
+        3: [['a', 'b', 'g', 'c', 'd']],
+        4: [['f', 'g', 'b', 'c'], ['g', 'b', 'c']],                     # standard & cross-style 4
+        5: [['a', 'f', 'g', 'c', 'd']],
+        6: [['a', 'f', 'g', 'e', 'c', 'd'], ['f', 'g', 'e', 'c', 'd']], # with & without top bar
+        7: [['a', 'b', 'c'], ['a', 'b', 'c', 'f']],                     # with & without serif
+        8: [['a', 'b', 'c', 'd', 'e', 'f', 'g']],
+        9: [['a', 'b', 'c', 'f', 'g'], ['a', 'b', 'c', 'd', 'f', 'g']], # without & with bottom bar
+    }
+
+    t = max(2, int(w * 0.12))
+    templates = {}
+
+    for digit, variants in digit_segs_variants.items():
+        templates[digit] = []
+        for segs in variants:
+            img = np.zeros((h, w), dtype=np.uint8)
+            if digit == 1:
+                rx = int(w * 0.65)
+                img[2:h-2, rx-t//2:rx+t//2+1] = 255
+                templates[digit].append(img)
+                continue
+
+            x_left = int(w * 0.15)
+            x_right = int(w * 0.85)
+            y_top = int(h * 0.10)
+            y_mid = int(h * 0.50)
+            y_bot = int(h * 0.90)
+
+            if 'a' in segs: img[y_top-t//2:y_top+t//2+1, x_left:x_right] = 255
+            if 'd' in segs: img[y_bot-t//2:y_bot+t//2+1, x_left:x_right] = 255
+            if 'g' in segs: img[y_mid-t//2:y_mid+t//2+1, x_left:x_right] = 255
+            if 'f' in segs: img[y_top:y_mid, x_left-t//2:x_left+t//2+1] = 255
+            if 'e' in segs: img[y_mid:y_bot, x_left-t//2:x_left+t//2+1] = 255
+            if 'b' in segs: img[y_top:y_mid, x_right-t//2:x_right+t//2+1] = 255
+            if 'c' in segs: img[y_mid:y_bot, x_right-t//2:x_right+t//2+1] = 255
+
+            templates[digit].append(img)
+
+    return templates
+
+_TEMPLATES_CACHE = _build_7seg_templates(32, 48)
 
 
-SEVEN_SEG_MAP = {
-    (1, 1, 1, 0, 1, 1, 1): 0,
-    (0, 0, 1, 0, 0, 1, 0): 1,
-    (1, 0, 1, 1, 1, 0, 1): 2,
-    (1, 0, 1, 1, 0, 1, 1): 3,
-    (0, 1, 1, 1, 0, 1, 0): 4,
-    (1, 1, 0, 1, 0, 1, 1): 5,
-    (1, 1, 0, 1, 1, 1, 1): 6,
-    (1, 0, 1, 0, 0, 1, 0): 7,
-    (1, 1, 1, 1, 1, 1, 1): 8,
-    (1, 1, 1, 1, 0, 1, 1): 9,
-}
+def _classify_template(crop_bin: np.ndarray) -> dict:
+    h, w = crop_bin.shape[:2]
+    if h < 5 or w < 3:
+        return {d: 0.1 for d in range(10)}
+
+    resized = cv2.resize(crop_bin, (32, 48))
+    scores = {}
+    for d, tmpl_list in _TEMPLATES_CACHE.items():
+        best_s = 0.0
+        for tmpl in tmpl_list:
+            res = cv2.matchTemplate(resized, tmpl, cv2.TM_CCOEFF_NORMED)
+            score = max(0.0, float(res[0, 0]))
+            if score > best_s:
+                best_s = score
+        scores[d] = best_s
+
+    total = sum(scores.values()) + 1e-6
+    return {d: scores[d] / total for d in range(10)}
 
 
-def decode_base64_image(base64_str: str) -> np.ndarray:
-    try:
-        if "," in base64_str:
-            base64_str = base64_str.split(",", 1)[1]
-        
-        img_bytes = base64.b64decode(base64_str)
-        pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-        bgr_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
-        return bgr_img
-    except Exception as e:
-        raise ValueError(f"Failed to decode base64 image: {str(e)}")
+# =========================================================================
+# ENGINE D: STRUCTURAL SKELETON & TOPOLOGICAL ANALYSIS
+# =========================================================================
+
+def _classify_structural(crop_bin: np.ndarray) -> dict:
+    h, w = crop_bin.shape[:2]
+    if h < 8 or w < 4:
+        return {d: 0.1 for d in range(10)}
+
+    # Hole count via contour hierarchy
+    contours, hierarchy = cv2.findContours(crop_bin, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    num_holes = 0
+    if hierarchy is not None:
+        for row in hierarchy[0]:
+            if row[3] != -1:
+                num_holes += 1
+
+    scores = {d: 0.05 for d in range(10)}
+    if num_holes >= 2:
+        scores[8] = 0.85
+    elif num_holes == 1:
+        scores[0] = 0.35
+        scores[6] = 0.25
+        scores[9] = 0.25
+        scores[4] = 0.15
+    else:
+        scores[1] = 0.25
+        scores[2] = 0.20
+        scores[3] = 0.20
+        scores[5] = 0.20
+        scores[7] = 0.15
+
+    total = sum(scores.values()) + 1e-6
+    return {d: scores[d] / total for d in range(10)}
 
 
-def preprocess_hsv_red_led(bgr_img: np.ndarray):
-    # 1. Red LED Detection
-    hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-    lower_red1 = np.array([0, 50, 50])
-    upper_red1 = np.array([15, 255, 255])
-    lower_red2 = np.array([160, 50, 50])
-    upper_red2 = np.array([180, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    red_mask = cv2.bitwise_or(mask1, mask2)
+# =========================================================================
+# ENGINE A: 7-SEGMENT GEOMETRIC CORE ANALYZER & DISAMBIGUATOR
+# =========================================================================
 
-    red_pixels = cv2.countNonZero(red_mask)
-    if red_pixels > 300:
-        # It's a red LED scale display: use the clean red mask without corrupting dark background
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-        closed_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel)
-        dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
-        return dilated_mask
+def _classify_geometric(crop_bin: np.ndarray) -> tuple[dict, int]:
+    h, w = crop_bin.shape[:2]
+    if h < 5 or w < 3:
+        return {d: 0.1 for d in range(10)}, 0
 
-    # 2. Dark LCD / Ink Detection (black on light bg fallback)
-    gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
-    dark_mask = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 15
-    )
-    noise_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    dark_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_OPEN, noise_kernel)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    closed_mask = cv2.morphologyEx(dark_mask, cv2.MORPH_CLOSE, kernel)
-    dilated_mask = cv2.dilate(closed_mask, kernel, iterations=1)
-    return dilated_mask
+    # Rule for '1': skinny box
+    ar = w / float(h)
+    if ar < 0.38:
+        probs = {d: 0.001 for d in range(10)}
+        probs[1] = 0.99
+        return probs, 1
 
+    # Rule for '1': left half empty and right half active
+    left_density = cv2.countNonZero(crop_bin[:, :int(w * 0.42)]) / float(h * int(w * 0.42) or 1)
+    right_density = cv2.countNonZero(crop_bin[:, int(w * 0.58):]) / float(h * (w - int(w * 0.58)) or 1)
+    if left_density < 0.08 and right_density > 0.22:
+        probs = {d: 0.001 for d in range(10)}
+        probs[1] = 0.98
+        return probs, 1
 
-def compute_iou(boxA, boxB):
-    xA = max(boxA[0], boxB[0])
-    yA = max(boxA[1], boxB[1])
-    xB = min(boxA[0] + boxA[2], boxB[0] + boxB[2])
-    yB = min(boxA[1] + boxA[3], boxB[1] + boxB[3])
-
-    interWidth = max(0, xB - xA)
-    interHeight = max(0, yB - yA)
-    interArea = interWidth * interHeight
-
-    boxAArea = boxA[2] * boxA[3]
-    boxBArea = boxB[2] * boxB[3]
-
-    if boxAArea + boxBArea - interArea == 0:
-        return 0.0
-
-    return interArea / float(boxAArea + boxBArea - interArea)
-
-
-def is_nested(box_inner, box_outer):
-    xi, yi, wi, hi = box_inner
-    xo, yo, wo, ho = box_outer
-    return xi >= xo and yi >= yo and (xi + wi) <= (xo + wo) and (yi + hi) <= (yo + ho)
-
-
-def apply_nms_and_overlap_filter(candidates, iou_threshold=0.3):
-    if not candidates:
-        return []
-
-    sorted_cands = sorted(candidates, key=lambda c: (c['box'][2] * c['box'][3]) * c['confidence'], reverse=True)
-    keep = []
-
-    for cand in sorted_cands:
-        box = cand['box']
-        discard = False
-        for kept in keep:
-            kbox = kept['box']
-            iou = compute_iou(box, kbox)
-            
-            x_overlap = max(0, min(box[0] + box[2], kbox[0] + kbox[2]) - max(box[0], kbox[0]))
-            overlap_ratio = x_overlap / float(min(box[2], kbox[2])) if min(box[2], kbox[2]) > 0 else 0
-
-            if iou > iou_threshold or overlap_ratio > 0.35 or is_nested(box, kbox):
-                discard = True
-                break
-
-        if not discard:
-            keep.append(cand)
-
-    keep.sort(key=lambda c: c['box'][0])
-    return keep
-
-
-def verify_7segment_geometric_rules(active_pattern: list[int], raw_digit: int | None, conf: float) -> tuple[int, float]:
-    top, top_left, top_right, middle, bottom_left, bottom_right, bottom = active_pattern
-
-    # 0: Middle empty, top & bottom active, left active
-    if middle == 0 and top == 1 and bottom == 1 and top_left == 1 and bottom_left == 1:
-        return 0, max(conf, 0.96)
-
-    # 4: Top & bottom empty, middle active, right active (NEVER guess 9 or 8)
-    if top == 0 and bottom == 0 and middle == 1 and (top_right == 1 or bottom_right == 1):
-        return 4, max(conf, 0.96)
-
-    # 1: Only right segments active
-    if top == 0 and bottom == 0 and middle == 0 and top_left == 0 and bottom_left == 0 and (top_right == 1 or bottom_right == 1):
-        return 1, max(conf, 0.98)
-
-    # 7: Top, top-right, bottom-right active, middle & bottom & top-left empty (NEVER guess 3)
-    if top == 1 and top_right == 1 and bottom_right == 1 and middle == 0 and bottom == 0 and top_left == 0:
-        return 7, max(conf, 0.95)
-
-    # 6: Top-right empty, bottom-left active (NEVER guess 8 or 5)
-    if top_right == 0 and bottom_left == 1:
-        return 6, max(conf, 0.95)
-
-    # 5: Top-right empty, top-left active, bottom-left empty, bottom-right active (NEVER guess 9 or 6)
-    if top_right == 0 and top_left == 1 and bottom_left == 0 and bottom_right == 1:
-        return 5, max(conf, 0.95)
-
-    # 3: Top-left empty, bottom-left empty, top-right & bottom-right active, middle active (NEVER guess 9)
-    if top_left == 0 and bottom_left == 0 and top_right == 1 and bottom_right == 1 and middle == 1:
-        return 3, max(conf, 0.95)
-
-    # 9: Top-left active, top-right active, bottom-left empty, bottom-right active, top active
-    if top_left == 1 and top_right == 1 and bottom_left == 0 and bottom_right == 1 and top == 1 and middle == 1:
-        return 9, max(conf, 0.95)
-
-    # 8: All 7 segments active
-    if top_left == 1 and top_right == 1 and bottom_left == 1 and bottom_right == 1 and middle == 1 and top == 1 and bottom == 1:
-        return 8, max(conf, 0.95)
-
-    # 2: Top-left empty, bottom-right empty, top-right active, bottom-left active
-    if top_left == 0 and bottom_right == 0 and top_right == 1 and bottom_left == 1:
-        return 2, max(conf, 0.95)
-
-    if raw_digit is not None:
-        return raw_digit, conf
-
-    return 0, 0.5
-
-
-def fix_digit_prediction(digit_crop: np.ndarray, model_prediction: int) -> int:
-    h, w = digit_crop.shape[:2]
-    if h < 10 or w < 4:
-        return model_prediction
-
-    # Keep confident predictions for distinct digits
-    if model_prediction in (1, 2, 4, 5, 7, 8):
-        return model_prediction
-
-    top_left_region = digit_crop[int(h * 0.15):int(h * 0.45), 0:int(w * 0.35)]
-    top_left_pixels = cv2.countNonZero(top_left_region) if top_left_region.size > 0 else 0
-    top_left_total = top_left_region.size if top_left_region.size > 0 else 1
-
-    bottom_left_region = digit_crop[int(h * 0.55):int(h * 0.85), 0:int(w * 0.35)]
-    bottom_left_pixels = cv2.countNonZero(bottom_left_region) if bottom_left_region.size > 0 else 0
-    bottom_left_total = bottom_left_region.size if bottom_left_region.size > 0 else 1
-
-    is_tl_empty = (top_left_pixels / float(top_left_total)) < 0.10
-    is_bl_empty = (bottom_left_pixels / float(bottom_left_total)) < 0.10
-
-    # Check middle and bottom segments to distinguish 3 from 7
-    middle_region = digit_crop[int(h * 0.40):int(h * 0.60), int(w * 0.20):int(w * 0.80)]
-    mid_pixels = cv2.countNonZero(middle_region) if middle_region.size > 0 else 0
-    mid_total = middle_region.size if middle_region.size > 0 else 1
-    is_mid_active = (mid_pixels / float(mid_total)) > 0.15
-
-    bottom_region = digit_crop[int(h * 0.80):h, int(w * 0.20):int(w * 0.80)]
-    bot_pixels = cv2.countNonZero(bottom_region) if bottom_region.size > 0 else 0
-    bot_total = bottom_region.size if bottom_region.size > 0 else 1
-    is_bot_active = (bot_pixels / float(bot_total)) > 0.15
-
-    if is_tl_empty and is_bl_empty:
-        if not is_mid_active and not is_bot_active:
-            return 7
-        if is_mid_active and is_bot_active:
-            return 3
-        return model_prediction
-
-    return model_prediction
-
-
-def recognize_digit_from_crop(digit_crop: np.ndarray) -> tuple[int, float]:
-    h, w = digit_crop.shape[:2]
-    if h < 10 or w < 4:
-        return None, 0.0
-
-    # Rule for '1': If aspect ratio w/h < 0.38 (skinny box), FORCE digit to 1
-    aspect_w_h = w / float(h)
-    if aspect_w_h < 0.38:
-        return 1, 0.98
-
-    # Also detect '1' when left half is empty and right half is active (distinguishes 1 from 8)
-    left_half = digit_crop[:, 0:int(w * 0.45)]
-    right_half = digit_crop[:, int(w * 0.55):w]
-    left_density = (cv2.countNonZero(left_half) / float(left_half.size)) if left_half.size > 0 else 0
-    right_density = (cv2.countNonZero(right_half) / float(right_half.size)) if right_half.size > 0 else 0
-    if left_density < 0.08 and right_density > 0.20:
-        return 1, 0.96
-
-    mlp_digit, mlp_conf = _mlp_classify(digit_crop)
-
+    # 7 core sampling zones
     segments_rel = [
-        (0.2, 0.0, 0.6, 0.2),    # Top [0]
-        (0.0, 0.08, 0.3, 0.42),  # Top-Left [1]
-        (0.7, 0.08, 0.3, 0.42),  # Top-Right [2]
-        (0.2, 0.4, 0.6, 0.2),    # Middle [3]
-        (0.0, 0.5, 0.3, 0.42),   # Bottom-Left [4]
-        (0.7, 0.5, 0.3, 0.42),   # Bottom-Right [5]
-        (0.2, 0.8, 0.6, 0.2),    # Bottom [6]
+        (0.20, 0.00, 0.60, 0.18),    # Top [0]
+        (0.00, 0.18, 0.28, 0.24),    # Top-Left [1]
+        (0.72, 0.18, 0.28, 0.24),    # Top-Right [2]
+        (0.20, 0.40, 0.60, 0.20),    # Middle [3]
+        (0.00, 0.58, 0.28, 0.24),    # Bottom-Left [4]
+        (0.72, 0.58, 0.28, 0.24),    # Bottom-Right [5]
+        (0.20, 0.82, 0.60, 0.18),    # Bottom [6]
     ]
 
-    active_pattern = []
-    scores = []
-
+    ratios = []
     for (rx, ry, rw, rh) in segments_rel:
         x1, y1 = int(rx * w), int(ry * h)
-        x2, y2 = int((rx + rw) * w), int((ry + rh) * h)
+        x2, y2 = max(x1 + 1, int((rx + rw) * w)), max(y1 + 1, int((ry + rh) * h))
+        roi = crop_bin[y1:y2, x1:x2]
+        ratio = cv2.countNonZero(roi) / float(roi.size) if roi.size > 0 else 0.0
+        ratios.append(ratio)
 
-        roi = digit_crop[y1:y2, x1:x2]
-        if roi.size == 0:
-            active_pattern.append(0)
-            scores.append(0.0)
-            continue
+    top_r, tl_r, tr_r, mid_r, bl_r, br_r, bot_r = ratios
+    max_r = max(ratios) if ratios else 0.0
+    thresh = max(0.18, max_r * 0.35)
 
-        on_pixels = cv2.countNonZero(roi)
-        total_pixels = roi.shape[0] * roi.shape[1]
-        ratio = on_pixels / float(total_pixels) if total_pixels > 0 else 0
+    is_top = top_r >= thresh
+    is_tr  = tr_r >= thresh
+    is_br  = br_r >= thresh
+    is_bot = bot_r >= thresh
+    is_mid = mid_r >= thresh
 
-        is_on = 1 if ratio > 0.22 else 0
-        active_pattern.append(is_on)
-        scores.append(ratio if is_on else (1.0 - ratio))
+    # Robust left-side segment detection (relative to right side)
+    is_tl  = tl_r >= thresh and (tl_r > 0.40 * tr_r or tr_r < thresh)
+    is_bl  = bl_r >= thresh and (bl_r > 0.40 * br_r or br_r < thresh)
 
-    pattern_tuple = tuple(active_pattern)
-    raw_digit = SEVEN_SEG_MAP.get(pattern_tuple, None)
-    confidence = float(np.mean(scores)) if scores else 0.5
+    scores = {d: 0.02 for d in range(10)}
 
-    top, top_left, top_right, middle, bottom_left, bottom_right, bottom = active_pattern
+    # Explicit 9: Top, TL, TR, Mid, BR active, BL is empty (Bot can be 0 or 1!)
+    if is_top and is_tl and is_tr and is_mid and is_br and not is_bl:
+        scores[9] = 0.98
+    # Explicit 4: Middle active, TR active, BR active, Top empty, Bot empty, BL empty (TL can be 0 or 1!)
+    elif not is_top and is_mid and is_tr and is_br and not is_bl and not is_bot:
+        scores[4] = 0.98
+    # Explicit 3: Top, TR, Mid, BR active, left side empty (Bot can be faint or active!)
+    elif is_top and is_tr and is_mid and is_br and not is_tl and not is_bl:
+        scores[3] = 0.98
+    # Explicit 8: All 7 segments solidly active
+    elif is_top and is_tr and is_mid and is_br and is_bot and is_tl and is_bl:
+        scores[8] = 0.98
+    # Explicit 0: Middle empty, Top, Bot, TL, TR, BL, BR active
+    elif not is_mid and is_top and is_bot and is_tl and is_tr and is_bl and is_br:
+        scores[0] = 0.98
+    # Explicit 7: Top active, TR active, BR active, Middle EMPTY, Bottom empty, Left empty
+    elif is_top and is_tr and is_br and not is_mid and not is_bot and not is_bl:
+        scores[7] = 0.98
+    # Explicit 6: TL, Mid, BL, BR, Bot active, TR empty
+    elif is_tl and is_mid and is_bl and is_br and is_bot and not is_tr:
+        scores[6] = 0.98
+    # Explicit 5: Top, TL, Mid, BR, Bot active, TR empty, BL empty
+    elif is_top and is_tl and is_mid and is_br and is_bot and not is_tr and not is_bl:
+        scores[5] = 0.98
+    # Explicit 2: Top, TR, Mid, BL, Bot active, TL empty, BR empty
+    elif is_top and is_tr and is_mid and is_bl and is_bot and not is_tl and not is_br:
+        scores[2] = 0.98
+    # Explicit 1: Only TR and BR active, Middle EMPTY, Top empty, Bot empty
+    elif is_tr and is_br and not is_mid and not is_top and not is_bot and not is_tl and not is_bl:
+        scores[1] = 0.98
+    else:
+        # Distance-based fallback for imperfect/noisy states
+        patterns = [
+            (0, [1, 1, 1, 0, 1, 1, 1]),
+            (1, [0, 0, 1, 0, 0, 1, 0]),
+            (2, [1, 0, 1, 1, 1, 0, 1]),
+            (3, [1, 0, 1, 1, 0, 1, 1]),
+            (4, [0, 1, 1, 1, 0, 1, 0]),
+            (4, [0, 0, 1, 1, 0, 1, 0]), # variant 4 without top-left
+            (5, [1, 1, 0, 1, 0, 1, 1]),
+            (6, [1, 1, 0, 1, 1, 1, 1]),
+            (6, [0, 1, 0, 1, 1, 1, 1]),
+            (7, [1, 0, 1, 0, 0, 1, 0]),
+            (8, [1, 1, 1, 1, 1, 1, 1]),
+            (9, [1, 1, 1, 1, 0, 1, 1]),
+            (9, [1, 1, 1, 1, 0, 1, 0]),
+        ]
+        current_pat = [int(is_top), int(is_tl), int(is_tr), int(is_mid), int(is_bl), int(is_br), int(is_bot)]
+        for d, pat in patterns:
+            dist = sum(1 for a, b in zip(current_pat, pat) if a != b)
+            s = max(0.02, 1.0 - dist * 0.22)
+            if s > scores[d]:
+                scores[d] = s
 
-    # Correct MLP misclassifications for 9 vs 6, 8 vs 1, 8 vs 6, 9 vs 4, 9 vs 5
-    if mlp_digit == 6 and bottom_left == 0 and top_right == 1:
-        mlp_digit = 9
-    elif mlp_digit == 8 and top_right == 0 and bottom_left == 1:
-        mlp_digit = 6
-    elif mlp_digit == 8 and bottom_left == 0 and top_left == 0:
-        mlp_digit = 1 if (middle == 0 and bottom == 0) else 3
-    elif mlp_digit == 9 and top == 0 and bottom == 0:
-        mlp_digit = 4
-    elif mlp_digit == 9 and top_right == 0:
-        mlp_digit = 5
-
-    if mlp_digit is not None and mlp_conf >= 0.75:
-        geo_digit, geo_conf = verify_7segment_geometric_rules(active_pattern, mlp_digit, mlp_conf)
-        final_d = fix_digit_prediction(digit_crop, geo_digit)
-        return final_d, geo_conf
-
-    final_digit, final_conf = verify_7segment_geometric_rules(active_pattern, raw_digit, confidence)
-    final_d = fix_digit_prediction(digit_crop, final_digit)
-    return final_d, final_conf
+    total = sum(scores.values()) + 1e-6
+    probs = {d: scores[d] / total for d in range(10)}
+    best_d = max(probs, key=probs.get)
+    return probs, best_d
 
 
-def autocorrect_scale_weight(weight_digits: list[str]) -> int:
-    raw_str = "".join(weight_digits)
-    cleaned_str = re.sub(r"\D", "", raw_str)
-    
-    if not cleaned_str:
-        return 0
+# =========================================================================
+# FUSION LAYER: MULTI-ENGINE WEIGHTED VOTING
+# =========================================================================
 
-    if len(cleaned_str) > 5:
-        cleaned_str = cleaned_str[:5]
-    
-    if len(cleaned_str) > 3 and cleaned_str.startswith("0"):
-        cleaned_str = cleaned_str[1:]
+def recognize_digit_from_crop(digit_crop: np.ndarray) -> tuple[Optional[int], float]:
+    h, w = digit_crop.shape[:2]
+    if h < 10 or w < 3:
+        return None, 0.0
 
-    return int(cleaned_str) if cleaned_str else 0
+    # Ensure binary mask
+    bin_crop = digit_crop
+    if bin_crop.ndim == 3:
+        bin_crop = cv2.cvtColor(bin_crop, cv2.COLOR_BGR2GRAY)
 
+    unique_vals = np.unique(bin_crop)
+    if len(unique_vals) > 2 or (len(unique_vals) == 2 and not (0 in unique_vals and 255 in unique_vals)):
+        corners = [bin_crop[0, 0], bin_crop[0, -1], bin_crop[-1, 0], bin_crop[-1, -1]]
+        bg_val = np.median(corners)
+        if bg_val > 127:
+            _, bin_crop = cv2.threshold(bin_crop, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        else:
+            _, bin_crop = cv2.threshold(bin_crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # Engine A: Geometric
+    p_geo, geo_best = _classify_geometric(bin_crop)
+
+    # Engine B: MLP
+    mlp_d, mlp_c, p_mlp = _mlp_classify(bin_crop)
+
+    # Engine C: Template Matching
+    p_tmpl = _classify_template(bin_crop)
+    tmpl_best = max(p_tmpl, key=p_tmpl.get)
+
+    # Engine D: Structural Analysis
+    p_struct = _classify_structural(bin_crop)
+
+    # Fusion weighting
+    # If Geometric and Template agree, they form a ground-truth consensus
+    final_scores = {}
+    if geo_best == tmpl_best:
+        for d in range(10):
+            final_scores[d] = 0.60 * p_geo[d] + 0.30 * p_tmpl[d] + 0.10 * p_struct[d]
+    elif mlp_d is not None and mlp_c >= 0.70 and (mlp_d == geo_best or mlp_d == tmpl_best):
+        for d in range(10):
+            final_scores[d] = (
+                0.40 * p_geo[d] +
+                0.30 * p_tmpl[d] +
+                0.20 * p_mlp[d] +
+                0.10 * p_struct[d]
+            )
+    else:
+        for d in range(10):
+            final_scores[d] = (
+                0.60 * p_geo[d] +
+                0.30 * p_tmpl[d] +
+                0.10 * p_struct[d]
+            )
+
+    best_digit = max(final_scores, key=final_scores.get)
+
+    # Calibrate confidence based on engine consensus
+    if geo_best == tmpl_best:
+        confidence = max(0.96, float(final_scores[best_digit]) * 1.5)
+    elif mlp_d == best_digit:
+        confidence = max(0.92, float(final_scores[best_digit]) * 1.4)
+    else:
+        confidence = float(final_scores[best_digit]) * 1.2
+
+    confidence = min(0.99, max(0.60, confidence))
+    return best_digit, round(confidence, 4)
+
+
+# =========================================================================
+# PREPROCESSING PIPELINE (MULTI-MODE ADAPTIVE)
+# =========================================================================
+
+def preprocess_multi_mode_display(bgr_img: np.ndarray, relaxed: bool = False) -> tuple[np.ndarray, str]:
+    H, W = bgr_img.shape[:2]
+    b, g, r = cv2.split(bgr_img)
+
+    # Auto-detect inverted Red LED (White/light background with Cyan digits)
+    cyan_diff = cv2.subtract(cv2.min(g, b), r)
+    cyan_count = cv2.countNonZero(cyan_diff > 25)
+    if cyan_count > 1500 and float(bgr_img.mean()) > 130:
+        bgr_img = 255 - bgr_img
+        b, g, r = cv2.split(bgr_img)
+
+    hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
+    diff = cv2.subtract(r, cv2.max(g, b))
+    bright_red_count = cv2.countNonZero(diff > 25)
+    mean_brightness = float(bgr_img.mean())
+
+    # Mode A: Red LED (illuminated red digits on dark/ambient background)
+    if bright_red_count > 2500 or (bright_red_count > 500 and mean_brightness < 140):
+        if not relaxed:
+            m1 = cv2.inRange(hsv, np.array([0, 50, 60]), np.array([15, 255, 255]))
+            m2 = cv2.inRange(hsv, np.array([160, 50, 60]), np.array([180, 255, 255]))
+            mask_hsv = cv2.bitwise_or(m1, m2)
+            _, diff_thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
+        else:
+            m1 = cv2.inRange(hsv, np.array([0, 30, 45]), np.array([15, 255, 255]))
+            m2 = cv2.inRange(hsv, np.array([145, 30, 45]), np.array([180, 255, 255]))
+            mask_hsv = cv2.bitwise_or(m1, m2)
+            _, diff_thresh = cv2.threshold(diff, 18, 255, cv2.THRESH_BINARY)
+
+        mask = cv2.bitwise_or(mask_hsv, diff_thresh)
+
+        # Clean top/bottom bezel margin rows (top 5% and bottom 5%)
+        mask[:int(H * 0.05), :] = 0
+        mask[H - int(H * 0.05):, :] = 0
+
+        # Close small gaps in strokes
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        return mask, "RED_LED"
+
+    # Mode B: Amber LED
+    amber_loose = cv2.inRange(hsv, np.array([16, 50, 60]), np.array([38, 255, 255]))
+    if cv2.countNonZero(amber_loose) > 1000:
+        mask = amber_loose
+        mask[:int(H * 0.05), :] = 0
+        mask[H - int(H * 0.05):, :] = 0
+        return mask, "AMBER_LED"
+
+    # Mode C: Dark LCD / Light background
+    gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
+    _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    mask[:int(H * 0.06), :] = 0
+    mask[H - int(H * 0.06):, :] = 0
+    mask[:, :int(W * 0.04)] = 0
+    mask[:, W - int(W * 0.04):] = 0
+    noise_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, noise_kernel)
+    return mask, "LCD_DARK"
+
+
+# =========================================================================
+# 3-STAGE DIGIT SEGMENTATION (VPP VALLEY SPLITTING & INDICATOR FILTER)
+# =========================================================================
+
+def _filter_overlapping_boxes(boxes: list[tuple[int, int, int, int]]) -> list[tuple[int, int, int, int]]:
+    if len(boxes) <= 1:
+        return boxes
+    boxes = sorted(boxes, key=lambda b: (b[0], -b[2] * b[3]))
+    kept = []
+    for b in boxes:
+        x1, y1, w1, h1 = b
+        overlap = False
+        for k in kept:
+            x2, y2, w2, h2 = k
+            inter_x1 = max(x1, x2)
+            inter_x2 = min(x1 + w1, x2 + w2)
+            inter_w = max(0, inter_x2 - inter_x1)
+            min_w = min(w1, w2)
+            if min_w > 0 and (inter_w / float(min_w)) > 0.40:
+                overlap = True
+                break
+        if not overlap:
+            kept.append(b)
+    kept.sort(key=lambda b: b[0])
+    return kept
+
+
+def _split_merged_digits(crop_mask: np.ndarray, expected_single_w: float) -> list[tuple[int, int]]:
+    h, w = crop_mask.shape[:2]
+    if w < 40:
+        return [(0, w)]
+
+    ratio_w = w / float(expected_single_w or 1.0)
+    if ratio_w < 1.4:
+        return [(0, w)]
+
+    vpp = np.sum(crop_mask > 0, axis=0).astype(float)
+    smooth = np.convolve(vpp, np.ones(9) / 9.0, mode='same')
+
+    # Multi-digit block with 3 or more merged digits (e.g. ratio >= 2.2)
+    if ratio_w >= 2.2:
+        num_digits = max(3, int(round(ratio_w)))
+        segment_w = w / float(num_digits)
+        splits = []
+        for d in range(1, num_digits):
+            center = int(d * segment_w)
+            s_start = max(10, center - int(segment_w * 0.35))
+            s_end   = min(w - 10, center + int(segment_w * 0.35))
+            if s_end > s_start:
+                valley = s_start + int(np.argmin(smooth[s_start:s_end]))
+                splits.append(valley)
+        splits = sorted(list(set(splits)))
+        boundaries = [0] + splits + [w]
+        return [(boundaries[i], boundaries[i+1]) for i in range(len(boundaries)-1) if boundaries[i+1] - boundaries[i] > 15]
+
+    # Merged 2 digits: recognizer-guided valley candidate testing
+    valleys = []
+    for x in range(20, w - 20):
+        if smooth[x] <= smooth[x-1] and smooth[x] <= smooth[x+1]:
+            valleys.append(x)
+
+    best_split = None
+    best_score = -1.0
+    for vx in valleys:
+        c1 = crop_mask[:, :vx]
+        c2 = crop_mask[:, vx:]
+        d1, conf1 = recognize_digit_from_crop(c1)
+        d2, conf2 = recognize_digit_from_crop(c2)
+        if d1 is not None and d2 is not None:
+            score = conf1 * conf2
+            if score > best_score and conf1 >= 0.75 and conf2 >= 0.75:
+                best_score = score
+                best_split = vx
+
+    if best_split is not None:
+        return [(0, best_split), (best_split, w)]
+
+    return [(0, w)]
+
+
+def segment_display_digits(mask: np.ndarray) -> list[tuple[int, int, int, int]]:
+    H, W = mask.shape[:2]
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
+    min_digit_h = int(H * 0.45)
+
+    initial_boxes = []
+    for i in range(1, num_labels):
+        x, y, w, h, area = stats[i]
+        aspect_ratio = float(w) / h if h > 0 else 0
+        # Include normal digits and narrow digit 1
+        if (area > 100 and h >= min_digit_h and aspect_ratio <= 1.5) or (w < 45 and h >= min_digit_h and area > 50):
+            initial_boxes.append((x, y, w, h))
+
+    if not initial_boxes:
+        return []
+
+    initial_boxes.sort(key=lambda b: b[0])
+
+    # Estimate median single digit height and expected width
+    non_skinny = [b for b in initial_boxes if (b[2] / float(b[3])) >= 0.35]
+    if non_skinny:
+        typical_h = np.median([b[3] for b in non_skinny])
+    else:
+        typical_h = np.median([b[3] for b in initial_boxes])
+    expected_single_w = typical_h * 0.58
+
+    split_boxes = []
+    for (x, y, w, h) in initial_boxes:
+        crop = mask[y:y+h, x:x+w]
+        splits = _split_merged_digits(crop, expected_single_w)
+        for sx1, sx2 in splits:
+            split_boxes.append((x + sx1, y, sx2 - sx1, h))
+
+    # Filter out non-digit status indicator symbols & small noise fragments
+    if len(split_boxes) >= 2:
+        med_y = np.median([b[1] for b in split_boxes])
+        med_h = np.median([b[3] for b in split_boxes])
+        filtered = []
+        for (x, y, w, h) in split_boxes:
+            if (y - med_y) > med_h * 0.40:
+                continue
+            if h < med_h * 0.65:
+                continue
+            filtered.append((x, y, w, h))
+        if filtered:
+            split_boxes = filtered
+
+    split_boxes = _filter_overlapping_boxes(split_boxes)
+    split_boxes.sort(key=lambda b: b[0])
+    return split_boxes
+
+
+# =========================================================================
+# FIXED-SLOT FALLBACK (GRID-BASED)
+# =========================================================================
 
 SEVEN_SEG_MATRIX_ROBUST = {
     (1, 1, 1, 1, 1, 1, 0): "0",
     (0, 1, 1, 0, 0, 0, 0): "1",
     (1, 1, 0, 1, 1, 0, 1): "2",
     (1, 1, 1, 1, 0, 0, 1): "3",
-    (0, 1, 1, 0, 0, 1, 1): "4",
+    (0, 1, 1, 0, 0, 1, 1): "4", (0, 1, 1, 0, 0, 0, 1): "4",
     (1, 0, 1, 1, 0, 1, 1): "5",
     (1, 0, 1, 1, 1, 1, 1): "6", (0, 0, 1, 1, 1, 1, 1): "6",
     (1, 1, 1, 0, 0, 0, 0): "7", (1, 1, 1, 0, 0, 1, 0): "7",
@@ -475,37 +658,13 @@ VALID_PATTERNS = {
 }
 
 
-def get_closest_matching_digit(state: tuple[int, ...]) -> str:
-    if sum(state) == 0:
-        return ""
-    best_digit = "?"
-    min_dist = 999
-    for digit, pat in VALID_PATTERNS.items():
-        dist = sum(1 for a, b in zip(state, pat) if a != b)
-        if dist < min_dist:
-            min_dist = dist
-            best_digit = digit
-    return best_digit if min_dist <= 2 else "?"
-
-
-def decode_7segment_robust(a: int, b: int, c: int, d: int, e: int, f: int, g: int) -> str:
-    state = (a, b, c, d, e, f, g)
-    if state in SEVEN_SEG_MATRIX_ROBUST:
-        return SEVEN_SEG_MATRIX_ROBUST[state]
-    return get_closest_matching_digit(state)
-
-
 def decode_fixed_slots_7segment(processed_mask: np.ndarray, num_slots: int = 3) -> tuple[str, float]:
     img_h, img_w = processed_mask.shape[:2]
-
     contours, _ = cv2.findContours(processed_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
         best_cnt = max(contours, key=cv2.contourArea)
         x, y, w, h = cv2.boundingRect(best_cnt)
-        if w > 30 and h > 15:
-            display_crop = processed_mask[y:y+h, x:x+w]
-        else:
-            display_crop = processed_mask
+        display_crop = processed_mask[y:y+h, x:x+w] if w > 30 and h > 15 else processed_mask
     else:
         display_crop = processed_mask
 
@@ -537,22 +696,12 @@ def decode_fixed_slots_7segment(processed_mask: np.ndarray, num_slots: int = 3) 
             slot_crop[int(sh * 0.38):int(sh * 0.62), int(sw * 0.20):int(sw * 0.80)],
         ]
 
-        ratios = []
-        for reg in segments_map:
-            if reg.size == 0:
-                ratios.append(0.0)
-                continue
-            r = cv2.countNonZero(reg) / float(reg.size)
-            ratios.append(r)
-
+        ratios = [cv2.countNonZero(reg) / float(reg.size) if reg.size > 0 else 0.0 for reg in segments_map]
         max_ratio = max(ratios) if ratios else 0.0
+        states = [1 if (r / (max_ratio or 1.0)) >= 0.40 else 0 for r in ratios] if max_ratio >= 0.08 else [0] * 7
 
-        if max_ratio < 0.08:
-            states = [0] * 7
-        else:
-            states = [1 if (r / max_ratio) >= 0.40 else 0 for r in ratios]
-
-        digit_char = decode_7segment_robust(*states)
+        state_t = tuple(states)
+        digit_char = SEVEN_SEG_MATRIX_ROBUST.get(state_t, "?")
         if digit_char == "?":
             has_unknown = True
         decoded_digits.append(digit_char)
@@ -561,93 +710,106 @@ def decode_fixed_slots_7segment(processed_mask: np.ndarray, num_slots: int = 3) 
         return "", 0.0
 
     raw_weight_str = "".join(d for d in decoded_digits if d.isdigit())
-    return raw_weight_str, 0.99
+    return raw_weight_str, 0.90
 
+
+def autocorrect_scale_weight(weight_digits: list[str]) -> int:
+    raw_str = "".join(weight_digits)
+    cleaned_str = re.sub(r"\D", "", raw_str)
+    if not cleaned_str:
+        return 0
+
+    if len(cleaned_str) > 5:
+        cleaned_str = cleaned_str[:5]
+
+    if len(cleaned_str) > 1 and cleaned_str.startswith("0"):
+        cleaned_str = cleaned_str.lstrip("0") or "0"
+
+    return int(cleaned_str) if cleaned_str else 0
+
+
+def decode_base64_image(base64_str: str) -> np.ndarray:
+    try:
+        if "," in base64_str:
+            base64_str = base64_str.split(",", 1)[1]
+        img_bytes = base64.b64decode(base64_str)
+        pil_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    except Exception as e:
+        raise ValueError(f"Failed to decode base64 image: {str(e)}")
+
+
+# =========================================================================
+# MAIN RECOGNITION PIPELINE
+# =========================================================================
 
 def process_spectrum_detection(bgr_img: np.ndarray):
-    processed_mask = preprocess_hsv_red_led(bgr_img)
-    img_h, img_w = processed_mask.shape[:2]
+    # Pass 1: standard high-confidence mask
+    processed_mask, mode_detected = preprocess_multi_mode_display(bgr_img, relaxed=False)
+    boxes = segment_display_digits(processed_mask)
 
-    fixed_slot_str, fixed_conf = decode_fixed_slots_7segment(processed_mask, num_slots=3)
-
-    contours, _ = cv2.findContours(processed_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    raw_candidates = []
-    min_h = int(img_h * 0.08)
-    max_h = int(img_h * 0.95)
-
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
-        aspect_ratio = h / float(w) if w > 0 else 0
-        area = cv2.contourArea(cnt)
-
-        if w < 10 or h < min_h:
-            continue
-
-        if min_h <= h <= max_h and area > 40:
-            if aspect_ratio < 0.9 and w > int(h * 0.75):
-                half_w = int(w / 2)
-                crop1 = processed_mask[y:y+h, x:x+half_w]
-                digit1, conf1 = recognize_digit_from_crop(crop1)
-                if digit1 is not None:
-                    raw_candidates.append({'box': (x, y, half_w, h), 'digit': digit1, 'confidence': conf1})
-
-                crop2 = processed_mask[y:y+h, x+half_w:x+w]
-                digit2, conf2 = recognize_digit_from_crop(crop2)
-                if digit2 is not None:
-                    raw_candidates.append({'box': (x + half_w, y, half_w, h), 'digit': digit2, 'confidence': conf2})
-            else:
-                crop = processed_mask[y:y+h, x:x+w]
-                digit, conf = recognize_digit_from_crop(crop)
-                if digit is not None:
-                    raw_candidates.append({'box': (x, y, w, h), 'digit': digit, 'confidence': conf})
-
-    final_candidates = apply_nms_and_overlap_filter(raw_candidates, iou_threshold=0.3)
-    final_candidates.sort(key=lambda c: c['box'][0])
+    # Pass 2: relaxed threshold if Pass 1 yielded NO digits at all
+    if len(boxes) == 0:
+        relaxed_mask, _ = preprocess_multi_mode_display(bgr_img, relaxed=True)
+        relaxed_boxes = segment_display_digits(relaxed_mask)
+        if len(relaxed_boxes) > 0:
+            processed_mask = relaxed_mask
+            boxes = relaxed_boxes
 
     detected_digits = []
     confidences = []
     preview_overlay = cv2.cvtColor(processed_mask, cv2.COLOR_GRAY2BGR)
 
-    for cand in final_candidates:
-        x, y, w, h = cand['box']
-        digit = cand['digit']
-        conf = cand['confidence']
-
-        detected_digits.append(str(digit))
-        confidences.append(conf)
-
-        cv2.rectangle(preview_overlay, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cv2.putText(preview_overlay, str(digit), (x, max(15, y - 5)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    for (x, y, w, h) in boxes:
+        crop = processed_mask[y:y+h, x:x+w]
+        digit, conf = recognize_digit_from_crop(crop)
+        if digit is not None:
+            detected_digits.append(str(digit))
+            confidences.append(conf)
+            cv2.rectangle(preview_overlay, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(preview_overlay, str(digit), (x, max(20, y - 5)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
     _, buffer = cv2.imencode(".png", preview_overlay)
     base64_preview = "data:image/png;base64," + base64.b64encode(buffer).decode("utf-8")
 
     if detected_digits:
+        if len(detected_digits) > 5:
+            return {
+                "status": "ERROR",
+                "weight_detected": 0,
+                "confidence": 0.0,
+                "spectrum_processed_image": base64_preview,
+                "mode_detected": mode_detected,
+                "engine_version": "6.0.0 (Error: Too many digits detected)",
+                "message": "Invalid reading: over 5 digits detected"
+            }
+            
         weight_val = autocorrect_scale_weight(detected_digits)
         if weight_val > 0:
-            avg_confidence = float(np.mean(confidences)) if confidences else 0.0
-            status = "SUCCESS" if avg_confidence >= 0.75 else "WARNING_LOW_CONFIDENCE"
+            avg_conf = float(np.mean(confidences)) if confidences else 0.0
+            status = "SUCCESS" if avg_conf >= 0.75 else "WARNING_LOW_CONFIDENCE"
             return {
                 "status": status,
                 "weight_detected": weight_val,
-                "confidence": round(avg_confidence, 4),
+                "confidence": round(avg_conf, 4),
                 "spectrum_processed_image": base64_preview,
-                "engine_version": "5.2.0 (SPECTRUM Contour & Heuristic Active)"
+                "mode_detected": mode_detected,
+                "engine_version": "6.0.0 (SPECTRUM Multi-Engine Fusion Active)"
             }
 
+    # Fallback to Fixed-Slot Grid Decoder
+    fixed_slot_str, fixed_conf = decode_fixed_slots_7segment(processed_mask, num_slots=3)
     if fixed_slot_str and fixed_slot_str.isdigit():
         val = int(fixed_slot_str)
         if val > 0:
-            _, buffer = cv2.imencode(".png", cv2.cvtColor(processed_mask, cv2.COLOR_GRAY2BGR))
-            base64_preview = "data:image/png;base64," + base64.b64encode(buffer).decode("utf-8")
             return {
                 "status": "SUCCESS",
                 "weight_detected": val,
                 "confidence": 0.85,
                 "spectrum_processed_image": base64_preview,
-                "engine_version": "5.2.0 (Fixed-Slot 7-Segment Decoder Fallback)"
+                "mode_detected": mode_detected,
+                "engine_version": "6.0.0 (Fixed-Slot 7-Segment Decoder Fallback)"
             }
 
     return {
@@ -655,20 +817,45 @@ def process_spectrum_detection(bgr_img: np.ndarray):
         "weight_detected": 0,
         "confidence": 0.0,
         "spectrum_processed_image": base64_preview,
-        "engine_version": "5.2.0",
+        "mode_detected": mode_detected,
+        "engine_version": "6.0.0",
         "message": "No LED digits detected in image"
     }
+
+
+# =========================================================================
+# FASTAPI APP & ENDPOINTS
+# =========================================================================
+
+app = FastAPI(
+    title="SPECTRUM Engine 6.0 AI Microservice",
+    description="Multi-Engine Fusion (Geometric Heuristic, Template Matching, Structural Skeleton, MLP & NMS Active)",
+    version="6.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+
+class DetectRequest(BaseModel):
+    image: Optional[str] = None
+    images: Optional[list[str]] = None
 
 
 @app.get("/")
 @app.get("/api/spectrum/health")
 def health_check():
     return {
-        "engine": "SPECTRUM Engine 4.0 AI Microservice",
-        "heuristic_rules": "ACTIVE (disjoint 10-digit geometric validation)",
-        "nms_status": "ACTIVE",
+        "engine": "SPECTRUM Engine 6.0 AI Microservice",
+        "fusion_layer": "ACTIVE (4-Engine Weighted Voting: Geometric + Template + Structural + MLP)",
+        "segmentation": "ACTIVE (3-Stage VPP Valley Splitting & Indicator Filter)",
         "status": "ONLINE",
-        "version": "4.0.0"
+        "version": "6.0.0"
     }
 
 
@@ -677,35 +864,41 @@ def get_stats():
     return get_dataset_statistics()
 
 
-class DetectRequest(BaseModel):
-    image: Optional[str] = None
-    images: Optional[list[str]] = None
-
-
 @app.post("/api/spectrum/detect")
 def detect_weight(payload: DetectRequest):
     try:
         if payload.images and len(payload.images) > 0:
-            results = []
+            frame_votes = []
+            previews = []
             for b64 in payload.images:
                 try:
                     img = decode_base64_image(b64)
                     res = process_spectrum_detection(img)
                     w = res.get("weight_detected", 0)
+                    c = res.get("confidence", 0.0)
                     if w > 0:
-                        results.append(w)
+                        frame_votes.append((w, c))
+                        if not previews:
+                            previews.append(res)
                 except Exception:
                     continue
 
-            if results:
-                counts = Counter(results)
-                mode_weight, _ = counts.most_common(1)[0]
-                first_img = decode_base64_image(payload.images[0])
-                res = process_spectrum_detection(first_img)
-                res["weight_detected"] = mode_weight
-                res["confidence"] = 1.0
-                res["engine_version"] = "5.1.0 (Adaptive 7-Segment & Temporal Consensus)"
-                res["message"] = "100% Conf (Multi-Frame Verified)"
+            if frame_votes:
+                # Weighted voting: accumulate confidence scores per weight
+                vote_weights = {}
+                for w, c in frame_votes:
+                    vote_weights[w] = vote_weights.get(w, 0.0) + max(0.2, c)
+                best_weight = max(vote_weights, key=vote_weights.get)
+
+                total_frames = len(frame_votes)
+                agreeing_frames = sum(1 for w, _ in frame_votes if w == best_weight)
+                consensus_ratio = agreeing_frames / float(total_frames)
+
+                res = previews[0] if previews else process_spectrum_detection(decode_base64_image(payload.images[0]))
+                res["weight_detected"] = best_weight
+                res["confidence"] = 1.0 if consensus_ratio >= 0.60 else round(consensus_ratio, 3)
+                res["engine_version"] = "6.0.0 (Adaptive 7-Segment & Temporal Consensus)"
+                res["message"] = f"Multi-Frame Verified ({agreeing_frames}/{total_frames} frames agreement)"
                 return res
             elif payload.image:
                 bgr_img = decode_base64_image(payload.image)
@@ -713,21 +906,19 @@ def detect_weight(payload: DetectRequest):
                 if res.get("weight_detected", 0) > 0:
                     return res
                 fallback = run_easyocr_fallback(bgr_img)
-                if fallback: return fallback
-                return res
+                return fallback or res
             else:
                 first_img = decode_base64_image(payload.images[0])
                 fallback = run_easyocr_fallback(first_img)
-                if fallback: return fallback
-                return process_spectrum_detection(first_img)
+                return fallback or process_spectrum_detection(first_img)
+
         elif payload.image:
             bgr_img = decode_base64_image(payload.image)
             res = process_spectrum_detection(bgr_img)
             if res.get("weight_detected", 0) > 0:
                 return res
             fallback = run_easyocr_fallback(bgr_img)
-            if fallback: return fallback
-            return res
+            return fallback or res
         else:
             raise HTTPException(status_code=400, detail="Param image or images is required.")
     except Exception as e:
@@ -743,3 +934,6 @@ def retrain_model():
 @app.get("/api/spectrum/retrain-status")
 def retrain_status():
     return get_retrain_status()
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='0.0.0.0', port=8001)
