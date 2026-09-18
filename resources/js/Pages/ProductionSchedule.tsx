@@ -89,10 +89,11 @@ export default function ProductionSchedule() {
     };
 
     async function handleUpdateStatus(id: number, newStatus: string) {
+        const isClosing = newStatus === "CLOSED";
         const confirmed = await SystemUI.confirm({
-            title: "Update Status",
+            title: isClosing ? "Close Schedule" : "Update Status",
             message: `Are you sure you want to mark this schedule as ${newStatus}?`,
-            confirmText: "Yes, Update",
+            confirmText: isClosing ? "Close Schedule" : "Yes, Update",
             cancelText: "Cancel",
         });
         if (!confirmed) return;
