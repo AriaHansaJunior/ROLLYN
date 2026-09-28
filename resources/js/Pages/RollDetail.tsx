@@ -18,6 +18,8 @@ import {
     Download,
     Tag,
     Maximize2,
+    Disc,
+    ArrowUpRight,
 } from "lucide-react";
 import { Link, router, usePage } from "@inertiajs/react";
 import { SystemUI } from "@/Utils/SystemUI";
@@ -61,6 +63,15 @@ interface RollDetailItem {
     ocrWeight: number;
     ocrConfidence: string;
     ocrStatus: string;
+    jumbo_roll?: string | null;
+    jumbo_roll_id?: number | null;
+    source_jumbo_roll?: {
+        id: number;
+        jumbo_roll_number: string;
+        weight: number;
+        production_date: string | null;
+        status: string;
+    } | null;
 }
 
 interface OptionItem {
@@ -403,6 +414,22 @@ export default function RollDetail({
                     <InfoRow label="Entry Date" value={currentRoll.date} />
                     <InfoRow label="PIC" value={currentRoll.pic} />
                     <InfoRow label="Status" value={currentRoll.status} />
+                    {currentRoll.source_jumbo_roll && (
+                        <div className="flex justify-between items-center py-2 border-b border-slate-100 text-xs">
+                            <span className="text-slate-500 font-medium flex items-center gap-1">
+                                <Disc size={12} className="text-blue-500" />
+                                <span>Source Jumbo Roll</span>
+                            </span>
+                            <Link
+                                href="/jumbo-roll"
+                                className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                title="View Jumbo Roll Management"
+                            >
+                                <span>{currentRoll.source_jumbo_roll.jumbo_roll_number}</span>
+                                <ArrowUpRight size={11} />
+                            </Link>
+                        </div>
+                    )}
                 </Section>
 
                 {/* 3. Specification */}

@@ -8,6 +8,7 @@ const pageLabels: Record<string, string[]> = {
   'warehouse-map': ['Warehouse', 'Warehouse Map'],
   'roll-inventory': ['Warehouse', 'Roll Inventory'],
   'slot-status': ['Warehouse', 'Slot Status'],
+  'jumbo-roll': ['Production', 'Jumbo Roll'],
   'incoming-roll': ['Production', 'Incoming Roll'],
   'production-schedule': ['Production', 'Production Schedule'],
   'ocr-monitoring': ['Production', 'OCR Monitoring'],

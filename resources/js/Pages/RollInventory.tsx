@@ -45,6 +45,8 @@ interface RollItem {
   diameter?: number
   core?: string
   cobb?: string
+  jumbo_roll?: string | null
+  jumbo_roll_id?: number | null
 }
 
 interface OptionItem {

@@ -26,24 +26,26 @@ class IncomingRollController extends Controller
         $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules'])->latest()->get();
 
         // Auto-start SPECTRUM Engine if it's not running
-        $connection = @fsockopen('127.0.0.1', 8001, $errno, $errstr, 1);
-        if (is_resource($connection)) {
-            fclose($connection);
-        } else {
-            $engineDir = base_path('spectrum_engine');
-            try {
-                if (class_exists('COM')) {
-                    $shell = new \COM("WScript.Shell");
-                    $cmd = "cmd /c cd /d " . escapeshellarg($engineDir) . " && python -m uvicorn app:app --host 127.0.0.1 --port 8001";
-                    $shell->Run($cmd, 0, false); // 0 = hidden window, false = do not wait
-                } else {
+        if (!app()->environment('testing')) {
+            $connection = @fsockopen('127.0.0.1', 8001, $errno, $errstr, 1);
+            if (is_resource($connection)) {
+                fclose($connection);
+            } else {
+                $engineDir = base_path('spectrum_engine');
+                try {
+                    if (class_exists('COM')) {
+                        $shell = new \COM("WScript.Shell");
+                        $cmd = "cmd /c cd /d " . escapeshellarg($engineDir) . " && python -m uvicorn app:app --host 127.0.0.1 --port 8001";
+                        $shell->Run($cmd, 0, false); // 0 = hidden window, false = do not wait
+                    } else {
+                        exec('start "" /B cmd /c "cd /d ' . escapeshellarg($engineDir) . ' && python -m uvicorn app:app --host 127.0.0.1 --port 8001 > NUL 2>&1"');
+                    }
+                } catch (\Throwable $e) {
                     exec('start "" /B cmd /c "cd /d ' . escapeshellarg($engineDir) . ' && python -m uvicorn app:app --host 127.0.0.1 --port 8001 > NUL 2>&1"');
                 }
-            } catch (\Throwable $e) {
-                exec('start "" /B cmd /c "cd /d ' . escapeshellarg($engineDir) . ' && python -m uvicorn app:app --host 127.0.0.1 --port 8001 > NUL 2>&1"');
+                // Add a brief delay to allow the engine to start
+                usleep(500000); // 500ms
             }
-            // Add a brief delay to allow the engine to start
-            usleep(500000); // 500ms
         }
 
         $lastSavedRollNumber = session('last_saved_roll_number');
@@ -51,8 +53,11 @@ class IncomingRollController extends Controller
             ? self::getNextRollNumber($lastSavedRollNumber) 
             : null;
 
+        $jumboRolls = \App\Models\JumboRoll::with('jop')->orderBy('id', 'desc')->get();
+
         return Inertia::render('IncomingRoll', [
             'jopList' => $jops,
+            'jumboRolls' => $jumboRolls,
             'lastSavedRollNumber' => $lastSavedRollNumber,
             'recommendedRollNumber' => $recommendedRollNumber,
         ]); 
@@ -209,6 +214,8 @@ class IncomingRollController extends Controller
             'entry_date' => 'nullable|string',
             'pic'        => 'nullable|string',
             'weight'     => 'nullable|numeric',
+            'jumbo_roll_id' => 'nullable',
+            'jumbo_roll'    => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -366,6 +373,17 @@ class IncomingRollController extends Controller
 
             $entryDate = $request->entry_date ? trim($request->entry_date) : now()->toDateString();
 
+            // Resolve Jumbo Roll relationship if provided
+            $jumboRollId = null;
+            if ($request->filled('jumbo_roll_id')) {
+                $jumboRollId = $request->jumbo_roll_id;
+            } elseif ($request->filled('jumbo_roll')) {
+                $jr = \App\Models\JumboRoll::where('jumbo_roll_number', trim($request->jumbo_roll))->first();
+                if ($jr) {
+                    $jumboRollId = $jr->id;
+                }
+            }
+
             // 3. Create or Update Roll
             if ($existingRoll && $isUpdate) {
                 $existingRoll->update([
@@ -387,6 +405,7 @@ class IncomingRollController extends Controller
                     'users_id'           => $userId,
                     'jops_id'            => $jopId,
                     'gsms_id'            => $gsm->id,
+                    'jumbo_roll_id'      => $jumboRollId ?? $existingRoll->jumbo_roll_id,
                 ]);
                 $roll = $existingRoll;
             } else {
@@ -411,6 +430,7 @@ class IncomingRollController extends Controller
                     'users_id'           => $userId,
                     'jops_id'            => $jopId,
                     'gsms_id'            => $gsm->id,
+                    'jumbo_roll_id'      => $jumboRollId,
                 ]);
             }
 

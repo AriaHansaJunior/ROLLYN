@@ -20,7 +20,7 @@ class RollController extends Controller
 
     public function index()
     {
-        $rolls = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop', 'shipmentRolls.shipment'])
+        $rolls = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop', 'shipmentRolls.shipment', 'jumboRoll'])
             ->orderBy('entry_date', 'desc')
             ->orderBy('no', 'desc')
             ->get()
@@ -63,6 +63,8 @@ class RollController extends Controller
                     'diameter' => 1200,
                     'core' => $roll->core->core ?? '3',
                     'cobb' => $roll->cobb->cobb ?? '',
+                    'jumbo_roll' => $roll->jumboRoll?->jumbo_roll_number ?? null,
+                    'jumbo_roll_id' => $roll->jumbo_roll_id,
                 ];
             });
 
@@ -144,7 +146,7 @@ class RollController extends Controller
 
     public function show($id)
     {
-        $roll = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop'])
+        $roll = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop', 'jumboRoll'])
             ->where('no', $id)
             ->orWhere('no_roll', $id)
             ->first();
@@ -181,6 +183,15 @@ class RollController extends Controller
             'locations_id' => $roll->locations_id,
             'jop' => $roll->jop?->jop ?? '—',
             'jops_id' => $roll->jops_id,
+            'jumbo_roll' => $roll->jumboRoll?->jumbo_roll_number ?? null,
+            'jumbo_roll_id' => $roll->jumbo_roll_id,
+            'source_jumbo_roll' => $roll->jumboRoll ? [
+                'id' => $roll->jumboRoll->id,
+                'jumbo_roll_number' => $roll->jumboRoll->jumbo_roll_number,
+                'weight' => (float) $roll->jumboRoll->weight,
+                'production_date' => $roll->jumboRoll->production_date ? $roll->jumboRoll->production_date->format('Y-m-d') : null,
+                'status' => $roll->jumboRoll->status,
+            ] : null,
             'pic' => $roll->user?->username ?? 'Operator',
             'status' => $roll->locations_id ? 'Slotted' : ($roll->jops_id ? 'Shipment Plan' : 'Incoming'),
             'customer' => $roll->jop?->customer?->customer ?? '—',

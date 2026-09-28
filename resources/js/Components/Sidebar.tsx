@@ -18,6 +18,7 @@ import {
     Sparkles,
     History,
     Calendar,
+    Disc,
 } from "lucide-react";
 import { Link, usePage } from "@inertiajs/react";
 
@@ -37,6 +38,7 @@ const navSections = [
     {
         label: "Production",
         items: [
+            { id: "jumbo-roll", label: "Jumbo Roll", icon: Disc },
             { id: "incoming-roll", label: "Incoming Roll", icon: TruckIcon },
             { id: "production-schedule", label: "Production Schedule", icon: Calendar },
             { id: "ocr-monitoring", label: "OCR Monitoring", icon: Eye },
@@ -92,7 +94,7 @@ export default function Sidebar({
     // PPIC: operational minus OCR & User Management (dashboard, warehouse-map, roll-inventory, slot-status, target-order, jop, reports, profile)
     const roleAllowedItems: Record<string, string[] | null> = {
         admin: null, // null = all items visible
-        production: ["incoming-roll", "production-schedule", "roll-inventory", "jop"],
+        production: ["jumbo-roll", "incoming-roll", "production-schedule", "roll-inventory", "jop"],
         qc: ["roll-inventory"], // Removed 'reports' and 'profile'
         ppic: [
             "dashboard",
@@ -101,6 +103,7 @@ export default function Sidebar({
             "slot-status",
             "target-order",
             "jop",
+            "jumbo-roll",
             "production-schedule",
             "shipment-history",
             "reports",

@@ -147,12 +147,12 @@ class SecurityHardeningTest extends TestCase
 
         $shipment = Shipment::create([
             'shipment_number' => 'SHP-2026-001',
-            'customers_id' => $customer->id,
             'admin_users_id' => $ppic->id,
             'qc_users_id' => $assignedQc->id,
             'status' => 'pending',
             'shipment_date' => now()->toDateString(),
         ]);
+        $shipment->customers()->attach($customer->id);
 
         // 1. Assigned QC officer can process
         $this->assertTrue(Gate::forUser($assignedQc)->allows('qcProcess', $shipment));

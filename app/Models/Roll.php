@@ -31,6 +31,7 @@ class Roll extends Model
         'status',
         'users_id',
         'jops_id',
+        'jumbo_roll_id',
     ];
 
     public function shift()
@@ -101,5 +102,10 @@ class Roll extends Model
     public function shipmentRolls()
     {
         return $this->hasMany(ShipmentRoll::class, 'roll_no', 'no');
+    }
+
+    public function jumboRoll()
+    {
+        return $this->belongsTo(JumboRoll::class, 'jumbo_roll_id');
     }
 }

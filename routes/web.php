@@ -14,6 +14,7 @@ use App\Http\Controllers\RecommendationLogController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SpectrumEngineController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\JumboRollController;
 
 Route::get('/', function () {
     return redirect('/dashboard');
@@ -87,6 +88,16 @@ Route::middleware('auth')->group(function () {
         // Production Schedule
         Route::get('/production-schedule', [ProductionScheduleController::class, 'index']);
         Route::put('/production-schedule/{id}', [ProductionScheduleController::class, 'update']);
+
+        // Jumbo Roll Management
+        Route::get('/jumbo-roll', [JumboRollController::class, 'index']);
+        Route::get('/jumbo-roll/{id}', [JumboRollController::class, 'show']);
+        Route::post('/jumbo-roll', [JumboRollController::class, 'store']);
+        Route::put('/jumbo-roll/{id}', [JumboRollController::class, 'update']);
+        Route::delete('/jumbo-roll/{id}', [JumboRollController::class, 'destroy']);
+        Route::post('/jumbo-roll/{id}/assign-rolls', [JumboRollController::class, 'assignRolls']);
+        Route::delete('/jumbo-roll/{id}/rolls/{rollNo}', [JumboRollController::class, 'removeRoll']);
+        Route::get('/jumbo-roll/{id}/available-rolls', [JumboRollController::class, 'getAvailableRolls']);
     });
 
     // 6. ADMIN + QC
