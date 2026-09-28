@@ -780,16 +780,18 @@ export default function JumboRoll() {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={8} className="text-center py-12 text-slate-400">
-                                    <div className="flex flex-col items-center justify-center gap-2">
-                                        <Disc size={32} className="text-slate-300 stroke-1" />
-                                        <div className="text-sm font-semibold text-slate-600">
+                                <td colSpan={8} className="text-center py-16 text-slate-400">
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        <Disc size={44} className="text-slate-300 stroke-1" />
+                                        <div className="text-lg font-bold text-slate-700">
                                             No Jumbo Rolls found
                                         </div>
-                                        <p className="text-xs text-slate-400 max-w-sm">
-                                            No Jumbo Roll records match your current filter. Click{" "}
-                                            <strong>New Jumbo Roll</strong> to register an initial large paper roll.
-                                        </p>
+                                        <div className="text-sm sm:text-base text-slate-500 max-w-md text-center leading-relaxed">
+                                            <div>No Jumbo Roll records match your current filter.</div>
+                                            <div className="mt-1">
+                                                Click <strong className="text-blue-600 font-semibold">New Jumbo Roll</strong> to register an initial large paper roll.
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
