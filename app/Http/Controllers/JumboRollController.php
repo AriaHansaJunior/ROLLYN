@@ -174,7 +174,7 @@ class JumboRollController extends Controller
     /**
      * Show details for a single Jumbo Roll with its associated Incoming Rolls.
      */
-    public function show($id)
+    public function show(int|string $id)
     {
         $jumboRoll = JumboRoll::with([
             'jop.customer',
@@ -280,7 +280,7 @@ class JumboRollController extends Controller
     /**
      * Update an existing Jumbo Roll.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int|string $id)
     {
         $jumboRoll = JumboRoll::findOrFail($id);
 
@@ -313,7 +313,7 @@ class JumboRollController extends Controller
      * Safely delete a Jumbo Roll.
      * Prevents deletion if associated Incoming Rolls exist to ensure referential integrity.
      */
-    public function destroy($id)
+    public function destroy(int|string $id)
     {
         $jumboRoll = JumboRoll::withCount('rolls')->findOrFail($id);
 
@@ -337,7 +337,7 @@ class JumboRollController extends Controller
     /**
      * Assign / Link existing Incoming Rolls to this Jumbo Roll.
      */
-    public function assignRolls(Request $request, $id)
+    public function assignRolls(Request $request, int|string $id)
     {
         $jumboRoll = JumboRoll::findOrFail($id);
 
@@ -358,7 +358,7 @@ class JumboRollController extends Controller
     /**
      * Remove / Unlink an Incoming Roll from this Jumbo Roll.
      */
-    public function removeRoll($id, $rollNo)
+    public function removeRoll(int|string $id, int|string $rollNo)
     {
         $jumboRoll = JumboRoll::findOrFail($id);
 
@@ -379,7 +379,7 @@ class JumboRollController extends Controller
     /**
      * Get candidate Incoming Rolls that can be linked to this Jumbo Roll.
      */
-    public function getAvailableRolls(Request $request, $id)
+    public function getAvailableRolls(Request $request, int|string $id)
     {
         $jumboRoll = JumboRoll::findOrFail($id);
         $search = trim($request->input('search', ''));

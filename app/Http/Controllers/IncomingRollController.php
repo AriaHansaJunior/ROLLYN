@@ -16,6 +16,7 @@ use App\Models\Jop;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -326,7 +327,7 @@ class IncomingRollController extends Controller
             }
 
             // User / PIC
-            $userId = auth()->id();
+            $userId = Auth::id();
             if (!$userId && $request->pic) {
                 $userObj = User::where('username', 'like', '%' . trim($request->pic) . '%')->first();
                 if ($userObj) {

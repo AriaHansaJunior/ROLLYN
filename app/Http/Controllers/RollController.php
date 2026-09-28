@@ -144,7 +144,7 @@ class RollController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show(int|string $id)
     {
         $roll = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop', 'jumboRoll'])
             ->where('no', $id)
@@ -215,7 +215,7 @@ class RollController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int|string $id)
     {
         $roll = Roll::where('no', $id)->orWhere('no_roll', $id)->first();
 
@@ -338,7 +338,7 @@ class RollController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int|string $id)
     {
         $roll = Roll::where('no', $id)->orWhere('no_roll', $id)->first();
 
@@ -416,7 +416,7 @@ class RollController extends Controller
         }
     }
 
-    private function syncLocationStackState($locationId)
+    private function syncLocationStackState(int|string|null $locationId)
     {
         if (!$locationId) return;
         Location::find($locationId)?->syncState();
