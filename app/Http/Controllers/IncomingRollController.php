@@ -24,7 +24,7 @@ class IncomingRollController extends Controller
 {
     public function index()
     {
-        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules'])->latest()->get();
+        $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules', 'jumboRolls'])->latest()->get();
 
         // Auto-start SPECTRUM Engine if it's not running (non-blocking)
         if (!app()->environment('testing')) {
@@ -145,6 +145,66 @@ class IncomingRollController extends Controller
     }
 
     /**
+     * Get or recommend Jumbo Roll number based on selected JOP.
+     */
+    public function recommendJumboRoll(Request $request)
+    {
+        $jopCode = trim($request->input('jop', ''));
+        if (!$jopCode) {
+            return response()->json([
+                'jumbo_roll' => null,
+                'jumbo_roll_id' => null,
+                'status' => null,
+                'existing_rolls' => [],
+            ]);
+        }
+
+        $jop = Jop::where('jop', $jopCode)->with('jumboRolls')->first();
+        if (!$jop) {
+            $derived = preg_replace('/^JOP-/i', 'JR-', $jopCode);
+            if (!str_starts_with(strtoupper($derived), 'JR-')) {
+                $derived = 'JR-' . $derived;
+            }
+            return response()->json([
+                'jumbo_roll' => $derived,
+                'jumbo_roll_id' => null,
+                'status' => null,
+                'existing_rolls' => [],
+            ]);
+        }
+
+        $existing = $jop->jumboRolls;
+        if ($existing->isNotEmpty()) {
+            $inProgress = $existing->firstWhere('status', 'IN_PROGRESS');
+            $chosen = $inProgress ?? $existing->sortByDesc('id')->first();
+            return response()->json([
+                'jumbo_roll' => $chosen->jumbo_roll_number,
+                'jumbo_roll_id' => $chosen->id,
+                'status' => $chosen->status,
+                'existing_rolls' => $existing->map(fn($r) => [
+                    'id' => $r->id,
+                    'jumbo_roll_number' => $r->jumbo_roll_number,
+                    'status' => $r->status,
+                    'weight' => (float)$r->weight,
+                ])->values(),
+            ]);
+        }
+
+        // Auto-generate based on JOP
+        $derived = preg_replace('/^JOP-/i', 'JR-', $jop->jop);
+        if (!str_starts_with(strtoupper($derived), 'JR-')) {
+            $derived = 'JR-' . $derived;
+        }
+
+        return response()->json([
+            'jumbo_roll' => $derived,
+            'jumbo_roll_id' => null,
+            'status' => null,
+            'existing_rolls' => [],
+        ]);
+    }
+
+    /**
      * Calculate next recommended roll number based on last successfully saved roll number (+1).
      */
     public static function getNextRollNumber(?string $lastRoll): ?string
@@ -212,9 +272,11 @@ class IncomingRollController extends Controller
             'status'     => 'nullable|string',
             'entry_date' => 'nullable|string',
             'pic'        => 'nullable|string',
-            'weight'     => 'nullable|numeric',
+            'weight'        => 'nullable|numeric',
             'jumbo_roll_id' => 'nullable',
             'jumbo_roll'    => 'nullable|string',
+            'jumboRoll'     => 'nullable|string',
+            'jumboRollId'   => 'nullable',
         ]);
 
         DB::beginTransaction();
@@ -373,11 +435,29 @@ class IncomingRollController extends Controller
             $entryDate = $request->entry_date ? trim($request->entry_date) : now()->toDateString();
 
             // Resolve Jumbo Roll relationship if provided
-            $jumboRollId = null;
-            if ($request->filled('jumbo_roll_id')) {
-                $jumboRollId = $request->jumbo_roll_id;
-            } elseif ($request->filled('jumbo_roll')) {
-                $jr = \App\Models\JumboRoll::where('jumbo_roll_number', trim($request->jumbo_roll))->first();
+            $jumboRollId = $request->input('jumbo_roll_id') ?? $request->input('jumboRollId');
+            $jumboRollNumber = trim($request->input('jumbo_roll') ?? $request->input('jumboRoll') ?? '');
+
+            if ($jumboRollId) {
+                $jr = \App\Models\JumboRoll::find($jumboRollId);
+                if (!$jr && $jumboRollNumber !== '') {
+                    $jumboRollId = null;
+                }
+            }
+
+            if (!$jumboRollId && $jumboRollNumber !== '') {
+                $jr = \App\Models\JumboRoll::where('jumbo_roll_number', $jumboRollNumber)->first();
+                if (!$jr && $jopId) {
+                    $jr = \App\Models\JumboRoll::create([
+                        'jumbo_roll_number' => $jumboRollNumber,
+                        'jops_id'           => $jopId,
+                        'weight'            => $weightVal > 0 ? $weightVal : (float)($jopObj->weight ?? 0),
+                        'production_date'   => $entryDate,
+                        'status'            => 'IN_PROGRESS',
+                        'users_id'          => $userId,
+                        'notes'             => 'Auto-created from Incoming Roll',
+                    ]);
+                }
                 if ($jr) {
                     $jumboRollId = $jr->id;
                 }

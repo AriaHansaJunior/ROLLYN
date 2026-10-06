@@ -14,7 +14,7 @@ class JopController extends Controller
 
     public function index(Request $request)
     {
-        $query = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth'])
+        $query = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'jumboRolls'])
                     ->withCount('rolls');
 
         if ($customerId = $request->query('customer_id')) {

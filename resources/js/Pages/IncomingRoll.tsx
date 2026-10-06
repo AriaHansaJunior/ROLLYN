@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     CheckCircle,
     Save,
@@ -44,6 +44,8 @@ interface JopOption {
     grade?: { grade: string } | string;
     gsm?: { gsm: number } | number | string;
     customer?: { customer: string } | string;
+    jumboRolls?: any[];
+    jumbo_rolls?: any[];
 }
 
 function calculateNextRollNumber(lastRoll: string | null | undefined): string {
@@ -73,6 +75,7 @@ function calculateNextRollNumber(lastRoll: string | null | undefined): string {
 export default function IncomingRoll() {
     const {
         jopList = [],
+        jumboRolls = [],
         lastSavedRollNumber: initialLastSaved,
         recommendedRollNumber: initialRecommended,
     } = usePage<any>().props;
@@ -136,6 +139,8 @@ export default function IncomingRoll() {
                 : sessionStorage.getItem("incomingRoll_recommended") || "");
         const defaultState = {
             jop: "",
+            jumboRoll: "",
+            jumboRollId: null as number | null | string,
             grade: "",
             gsm: "",
             visual: "OK",
@@ -160,6 +165,8 @@ export default function IncomingRoll() {
             return {
                 ...defaultState,
                 ...parsed,
+                jumboRoll: parsed.jumboRoll !== undefined ? parsed.jumboRoll : "",
+                jumboRollId: parsed.jumboRollId !== undefined ? parsed.jumboRollId : null,
                 rollNumber:
                     parsed.rollNumber !== undefined && parsed.rollNumber !== ""
                         ? parsed.rollNumber
@@ -230,6 +237,49 @@ export default function IncomingRoll() {
         return () => clearTimeout(timer);
     }, [form.rollNumber, savedRollNumber]);
 
+    const availableJumboRolls = useMemo(() => {
+        if (!form.jop) return [];
+        const found = jops.find(
+            (j) => j.jop === form.jop || String(j.id) === form.jop,
+        );
+        const jopId = found?.id;
+        const fromProps = (jumboRolls as any[]).filter((jr) => {
+            if (jopId && String(jr.jops_id) === String(jopId)) return true;
+            if (jr.jop?.jop && jr.jop.jop === form.jop) return true;
+            return false;
+        });
+        const fromJop = ((found?.jumboRolls || (found as any)?.jumbo_rolls) || []) as any[];
+        const map = new Map<string, any>();
+        [...fromProps, ...fromJop].forEach((jr) => {
+            if (jr && jr.jumbo_roll_number) {
+                map.set(jr.jumbo_roll_number.toUpperCase(), jr);
+            }
+        });
+        return Array.from(map.values());
+    }, [form.jop, jops, jumboRolls]);
+
+    useEffect(() => {
+        if (!form.jop) return;
+
+        axios
+            .get(`/incoming-roll/recommend-jumbo?jop=${encodeURIComponent(form.jop)}`)
+            .then((res) => {
+                if (res.data && res.data.jumbo_roll) {
+                    setForm((f) => {
+                        if (!f.jumboRoll || f.jumboRoll.startsWith("JR-")) {
+                            return {
+                                ...f,
+                                jumboRoll: res.data.jumbo_roll,
+                                jumboRollId: res.data.jumbo_roll_id || f.jumboRollId,
+                            };
+                        }
+                        return f;
+                    });
+                }
+            })
+            .catch(() => {});
+    }, [form.jop]);
+
     useEffect(() => {
         if (!form.jop) return;
 
@@ -239,6 +289,7 @@ export default function IncomingRoll() {
                 grade: form.grade,
                 width: form.width,
                 entry_date: form.entry_date,
+                jumbo_roll: form.jumboRoll,
             })
             .then((res) => {
                 if (res.data && res.data.formNumber) {
@@ -251,7 +302,7 @@ export default function IncomingRoll() {
             .catch((err) => {
                 console.error("Failed to fetch recommended form number:", err);
             });
-    }, [form.jop, form.grade, form.width, form.entry_date]);
+    }, [form.jop, form.grade, form.width, form.entry_date, form.jumboRoll]);
 
     useEffect(() => {
         let list: JopOption[] = [];
@@ -406,9 +457,40 @@ export default function IncomingRoll() {
             }
         }
 
+        // Auto-resolve Jumbo Roll Number based on selected JOP
+        let autoJumboRoll = "";
+        let autoJumboRollId: number | null = null;
+
+        const foundJopId = found?.id;
+        const matchingJumbos = (jumboRolls as any[]).filter((jr) => {
+            if (foundJopId && String(jr.jops_id) === String(foundJopId)) return true;
+            if (jr.jop?.jop && jr.jop.jop === selectedJop) return true;
+            return false;
+        });
+        const jopJumbos = ((found?.jumboRolls || (found as any)?.jumbo_rolls) || []) as any[];
+        const combined = [...matchingJumbos, ...jopJumbos];
+
+        if (combined.length > 0) {
+            const inProgress = combined.find((jr) => jr.status === "IN_PROGRESS");
+            const chosen = inProgress || combined[0];
+            autoJumboRoll = chosen.jumbo_roll_number;
+            autoJumboRollId = chosen.id;
+        } else if (selectedJop) {
+            const jopCode = found?.jop || selectedJop;
+            if (/^JOP-/i.test(jopCode)) {
+                autoJumboRoll = jopCode.replace(/^JOP-/i, "JR-");
+            } else if (!/^JR-/i.test(jopCode)) {
+                autoJumboRoll = `JR-${jopCode}`;
+            } else {
+                autoJumboRoll = jopCode;
+            }
+        }
+
         setForm((f) => ({
             ...f,
             jop: selectedJop,
+            jumboRoll: autoJumboRoll || f.jumboRoll,
+            jumboRollId: autoJumboRollId !== null ? autoJumboRollId : f.jumboRollId,
             grade: gradeVal,
             gsm: gsmVal,
             width: widthVal,
@@ -420,6 +502,7 @@ export default function IncomingRoll() {
         setErrors((err) => ({
             ...err,
             jop: undefined,
+            jumboRoll: undefined,
             grade: undefined,
             gsm: undefined,
             plybond: undefined,
@@ -432,6 +515,8 @@ export default function IncomingRoll() {
         const errs: Record<string, string> = {};
 
         if (!form.jop.trim()) errs.jop = "JOP is required.";
+        if (!form.jumboRoll.trim())
+            errs.jumboRoll = "Nomor Jumbo is required (Select JOP first).";
         if (!form.grade.trim())
             errs.grade = "Grade is required (Select JOP first).";
         if (!form.gsm.trim()) errs.gsm = "GSM is required (Select JOP first).";
@@ -482,6 +567,10 @@ export default function IncomingRoll() {
         const payload = {
             rollNumber: form.rollNumber,
             formNumber: form.formNumber,
+            jumbo_roll: form.jumboRoll,
+            jumbo_roll_id: form.jumboRollId,
+            jumboRoll: form.jumboRoll,
+            jumboRollId: form.jumboRollId,
             shift: form.shift,
             jop: form.jop,
             grade: form.grade,
@@ -1150,7 +1239,7 @@ export default function IncomingRoll() {
                                     Job Order & Specification (Auto-filled)
                                 </h3>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
                                 {/* JOP Dropdown */}
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1">
@@ -1208,6 +1297,91 @@ export default function IncomingRoll() {
                                                 }
                                             </div>
                                         )}
+                                </div>
+
+                                {/* Nomor Jumbo */}
+                                <div>
+                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
+                                        <span>
+                                            Nomor Jumbo{" "}
+                                            <span className="text-red-500">*</span>
+                                        </span>
+                                        <span className="text-[10px] text-blue-600 font-normal">
+                                            (Otomatis JOP / Editable)
+                                        </span>
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            list="jumbo-roll-datalist"
+                                            value={form.jumboRoll}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const matched = availableJumboRolls.find(
+                                                    (jr) =>
+                                                        jr.jumbo_roll_number.toUpperCase() ===
+                                                        val.trim().toUpperCase(),
+                                                );
+                                                setForm((f) => ({
+                                                    ...f,
+                                                    jumboRoll: val,
+                                                    jumboRollId: matched ? matched.id : null,
+                                                }));
+                                                if (errors.jumboRoll) {
+                                                    setErrors((err) => ({
+                                                        ...err,
+                                                        jumboRoll: undefined,
+                                                    }));
+                                                }
+                                            }}
+                                            placeholder="e.g. JR-0726-00001"
+                                            className={`form-input w-full font-mono uppercase ${
+                                                errors.jumboRoll ? "border-red-500" : ""
+                                            }`}
+                                        />
+                                        <datalist id="jumbo-roll-datalist">
+                                            {availableJumboRolls.map((jr) => (
+                                                <option
+                                                    key={jr.id}
+                                                    value={jr.jumbo_roll_number}
+                                                >
+                                                    {jr.jumbo_roll_number}{" "}
+                                                    {jr.status ? `(${jr.status})` : ""}{" "}
+                                                    {jr.weight ? `[${jr.weight} kg]` : ""}
+                                                </option>
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    {errors.jumboRoll ? (
+                                        <p className="text-red-600 text-[11px] mt-1">
+                                            {errors.jumboRoll}
+                                        </p>
+                                    ) : form.jumboRoll ? (
+                                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                            {availableJumboRolls.some(
+                                                (jr) =>
+                                                    jr.jumbo_roll_number.toUpperCase() ===
+                                                    form.jumboRoll.trim().toUpperCase(),
+                                            ) ? (
+                                                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                    <CheckCircle size={10} /> Terdaftar di Master Jumbo
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                    ✨ Otomatis dari JOP
+                                                </span>
+                                            )}
+                                            {availableJumboRolls.length > 1 && (
+                                                <span className="text-[10px] text-slate-500">
+                                                    ({availableJumboRolls.length} pilihan tersedia)
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="text-slate-400 text-[10px] mt-1">
+                                            Pilih JOP untuk mengisi otomatis, atau ketik manual
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Roll Number */}
@@ -1927,6 +2101,10 @@ export default function IncomingRoll() {
                                     "Job Order Production",
                                     form.jop || "(not entered)",
                                 ],
+                                [
+                                    "Nomor Jumbo",
+                                    form.jumboRoll || "(not entered)",
+                                ],
                                 ["Grade", form.grade || "(not entered)"],
                                 [
                                     "GSM",
@@ -2223,6 +2401,14 @@ export default function IncomingRoll() {
                                     </div>
                                     <div className="spec-row flex gap-0">
                                         <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
+                                            Jumbo Roll:
+                                        </span>{" "}
+                                        <span className="spec-value font-bold text-slate-900 font-mono">
+                                            {form.jumboRoll || "-"}
+                                        </span>
+                                    </div>
+                                    <div className="spec-row flex gap-0">
+                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
                                             Thickness:
                                         </span>{" "}
                                         <span className="spec-value font-semibold text-slate-900">
@@ -2283,6 +2469,7 @@ export default function IncomingRoll() {
                                     <QRCodeSVG
                                         value={JSON.stringify({
                                             roll: form.rollNumber || "104",
+                                            jumbo: form.jumboRoll || undefined,
                                             grade: form.grade || "SPECTA-TK4",
                                             jop: form.jop || "JOP-0726-00028",
                                             weight: weight.display || "1044",
@@ -2349,6 +2536,8 @@ export default function IncomingRoll() {
                                     });
                                     setForm({
                                         jop: "",
+                                        jumboRoll: "",
+                                        jumboRollId: null,
                                         grade: "",
                                         gsm: "",
                                         visual: "OK",

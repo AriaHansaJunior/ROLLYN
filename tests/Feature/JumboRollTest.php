@@ -463,4 +463,65 @@ class JumboRollTest extends TestCase
         $this->assertEquals($jumbo->id, $roll->jumbo_roll_id);
         $this->assertEquals('JR-SOURCE-TEST', $roll->jumboRoll->jumbo_roll_number);
     }
+
+    public function test_recommend_jumbo_roll_endpoint_returns_existing_active_jumbo_roll(): void
+    {
+        $this->actingAs($this->production);
+
+        $jumbo = JumboRoll::create([
+            'jumbo_roll_number' => 'JR-2026-ACTIVE',
+            'jops_id'           => $this->jop->id,
+            'weight'            => 19000,
+            'production_date'   => '2026-09-28',
+            'status'            => 'IN_PROGRESS',
+        ]);
+
+        $response = $this->getJson("/incoming-roll/recommend-jumbo?jop=" . urlencode($this->jop->jop));
+        $response->assertStatus(200);
+        $response->assertJson([
+            'jumbo_roll'    => 'JR-2026-ACTIVE',
+            'jumbo_roll_id' => $jumbo->id,
+            'status'        => 'IN_PROGRESS',
+        ]);
+        $this->assertCount(1, $response->json('existing_rolls'));
+    }
+
+    public function test_recommend_jumbo_roll_endpoint_derives_standard_number_when_none_exists(): void
+    {
+        $this->actingAs($this->production);
+
+        $response = $this->getJson("/incoming-roll/recommend-jumbo?jop=" . urlencode($this->jop->jop));
+        $response->assertStatus(200);
+        $response->assertJson([
+            'jumbo_roll'    => 'JR-2026-001',
+            'jumbo_roll_id' => null,
+        ]);
+    }
+
+    public function test_incoming_roll_auto_creates_and_links_jumbo_roll_when_string_provided(): void
+    {
+        $this->actingAs($this->production);
+
+        $response = $this->postJson('/incoming-roll', [
+            'rollNumber' => 'ROLL-AUTO-JR-01',
+            'jop'        => $this->jop->jop,
+            'grade'      => 'KLB-150',
+            'gsm'        => '150',
+            'shift'      => '1',
+            'weight'     => 4500,
+            'visual'     => 'OK',
+            'status'     => 'OK',
+            'jumbo_roll' => 'JR-AUTO-GENERATED-01',
+        ]);
+
+        $response->assertStatus(201);
+
+        $createdJumbo = JumboRoll::where('jumbo_roll_number', 'JR-AUTO-GENERATED-01')->first();
+        $this->assertNotNull($createdJumbo);
+        $this->assertEquals($this->jop->id, $createdJumbo->jops_id);
+
+        $roll = Roll::where('no_roll', 'ROLL-AUTO-JR-01')->first();
+        $this->assertNotNull($roll);
+        $this->assertEquals($createdJumbo->id, $roll->jumbo_roll_id);
+    }
 }
