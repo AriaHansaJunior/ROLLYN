@@ -7,6 +7,7 @@ use App\Models\Jop;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class JopController extends Controller
 {
@@ -23,7 +24,7 @@ class JopController extends Controller
 
         if ($request->query('status') === 'active') {
             $query->where(function ($q) {
-                $q->has('rolls', '<', \DB::raw('jops.quantity'))
+                $q->has('rolls', '<', DB::raw('jops.quantity'))
                   ->orWhereNull('quantity');
             });
         }
@@ -86,7 +87,7 @@ class JopController extends Controller
         return $this->successResponse($jop, 'JOP created successfully', 201);
     }
 
-    public function show($id)
+    public function show(int|string $id)
     {
         $jop = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'rolls' => function($q) {
             $q->orderBy('created_at', 'desc');
@@ -99,7 +100,7 @@ class JopController extends Controller
         return $this->successResponse($jop, 'JOP detail retrieved successfully');
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int|string $id)
     {
         $jop = Jop::find($id);
         if (!$jop) {
@@ -129,7 +130,7 @@ class JopController extends Controller
         return $this->successResponse($jop, 'JOP updated successfully');
     }
 
-    public function destroy($id)
+    public function destroy(int|string $id)
     {
         $jop = Jop::withCount('rolls')->find($id);
         if (!$jop) {
