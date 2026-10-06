@@ -72,6 +72,64 @@ function calculateNextRollNumber(lastRoll: string | null | undefined): string {
     }
 }
 
+function sanitizeNumeric(val: string, allowDecimal = true): string {
+    if (!val) return "";
+    if (!allowDecimal) {
+        return val.replace(/[^0-9]/g, "");
+    }
+    // Remove any character that is not a digit, dot, or comma
+    let cleaned = val.replace(/[^0-9.,]/g, "");
+    // Keep at most one decimal separator
+    const firstSep = cleaned.match(/[.,]/);
+    if (firstSep) {
+        const sep = firstSep[0];
+        const parts = cleaned.split(/[.,]/);
+        cleaned = parts[0] + sep + parts.slice(1).join("");
+    }
+    return cleaned;
+}
+
+function handleNumberKeyDown(
+    e: React.KeyboardEvent<HTMLInputElement>,
+    allowDecimal = true
+) {
+    // Allow control and navigation keys
+    if (
+        [
+            "Backspace",
+            "Delete",
+            "Tab",
+            "Escape",
+            "Enter",
+            "ArrowLeft",
+            "ArrowRight",
+            "ArrowUp",
+            "ArrowDown",
+            "Home",
+            "End",
+        ].includes(e.key) ||
+        e.ctrlKey ||
+        e.metaKey
+    ) {
+        return;
+    }
+
+    // Allow a single decimal point or comma if decimal is enabled
+    if (allowDecimal && (e.key === "." || e.key === ",")) {
+        const val = e.currentTarget.value;
+        if (val.includes(".") || val.includes(",")) {
+            e.preventDefault();
+        }
+        return;
+    }
+
+    // Prevent any key that is not 0-9
+    if (!/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+    }
+}
+
+
 export default function IncomingRoll() {
     const {
         jopList = [],
@@ -165,6 +223,13 @@ export default function IncomingRoll() {
             return {
                 ...defaultState,
                 ...parsed,
+                gsm: sanitizeNumeric(parsed.gsm || "", false),
+                width: sanitizeNumeric(parsed.width || "", false),
+                plybond: sanitizeNumeric(parsed.plybond || "", true),
+                thickness: sanitizeNumeric(parsed.thickness || "", true),
+                core: sanitizeNumeric(parsed.core || "", true),
+                bulk: sanitizeNumeric(parsed.bulk || "", true),
+                cobb: sanitizeNumeric(parsed.cobb || "", true),
                 jumboRoll: parsed.jumboRoll !== undefined ? parsed.jumboRoll : "",
                 jumboRollId: parsed.jumboRollId !== undefined ? parsed.jumboRollId : null,
                 rollNumber:
@@ -519,7 +584,14 @@ export default function IncomingRoll() {
             errs.jumboRoll = "Nomor Jumbo is required (Select JOP first).";
         if (!form.grade.trim())
             errs.grade = "Grade is required (Select JOP first).";
-        if (!form.gsm.trim()) errs.gsm = "GSM is required (Select JOP first).";
+        
+        // GSM Validation (Numeric only)
+        if (!form.gsm.trim()) {
+            errs.gsm = "GSM is required (Select JOP first).";
+        } else if (isNaN(Number(form.gsm.replace(",", "."))) || Number(form.gsm.replace(",", ".")) <= 0) {
+            errs.gsm = "GSM must be a valid positive number.";
+        }
+
         if (!form.visual.trim()) errs.visual = "Visual status is required.";
         if (!form.rollNumber.trim()) {
             errs.rollNumber = "Roll number is required.";
@@ -529,15 +601,53 @@ export default function IncomingRoll() {
         }
         if (!form.formNumber.trim())
             errs.formNumber = "Form number is required.";
-        if (!form.plybond.trim()) errs.plybond = "Plybond is required.";
+
+        // Plybond Validation (Numeric only)
+        if (!form.plybond.trim()) {
+            errs.plybond = "Plybond is required.";
+        } else if (isNaN(Number(form.plybond.replace(",", "."))) || Number(form.plybond.replace(",", ".")) <= 0) {
+            errs.plybond = "Plybond must be a valid positive number.";
+        }
+
         if (!form.diameter.trim()) errs.diameter = "Roll diameter is required.";
-        if (!form.width.trim()) errs.width = "Roll width is required.";
-        if (!form.thickness.trim()) errs.thickness = "Thickness is required.";
-        if (!form.bulk.trim()) errs.bulk = "Bulk is required.";
-        if (!form.core.trim()) errs.core = "Core is required.";
+
+        // Roll Width (RW) Validation (Numeric only)
+        if (!form.width.trim()) {
+            errs.width = "Roll width is required.";
+        } else if (isNaN(Number(form.width.replace(",", "."))) || Number(form.width.replace(",", ".")) <= 0) {
+            errs.width = "Roll width (RW) must be a valid positive number.";
+        }
+
+        // Thickness Validation (Numeric only)
+        if (!form.thickness.trim()) {
+            errs.thickness = "Thickness is required.";
+        } else if (isNaN(Number(form.thickness.replace(",", "."))) || Number(form.thickness.replace(",", ".")) <= 0) {
+            errs.thickness = "Thickness must be a valid positive number.";
+        }
+
+        // Bulk Validation (Numeric only)
+        if (!form.bulk.trim()) {
+            errs.bulk = "Bulk is required.";
+        } else if (isNaN(Number(form.bulk.replace(",", "."))) || Number(form.bulk.replace(",", ".")) <= 0) {
+            errs.bulk = "Bulk must be a valid positive number.";
+        }
+
+        // Core Validation (Numeric only)
+        if (!form.core.trim()) {
+            errs.core = "Core is required.";
+        } else if (isNaN(Number(form.core.replace(",", "."))) || Number(form.core.replace(",", ".")) <= 0) {
+            errs.core = "Core must be a valid positive number.";
+        }
         if (!form.exMaterial.trim())
             errs.exMaterial = "Ex material is required.";
-        if (!form.cobb.trim()) errs.cobb = "Cobb is required.";
+
+        // Cobb Validation (Numeric only)
+        if (!form.cobb.trim()) {
+            errs.cobb = "Cobb is required.";
+        } else if (isNaN(Number(form.cobb.replace(",", "."))) || Number(form.cobb.replace(",", ".")) <= 0) {
+            errs.cobb = "Cobb must be a valid positive number.";
+        }
+
         if (!form.shift.trim()) errs.shift = "Shift is required.";
         if (!form.entry_date.trim())
             errs.entry_date = "Production Date is required.";
@@ -1578,11 +1688,14 @@ export default function IncomingRoll() {
                                     </label>
                                     <input
                                         type="text"
+                                        inputMode="numeric"
                                         value={form.gsm}
+                                        onKeyDown={(e) => handleNumberKeyDown(e, false)}
                                         onChange={(e) => {
+                                            const val = sanitizeNumeric(e.target.value, false);
                                             setForm((f) => ({
                                                 ...f,
-                                                gsm: e.target.value,
+                                                gsm: val,
                                             }));
                                             if (errors.gsm)
                                                 setErrors((err) => ({
@@ -1590,7 +1703,7 @@ export default function IncomingRoll() {
                                                     gsm: undefined,
                                                 }));
                                         }}
-                                        placeholder="Enter GSM"
+                                        placeholder="Enter GSM (e.g. 420)"
                                         className={`form-input w-full ${errors.gsm ? "border-red-500" : ""}`}
                                     />
                                     {errors.gsm && (
@@ -1614,12 +1727,15 @@ export default function IncomingRoll() {
                                         </span>
                                     </label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={form.width}
+                                        onKeyDown={(e) => handleNumberKeyDown(e, false)}
                                         onChange={(e) => {
+                                            const val = sanitizeNumeric(e.target.value, false);
                                             setForm((f) => ({
                                                 ...f,
-                                                width: e.target.value,
+                                                width: val,
                                             }));
                                             if (errors.width)
                                                 setErrors((err) => ({
@@ -1652,11 +1768,14 @@ export default function IncomingRoll() {
                                     </label>
                                     <input
                                         type="text"
+                                        inputMode="decimal"
                                         value={form.plybond}
+                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
                                         onChange={(e) => {
+                                            const val = sanitizeNumeric(e.target.value, true);
                                             setForm((f) => ({
                                                 ...f,
-                                                plybond: e.target.value,
+                                                plybond: val,
                                             }));
                                             if (errors.plybond)
                                                 setErrors((err) => ({
@@ -1689,11 +1808,14 @@ export default function IncomingRoll() {
                                     </label>
                                     <input
                                         type="text"
+                                        inputMode="decimal"
                                         value={form.thickness}
+                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
                                         onChange={(e) => {
+                                            const val = sanitizeNumeric(e.target.value, true);
                                             setForm((f) => ({
                                                 ...f,
-                                                thickness: e.target.value,
+                                                thickness: val,
                                             }));
                                             if (errors.thickness)
                                                 setErrors((err) => ({
@@ -1726,11 +1848,14 @@ export default function IncomingRoll() {
                                     </label>
                                     <input
                                         type="text"
+                                        inputMode="decimal"
                                         value={form.core}
+                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
                                         onChange={(e) => {
+                                            const val = sanitizeNumeric(e.target.value, true);
                                             setForm((f) => ({
                                                 ...f,
-                                                core: e.target.value,
+                                                core: val,
                                             }));
                                             if (errors.core)
                                                 setErrors((err) => ({
@@ -1814,11 +1939,14 @@ export default function IncomingRoll() {
                                     </label>
                                     <input
                                         type="text"
+                                        inputMode="decimal"
                                         value={form.bulk}
+                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
                                         onChange={(e) => {
+                                            const val = sanitizeNumeric(e.target.value, true);
                                             setForm((f) => ({
                                                 ...f,
-                                                bulk: e.target.value,
+                                                bulk: val,
                                             }));
                                             if (errors.bulk)
                                                 setErrors((err) => ({
@@ -1851,11 +1979,14 @@ export default function IncomingRoll() {
                                     </label>
                                     <input
                                         type="text"
+                                        inputMode="decimal"
                                         value={form.cobb}
+                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
                                         onChange={(e) => {
+                                            const val = sanitizeNumeric(e.target.value, true);
                                             setForm((f) => ({
                                                 ...f,
-                                                cobb: e.target.value,
+                                                cobb: val,
                                             }));
                                             if (errors.cobb)
                                                 setErrors((err) => ({
@@ -1864,7 +1995,7 @@ export default function IncomingRoll() {
                                                 }));
                                         }}
                                         className={`form-input w-full ${errors.cobb ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 150-250"
+                                        placeholder="e.g. 150"
                                     />
                                     {errors.cobb && (
                                         <p className="text-red-600 text-[11px] mt-1">

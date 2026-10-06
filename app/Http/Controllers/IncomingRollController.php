@@ -253,20 +253,32 @@ class IncomingRollController extends Controller
 
     public function store(Request $request)
     {
+        // Normalize commas to dots for numeric fields if present
+        $numericInputs = ['gsm', 'width', 'plybond', 'bulk', 'cobb', 'thickness', 'core'];
+        $normalized = [];
+        foreach ($numericInputs as $field) {
+            if ($request->has($field) && $request->$field !== null && $request->$field !== '') {
+                $normalized[$field] = str_replace(',', '.', trim($request->$field));
+            }
+        }
+        if (!empty($normalized)) {
+            $request->merge($normalized);
+        }
+
         $request->validate([
             'rollNumber' => 'required|string',
             'formNumber' => 'nullable|string',
             'shift'      => 'nullable|string',
             'jop'        => 'nullable|string',
             'grade'      => 'nullable|string',
-            'gsm'        => 'nullable|string',
-            'plybond'    => 'nullable|string',
-            'thickness'  => 'nullable|string',
-            'bulk'       => 'nullable|string',
-            'width'      => 'nullable|string',
+            'gsm'        => 'nullable|numeric',
+            'plybond'    => 'nullable|numeric',
+            'thickness'  => 'nullable|numeric',
+            'bulk'       => 'nullable|numeric',
+            'width'      => 'nullable|numeric',
             'diameter'   => 'nullable|string',
-            'core'       => 'nullable|string',
-            'cobb'       => 'nullable|string',
+            'core'       => 'nullable|numeric',
+            'cobb'       => 'nullable|numeric',
             'exMaterial' => 'nullable|string',
             'visual'     => 'nullable|string',
             'status'     => 'nullable|string',
