@@ -3,7 +3,7 @@ import {
   Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X,
   Download, MapPin, Package, Camera, QrCode, CheckCircle2, XCircle, Clock,
   AlertTriangle, UserCheck, Calendar, Building2, Truck, Check, RefreshCw, Layers,
-  Ban, ShieldCheck, ShieldAlert, Printer, FileText, Info
+  Ban, ShieldCheck, ShieldAlert, Printer, FileText, Info, RotateCcw, Scale
 } from 'lucide-react'
 import { router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
@@ -47,6 +47,7 @@ interface RollItem {
   cobb?: string
   jumbo_roll?: string | null
   jumbo_roll_id?: number | null
+  reproduction_status?: string | null
 }
 
 interface OptionItem {
@@ -67,6 +68,7 @@ interface ShipmentRollItem {
   weight: number
   location: string
   qc_status: string // 'pending' | 'passed' | 'rejected_replace'
+  reproduction_status?: string | null
   qc_notes: string | null
   qc_checked_at: string | null
 }
@@ -167,6 +169,8 @@ export default function RollInventory({
   const authUser = (props.auth as any)?.user
   const userRole = (authUser?.role ?? '').toLowerCase()
   const isQC = userRole === 'qc'
+  const isPPIC = userRole === 'ppic'
+  const isPpicOrAdmin = userRole === 'ppic' || userRole === 'admin'
 
   // URL tab handling: QC is now allowed to switch views
   const initialTab = (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'shipments')
@@ -182,6 +186,7 @@ export default function RollInventory({
   const [statusFilter, setStatusFilter] = useState('All')
   const [queueFilter, setQueueFilter] = useState('All') // 'All' | 'queued' | 'not_queued'
   const [qcStatusFilter, setQcStatusFilter] = useState('All') // 'All' | 'OK' | 'HOLD'
+  const [reproductionFilter, setReproductionFilter] = useState('All') // 'All' | 'shipped' | 'reject' | 'reweigh' | 'reproduce_again' | 'none'
   const [sortKey, setSortKey] = useState<string>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
@@ -232,7 +237,8 @@ export default function RollInventory({
     jops_id: '',
     exmaterial: 'IMPORT',
     visual: 'OK',
-    status: 'OK'
+    status: 'OK',
+    reproduction_status: 'none'
   })
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
 
@@ -297,6 +303,44 @@ export default function RollInventory({
     notes: ''
   })
   const [isSubmittingReject, setIsSubmittingReject] = useState(false)
+
+  // PPIC Re-production Disposition Modal State
+  const [showPpicDispositionModal, setShowPpicDispositionModal] = useState(false)
+  const [ppicDispositionRoll, setPpicDispositionRoll] = useState<any>(null)
+  const [ppicDispositionStatus, setPpicDispositionStatus] = useState<'shipped' | 'reject' | 'reweigh' | 'reproduce_again'>('shipped')
+  const [ppicDispositionNotes, setPpicDispositionNotes] = useState('')
+  const [isSubmittingPpicDisposition, setIsSubmittingPpicDisposition] = useState(false)
+
+  function openPpicDispositionModal(roll: any) {
+    setPpicDispositionRoll(roll)
+    const currentStatus = roll.reproduction_status && roll.reproduction_status !== 'none'
+      ? roll.reproduction_status
+      : 'shipped'
+    setPpicDispositionStatus(currentStatus as any)
+    setPpicDispositionNotes(roll.qc_notes || '')
+    setShowPpicDispositionModal(true)
+  }
+
+  function submitPpicDisposition() {
+    if (!ppicDispositionRoll || isSubmittingPpicDisposition) return
+    setIsSubmittingPpicDisposition(true)
+    const rollId = ppicDispositionRoll.roll_no || ppicDispositionRoll.raw_id || ppicDispositionRoll.id
+    router.post(`/rolls/${rollId}/reproduction-disposition`, {
+      reproduction_status: ppicDispositionStatus,
+      notes: ppicDispositionNotes
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setIsSubmittingPpicDisposition(false)
+        setShowPpicDispositionModal(false)
+        SystemUI.toast({ message: `Re-production disposition updated for roll ${ppicDispositionRoll.no_roll}!`, type: 'success' })
+      },
+      onError: (errs) => {
+        setIsSubmittingPpicDisposition(false)
+        SystemUI.toast({ message: (errs as any)?.error || 'Failed to update re-production disposition.', type: 'error' })
+      }
+    })
+  }
 
   // Sync active shipment when shipments prop updates
   useEffect(() => {
@@ -459,6 +503,9 @@ export default function RollInventory({
 
     const matchQcStatus = qcStatusFilter === 'All' || r.roll_status === qcStatusFilter
 
+    const matchReproduction = reproductionFilter === 'All'
+      || (reproductionFilter === 'none' ? (!r.reproduction_status || r.reproduction_status === 'none') : r.reproduction_status === reproductionFilter)
+
     const matchAdv = (
       (!advFilters.width || String(r.width || '') === advFilters.width) &&
       (!advFilters.grade || String(r.grade || '') === advFilters.grade) &&
@@ -472,7 +519,7 @@ export default function RollInventory({
       (!advFilters.cobb || String(r.cobb || '') === advFilters.cobb)
     )
 
-    return matchSearch && matchStatus && matchQueue && matchQcStatus && matchAdv
+    return matchSearch && matchStatus && matchQueue && matchQcStatus && matchReproduction && matchAdv
   }).sort((a, b) => {
     const key = sortKey as keyof RollItem
     const va = a[key] ?? ''
@@ -573,7 +620,8 @@ export default function RollInventory({
       jops_id: r.jops_id ? String(r.jops_id) : '',
       exmaterial: r.exMaterial || 'IMPORT',
       visual: r.visual || 'OK',
-      status: r.roll_status || 'OK'
+      status: r.roll_status || 'OK',
+      reproduction_status: r.reproduction_status || 'none'
     })
     setEditErrors({})
     setShowEditModal(true)
@@ -1026,6 +1074,18 @@ export default function RollInventory({
                     <option value="OK">OK (Released)</option>
                     <option value="HOLD">HOLD (Verification)</option>
                   </select>
+                  <select
+                    value={reproductionFilter}
+                    onChange={e => { setReproductionFilter(e.target.value); setPage(1) }}
+                    className="form-input text-xs py-1.5 min-w-[150px] w-auto font-medium"
+                  >
+                    <option value="All">All Re-production</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="reject">Reject</option>
+                    <option value="reweigh">Reweigh</option>
+                    <option value="reproduce_again">Reproduce Again</option>
+                    <option value="none">Standard / None</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -1264,6 +1324,32 @@ export default function RollInventory({
                           <span className="text-[10px] text-slate-500 font-medium">
                             Visual: {r.visual || 'OK'}
                           </span>
+                          {r.reproduction_status && r.reproduction_status !== 'none' && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                r.reproduction_status === 'shipped'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                                  : r.reproduction_status === 'reject'
+                                  ? 'bg-red-50 text-red-700 border border-red-300'
+                                  : r.reproduction_status === 'reweigh'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-300'
+                                  : 'bg-purple-50 text-purple-700 border border-purple-300'
+                              }`}
+                              title={`PPIC Disposition: ${r.reproduction_status}`}
+                            >
+                              {r.reproduction_status === 'shipped' && <Truck size={10} />}
+                              {r.reproduction_status === 'reject' && <XCircle size={10} />}
+                              {r.reproduction_status === 'reweigh' && <Scale size={10} />}
+                              {r.reproduction_status === 'reproduce_again' && <RotateCcw size={10} />}
+                              {r.reproduction_status === 'shipped'
+                                ? 'Shipped'
+                                : r.reproduction_status === 'reject'
+                                ? 'Reject'
+                                : r.reproduction_status === 'reweigh'
+                                ? 'Reweigh'
+                                : 'Reproduce Again'}
+                            </span>
+                          )}
                           {isQueued && (
                             <span
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full"
@@ -1292,7 +1378,7 @@ export default function RollInventory({
                                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 border-slate-200'
                               }`}
                             onClick={() => openEdit(r)}
-                            title={r.roll_status === 'HOLD' ? 'Verifikasi & Rilis HOLD Roll' : 'Edit Roll Data'}
+                            title={r.roll_status === 'HOLD' ? 'Verify & Release HOLD Roll' : 'Edit Roll Data'}
                           >
                             <Edit size={14} />
                           </button>
@@ -1802,10 +1888,35 @@ export default function RollInventory({
                                       )}
                                     </div>
                                   ) : isReplace ? (
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                       <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-full font-bold text-[10px] border border-red-200">
                                         <XCircle size={12} /> Replace Requested
                                       </span>
+                                      {r.reproduction_status && r.reproduction_status !== 'none' && (
+                                        <span
+                                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                            r.reproduction_status === 'shipped'
+                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                                              : r.reproduction_status === 'reject'
+                                              ? 'bg-red-50 text-red-700 border border-red-300'
+                                              : r.reproduction_status === 'reweigh'
+                                              ? 'bg-amber-50 text-amber-700 border border-amber-300'
+                                              : 'bg-purple-50 text-purple-700 border border-purple-300'
+                                          }`}
+                                        >
+                                          {r.reproduction_status === 'shipped' && <Truck size={10} />}
+                                          {r.reproduction_status === 'reject' && <XCircle size={10} />}
+                                          {r.reproduction_status === 'reweigh' && <Scale size={10} />}
+                                          {r.reproduction_status === 'reproduce_again' && <RotateCcw size={10} />}
+                                          PPIC: {r.reproduction_status === 'shipped'
+                                            ? 'Shipped'
+                                            : r.reproduction_status === 'reject'
+                                            ? 'Reject'
+                                            : r.reproduction_status === 'reweigh'
+                                            ? 'Reweigh'
+                                            : 'Reproduce Again'}
+                                        </span>
+                                      )}
                                       {r.qc_notes && (
                                         <div className="text-[10px] text-red-600 truncate max-w-[150px]" title={r.qc_notes}>
                                           {r.qc_notes}
@@ -1836,6 +1947,24 @@ export default function RollInventory({
                                         title="Report defect or roll issue"
                                       >
                                         Reject
+                                      </button>
+                                    </div>
+                                  ) : !isShipmentCanceled && isPpicOrAdmin && (isReplace || (r.reproduction_status && r.reproduction_status !== 'none')) ? (
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        onClick={() => openPpicDispositionModal(r)}
+                                        className="btn btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1 ml-auto"
+                                        title="Manage Re-produced Roll Disposition (PPIC)"
+                                      >
+                                        <RotateCcw size={11} />
+                                        PPIC Disposition
+                                      </button>
+                                      <button
+                                        onClick={() => handleCancelRollFromShipment(r)}
+                                        className="p-1 rounded text-red-400 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
+                                        title="Remove roll from this shipment"
+                                      >
+                                        <Trash2 size={12} />
                                       </button>
                                     </div>
                                   ) : !isQC && !isShipmentCanceled && isPending ? (
@@ -2003,62 +2132,62 @@ export default function RollInventory({
 
       {/* 2. QC Reject Decision Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-sm p-5 bg-white rounded-2xl shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-2.5">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5">
+          <div className="card w-full max-w-[95vw] sm:max-w-lg md:max-w-xl p-6 sm:p-7 bg-white rounded-2xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5 text-red-600">
-                  <AlertTriangle size={16} />
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 text-red-600">
+                  <AlertTriangle size={20} />
                   Reject Roll QC Inspection
                 </h3>
-                <p className="text-[11px] text-slate-500 font-mono mt-0.5">Roll: {rejectForm.roll_display}</p>
+                <p className="text-xs sm:text-sm text-slate-500 font-mono mt-0.5">Roll: {rejectForm.roll_display}</p>
               </div>
-              <button onClick={() => setShowRejectModal(false)} className="text-slate-400 hover:text-slate-700">
-                <X size={16} />
+              <button onClick={() => setShowRejectModal(false)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+                <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1.5">Action & Resolution</label>
-                <div className="space-y-2">
-                  <label className={`flex items-start gap-2.5 p-2.5 border rounded-xl cursor-pointer transition-colors ${rejectForm.reject_type === 'replace' ? 'bg-red-50/80 border-red-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-2">Action & Resolution</label>
+                <div className="space-y-2.5">
+                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${rejectForm.reject_type === 'replace' ? 'bg-red-50/80 border-red-300' : 'border-slate-200 hover:bg-slate-50'}`}>
                     <input
                       type="radio"
-                      className="mt-1 text-red-600 accent-red-600"
+                      className="mt-1 text-red-600 accent-red-600 w-4 h-4"
                       name="reject_type"
                       value="replace"
                       checked={rejectForm.reject_type === 'replace'}
                       onChange={e => setRejectForm(f => ({ ...f, reject_type: e.target.value as any }))}
                     />
                     <div>
-                      <div className="text-xs font-bold text-red-900">Meminta Ganti (Replace)</div>
-                      <div className="text-[11px] text-slate-500">Roll is damaged/defective and unfit for shipping. It will be flagged for a replacement JOP.</div>
+                      <div className="text-sm font-bold text-red-900">Request Replacement (Replace)</div>
+                      <div className="text-xs text-slate-500 mt-0.5">Roll is damaged/defective and unfit for shipping. It will be flagged for a replacement JOP.</div>
                     </div>
                   </label>
 
-                  <label className={`flex items-start gap-2.5 p-2.5 border rounded-xl cursor-pointer transition-colors ${rejectForm.reject_type === 'fixed' ? 'bg-green-50/80 border-green-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${rejectForm.reject_type === 'fixed' ? 'bg-green-50/80 border-green-300' : 'border-slate-200 hover:bg-slate-50'}`}>
                     <input
                       type="radio"
-                      className="mt-1 text-green-600 accent-green-600"
+                      className="mt-1 text-green-600 accent-green-600 w-4 h-4"
                       name="reject_type"
                       value="fixed"
                       checked={rejectForm.reject_type === 'fixed'}
                       onChange={e => setRejectForm(f => ({ ...f, reject_type: e.target.value as any }))}
                     />
                     <div>
-                      <div className="text-xs font-bold text-green-900">Fixed Locally (Fixed)</div>
-                      <div className="text-[11px] text-slate-500">Minor damage has been fixed locally by QC. Roll status is now Passed.</div>
+                      <div className="text-sm font-bold text-green-900">Fixed Locally (Fixed)</div>
+                      <div className="text-xs text-slate-500 mt-0.5">Minor damage has been fixed locally by QC. Roll status is now Passed.</div>
                     </div>
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Notes / Remarks (Optional)</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Notes / Remarks (Optional)</label>
                 <textarea
-                  className="form-input w-full text-xs"
-                  rows={2}
+                  className="form-input w-full text-sm rounded-lg p-3"
+                  rows={3}
                   value={rejectForm.notes}
                   onChange={e => setRejectForm(f => ({ ...f, notes: e.target.value }))}
                   placeholder="Description of damage or repair action..."
@@ -2066,16 +2195,16 @@ export default function RollInventory({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
               <button
-                className="btn btn-secondary text-xs px-3 py-1.5"
+                className="btn btn-secondary text-sm px-4 py-2.5 rounded-lg"
                 onClick={() => setShowRejectModal(false)}
                 disabled={isSubmittingReject}
               >
                 Cancel
               </button>
               <button
-                className={`btn text-xs px-4 py-1.5 text-white font-bold cursor-pointer transition-colors ${rejectForm.reject_type === 'replace' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+                className={`btn text-sm px-6 py-2.5 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-sm ${rejectForm.reject_type === 'replace' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                 onClick={submitReject}
                 disabled={isSubmittingReject}
               >
@@ -2088,43 +2217,48 @@ export default function RollInventory({
 
       {/* 3. Edit Roll Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-lg p-5 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5">
+          <div className="card w-full max-w-[95vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl p-6 sm:p-7 bg-white rounded-2xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Edit Roll Data</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
-                <X size={18} />
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">Edit Roll Data</h3>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-mono">
+                  Roll: {editingRoll?.no_roll || editingRoll?.id}
+                </p>
+              </div>
+              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+                <X size={20} />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Roll Number <span className="text-red-500">*</span></label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Roll Number <span className="text-red-500">*</span></label>
                 <input
                   value={editForm.no_roll}
                   onChange={e => setEditForm(f => ({ ...f, no_roll: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 />
-                {editErrors.no_roll && <p className="text-red-600 text-[11px] mt-0.5">{editErrors.no_roll}</p>}
+                {editErrors.no_roll && <p className="text-red-600 text-xs mt-1">{editErrors.no_roll}</p>}
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Form Number</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Form Number</label>
                 <input
                   type="number"
                   value={editForm.form}
                   onChange={e => setEditForm(f => ({ ...f, form: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                   placeholder="e.g. 1"
                 />
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Shift</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Shift</label>
                 <select
                   value={editForm.shifts_id}
                   onChange={e => setEditForm(f => ({ ...f, shifts_id: Number(e.target.value) }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 >
                   {shifts.map(s => (
                     <option key={s.id} value={s.id}>Shift {s.shift}</option>
@@ -2133,21 +2267,21 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Entry Date</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Entry Date</label>
                 <input
                   type="date"
                   value={editForm.entry_date}
                   onChange={e => setEditForm(f => ({ ...f, entry_date: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 />
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Grade</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Grade</label>
                 <select
                   value={editForm.grades_id}
                   onChange={e => setEditForm(f => ({ ...f, grades_id: Number(e.target.value) }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 >
                   {grades.map(g => (
                     <option key={g.id} value={g.id}>{g.grade}</option>
@@ -2156,11 +2290,11 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">GSM (g/m²)</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">GSM (g/m²)</label>
                 <select
                   value={editForm.gsms_id}
                   onChange={e => setEditForm(f => ({ ...f, gsms_id: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 >
                   <option value="">Default from JOP</option>
                   {gsms.map(g => (
@@ -2170,21 +2304,21 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Weight (kg)</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Weight (kg)</label>
                 <input
                   type="number"
                   value={editForm.weight}
                   onChange={e => setEditForm(f => ({ ...f, weight: Number(e.target.value) }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 />
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Warehouse Location</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Warehouse Location</label>
                 <select
                   value={editForm.locations_id}
                   onChange={e => setEditForm(f => ({ ...f, locations_id: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 >
                   <option value="">Unallocated (No Slot)</option>
                   {locations.map(l => (
@@ -2194,11 +2328,11 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">JOP Order</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">JOP Order</label>
                 <select
                   value={editForm.jops_id}
                   onChange={e => setEditForm(f => ({ ...f, jops_id: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 >
                   <option value="">No JOP Assigned</option>
                   {jops.map(j => (
@@ -2208,11 +2342,11 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Ex Material</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Ex Material</label>
                 <select
                   value={editForm.exmaterial}
                   onChange={e => setEditForm(f => ({ ...f, exmaterial: e.target.value }))}
-                  className="form-input w-full"
+                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
                 >
                   <option value="IMPORT">IMPORT</option>
                   <option value="LOCAL">LOCAL</option>
@@ -2220,9 +2354,9 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Visual</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Visual</label>
                 <select
-                  className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm"
+                  className="form-input w-full h-11 text-sm bg-white border border-slate-300 rounded-lg px-3.5 shadow-sm"
                   value={editForm.visual}
                   onChange={e => setEditForm(f => ({ ...f, visual: e.target.value }))}
                 >
@@ -2233,9 +2367,9 @@ export default function RollInventory({
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Label Status (Roll Status)</label>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Label Status (Roll Status)</label>
                 <select
-                  className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed font-semibold"
+                  className="form-input w-full h-11 text-sm bg-white border border-slate-300 rounded-lg px-3.5 shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed font-semibold"
                   value={editForm.status}
                   onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
                   disabled={!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD'}
@@ -2243,23 +2377,199 @@ export default function RollInventory({
                   <option value="OK">OK (Released / Passed)</option>
                   <option value="HOLD">HOLD (Pending QC Verification)</option>
                 </select>
-                {!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD' ? (
-                  <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                {!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD' && (
+                  <p className="text-xs text-amber-600 font-semibold mt-1">
                     Only QC and Admin are authorized to release HOLD status to OK
                   </p>
-                ) : editingRoll?.roll_status === 'HOLD' ? (
-                  <p className="text-[10px] text-emerald-600 font-semibold mt-1">
+                )}
+              </div>
+
+              {/* Re-production Disposition (PPIC) */}
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3 p-4 bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="form-label text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <RotateCcw size={16} className="text-blue-600" />
+                    Re-production Disposition (PPIC)
+                  </label>
+                  {isPpicOrAdmin ? (
+                    <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                      Managed by PPIC
+                    </span>
+                  ) : (
+                    <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                      Managed by PPIC
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">
+                  Select disposition if this roll was re-produced by the production team.
+                </p>
+                <select
+                  className="form-input w-full h-11 text-sm bg-white border border-slate-300 rounded-lg px-3.5 font-semibold disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
+                  value={editForm.reproduction_status}
+                  onChange={e => setEditForm(f => ({ ...f, reproduction_status: e.target.value }))}
+                  disabled={!isPpicOrAdmin}
+                >
+                  <option value="none">None (Standard Production)</option>
+                  <option value="shipped">Shipped (Approved for delivery)</option>
+                  <option value="reject">Reject (Roll scrapped / rejected)</option>
+                  <option value="reweigh">Reweigh (Roll sent for re-weighing)</option>
+                  <option value="reproduce_again">Reproduce Again (Roll sent back for re-production)</option>
+                </select>
+                {!isPpicOrAdmin && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Only PPIC and Admin are authorized to update re-production disposition.
                   </p>
-                ) : null}
+                )}
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
-              <button className="btn btn-secondary text-xs px-3 py-1.5" onClick={() => setShowEditModal(false)}>
+            <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
+              <button className="btn btn-secondary text-sm px-4 py-2.5 rounded-lg" onClick={() => setShowEditModal(false)}>
                 Cancel
               </button>
-              <button className="btn btn-primary text-xs px-3 py-1.5" onClick={saveEdit}>
+              <button className="btn btn-primary text-sm font-bold px-6 py-2.5 rounded-lg shadow-sm" onClick={saveEdit}>
                 Update Roll
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PPIC Re-production Disposition Quick Modal for Shipment Rolls */}
+      {showPpicDispositionModal && ppicDispositionRoll && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5">
+          <div className="card w-full max-w-[95vw] sm:max-w-lg md:max-w-xl p-6 sm:p-7 bg-white rounded-2xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 text-blue-600">
+                  <RotateCcw size={20} />
+                  Re-production Disposition (PPIC)
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 font-mono mt-0.5">
+                  Roll: {ppicDispositionRoll.no_roll || ppicDispositionRoll.id}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPpicDispositionModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-2">
+                  Disposition Choice for Re-produced Roll
+                </label>
+                <div className="space-y-2.5">
+                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'shipped' ? 'bg-emerald-50/80 border-emerald-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <input
+                      type="radio"
+                      className="mt-1 text-emerald-600 accent-emerald-600 w-4 h-4"
+                      name="ppic_disposition"
+                      value="shipped"
+                      checked={ppicDispositionStatus === 'shipped'}
+                      onChange={() => setPpicDispositionStatus('shipped')}
+                    />
+                    <div>
+                      <div className="text-sm font-bold text-emerald-900 flex items-center gap-1.5">
+                        <Truck size={14} /> Shipped
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        Roll has been successfully re-produced and is approved for shipping.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'reject' ? 'bg-red-50/80 border-red-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <input
+                      type="radio"
+                      className="mt-1 text-red-600 accent-red-600 w-4 h-4"
+                      name="ppic_disposition"
+                      value="reject"
+                      checked={ppicDispositionStatus === 'reject'}
+                      onChange={() => setPpicDispositionStatus('reject')}
+                    />
+                    <div>
+                      <div className="text-sm font-bold text-red-900 flex items-center gap-1.5">
+                        <XCircle size={14} /> Reject
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        Roll remains defective/unfit and is rejected / scrapped.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'reweigh' ? 'bg-amber-50/80 border-amber-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <input
+                      type="radio"
+                      className="mt-1 text-amber-600 accent-amber-600 w-4 h-4"
+                      name="ppic_disposition"
+                      value="reweigh"
+                      checked={ppicDispositionStatus === 'reweigh'}
+                      onChange={() => setPpicDispositionStatus('reweigh')}
+                    />
+                    <div>
+                      <div className="text-sm font-bold text-amber-900 flex items-center gap-1.5">
+                        <Scale size={14} /> Reweigh
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        Roll requires re-weighing verification before final determination.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'reproduce_again' ? 'bg-purple-50/80 border-purple-300' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <input
+                      type="radio"
+                      className="mt-1 text-purple-600 accent-purple-600 w-4 h-4"
+                      name="ppic_disposition"
+                      value="reproduce_again"
+                      checked={ppicDispositionStatus === 'reproduce_again'}
+                      onChange={() => setPpicDispositionStatus('reproduce_again')}
+                    />
+                    <div>
+                      <div className="text-sm font-bold text-purple-900 flex items-center gap-1.5">
+                        <RotateCcw size={14} /> Reproduce Again
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        Roll needs another round of re-production by the production team.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">
+                  PPIC Notes / Remarks (Optional)
+                </label>
+                <textarea
+                  className="form-input w-full text-sm rounded-lg p-3"
+                  rows={3}
+                  value={ppicDispositionNotes}
+                  onChange={e => setPpicDispositionNotes(e.target.value)}
+                  placeholder="Additional notes for production or shipping..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                className="btn btn-secondary text-sm px-4 py-2.5 rounded-lg"
+                onClick={() => setShowPpicDispositionModal(false)}
+                disabled={isSubmittingPpicDisposition}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary text-sm px-6 py-2.5 font-bold rounded-lg cursor-pointer transition-colors shadow-sm"
+                onClick={submitPpicDisposition}
+                disabled={isSubmittingPpicDisposition}
+              >
+                {isSubmittingPpicDisposition ? 'Updating...' : 'Confirm Disposition'}
               </button>
             </div>
           </div>

@@ -581,7 +581,7 @@ export default function IncomingRoll() {
 
         if (!form.jop.trim()) errs.jop = "JOP is required.";
         if (!form.jumboRoll.trim())
-            errs.jumboRoll = "Nomor Jumbo is required (Select JOP first).";
+            errs.jumboRoll = "Jumbo Roll Number is required (Select JOP first).";
         if (!form.grade.trim())
             errs.grade = "Grade is required (Select JOP first).";
         
@@ -1409,15 +1409,15 @@ export default function IncomingRoll() {
                                         )}
                                 </div>
 
-                                {/* Nomor Jumbo */}
+                                {/* Jumbo Roll Number */}
                                 <div>
                                     <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
                                         <span>
-                                            Nomor Jumbo{" "}
+                                            Jumbo Roll Number{" "}
                                             <span className="text-red-500">*</span>
                                         </span>
                                         <span className="text-[10px] text-blue-600 font-normal">
-                                            (Otomatis JOP / Editable)
+                                            (Auto from JOP / Editable)
                                         </span>
                                     </label>
                                     <div className="relative">
@@ -1474,22 +1474,22 @@ export default function IncomingRoll() {
                                                     form.jumboRoll.trim().toUpperCase(),
                                             ) ? (
                                                 <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                    <CheckCircle size={10} /> Terdaftar di Master Jumbo
+                                                    <CheckCircle size={10} /> Registered in Master Jumbo
                                                 </span>
                                             ) : (
                                                 <span className="text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                    ✨ Otomatis dari JOP
+                                                    ✨ Auto from JOP
                                                 </span>
                                             )}
                                             {availableJumboRolls.length > 1 && (
                                                 <span className="text-[10px] text-slate-500">
-                                                    ({availableJumboRolls.length} pilihan tersedia)
+                                                    ({availableJumboRolls.length} options available)
                                                 </span>
                                             )}
                                         </div>
                                     ) : (
                                         <p className="text-slate-400 text-[10px] mt-1">
-                                            Pilih JOP untuk mengisi otomatis, atau ketik manual
+                                            Select JOP to auto-fill, or enter manually
                                         </p>
                                     )}
                                 </div>
@@ -1723,7 +1723,7 @@ export default function IncomingRoll() {
                                             </span>
                                         </span>
                                         <span className="text-[10px] text-blue-600 font-normal">
-                                            (Rekomendasi JOP)
+                                            (JOP Recommendation)
                                         </span>
                                     </label>
                                     <input
@@ -1763,7 +1763,7 @@ export default function IncomingRoll() {
                                             </span>
                                         </span>
                                         <span className="text-[10px] text-blue-600 font-normal">
-                                            (Rekomendasi PPIC)
+                                            (PPIC Recommendation)
                                         </span>
                                     </label>
                                     <input
@@ -1803,7 +1803,7 @@ export default function IncomingRoll() {
                                             </span>
                                         </span>
                                         <span className="text-[10px] text-blue-600 font-normal">
-                                            (Rekomendasi PPIC)
+                                            (PPIC Recommendation)
                                         </span>
                                     </label>
                                     <input
@@ -1843,7 +1843,7 @@ export default function IncomingRoll() {
                                             </span>
                                         </span>
                                         <span className="text-[10px] text-blue-600 font-normal">
-                                            (Rekomendasi PPIC)
+                                            (PPIC Recommendation)
                                         </span>
                                     </label>
                                     <input
@@ -2233,7 +2233,7 @@ export default function IncomingRoll() {
                                     form.jop || "(not entered)",
                                 ],
                                 [
-                                    "Nomor Jumbo",
+                                    "Jumbo Roll Number",
                                     form.jumboRoll || "(not entered)",
                                 ],
                                 ["Grade", form.grade || "(not entered)"],

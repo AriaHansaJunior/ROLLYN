@@ -61,6 +61,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/shipments', [ShipmentController::class, 'store']);
         Route::delete('/shipments/{id}/roll/{rollNo}', [ShipmentController::class, 'cancelRoll']);
         Route::delete('/shipments/{id}/cancel', [ShipmentController::class, 'cancelShipment']);
+        Route::post('/rolls/{id}/reproduction-disposition', [RollController::class, 'setReproductionDisposition']);
 
         Route::put('/locations/bulk-update', [LocationController::class, 'bulkUpdate']);
         Route::put('/locations/{id}', [LocationController::class, 'update']);

@@ -63,6 +63,7 @@ interface RollDetailItem {
     ocrWeight: number;
     ocrConfidence: string;
     ocrStatus: string;
+    reproduction_status?: "shipped" | "reject" | "reweigh" | "reproduce_again" | null;
     jumbo_roll?: string | null;
     jumbo_roll_id?: number | null;
     source_jumbo_roll?: {
@@ -130,7 +131,9 @@ export default function RollDetail({
     jops = [],
 }: Props) {
     const { props } = usePage();
-    const isQC = ((props.auth as any)?.user?.role ?? "").toLowerCase() === "qc";
+    const userRole = ((props.auth as any)?.user?.role ?? "").toLowerCase();
+    const isQC = userRole === "qc";
+    const isPPIC = userRole === "ppic" || userRole === "admin";
 
     const currentRoll = roll || {
         id: "R-10421",
@@ -189,6 +192,7 @@ export default function RollDetail({
         exmaterial: currentRoll.exMaterial || "IMPORT",
         visual: currentRoll.visual || "OK",
         status: currentRoll.roll_status || "OK",
+        reproduction_status: currentRoll.reproduction_status || "none",
     });
     const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
@@ -338,6 +342,7 @@ export default function RollDetail({
             exmaterial: currentRoll.exMaterial || "IMPORT",
             visual: currentRoll.visual || "OK",
             status: currentRoll.roll_status || "OK",
+            reproduction_status: currentRoll.reproduction_status || "none",
         });
         setShowEditModal(true);
     }
@@ -473,6 +478,33 @@ export default function RollDetail({
                         label="Core Diameter"
                         value={`${currentRoll.core} mm`}
                     />
+                    {currentRoll.reproduction_status && (
+                        <div className="flex justify-between items-center py-2 border-b border-slate-100 text-xs">
+                            <span className="text-slate-500 font-medium">Re-production Disposition</span>
+                            <span className="font-semibold text-right">
+                                {currentRoll.reproduction_status === 'shipped' && (
+                                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        Shipped
+                                    </span>
+                                )}
+                                {currentRoll.reproduction_status === 'reject' && (
+                                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                        Reject
+                                    </span>
+                                )}
+                                {currentRoll.reproduction_status === 'reweigh' && (
+                                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                        Reweigh
+                                    </span>
+                                )}
+                                {currentRoll.reproduction_status === 'reproduce_again' && (
+                                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
+                                        Reproduce Again
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+                    )}
                 </Section>
 
                 {/* Warehouse Information */}
@@ -494,7 +526,7 @@ export default function RollDetail({
                     />
                     <InfoRow 
                         label="Stacking Capacity" 
-                        value={isSlotted ? "Maks 4 Roll per Slot" : "—"} 
+                        value={isSlotted ? "Max 4 Rolls per Slot" : "—"} 
                     />
                 </Section>
 
@@ -705,21 +737,26 @@ export default function RollDetail({
 
             {/* 2. Edit Roll Modal */}
             {showEditModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-                    <div className="card w-full max-w-lg p-5 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5">
+                    <div className="card w-full max-w-[95vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl p-5 sm:p-6 bg-white rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <h3 className="text-base font-bold text-slate-900">
-                                Edit Roll Data
-                            </h3>
+                            <div>
+                                <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                                    Edit Roll Data
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Update roll physical specs, locations, and inspection states
+                                </p>
+                            </div>
                             <button
                                 onClick={() => setShowEditModal(false)}
-                                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
                             >
-                                <X size={18} />
+                                <X size={20} />
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
                             <div>
                                 <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
                                     Roll Number{" "}
@@ -733,7 +770,7 @@ export default function RollDetail({
                                             no_roll: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 />
                                 {editErrors.no_roll && (
                                     <p className="text-red-600 text-[11px] mt-0.5">
@@ -755,7 +792,7 @@ export default function RollDetail({
                                             form: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                     placeholder="e.g. 1"
                                 />
                             </div>
@@ -772,7 +809,7 @@ export default function RollDetail({
                                             shifts_id: Number(e.target.value),
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 >
                                     {shifts.length > 0 ? (
                                         shifts.map((s) => (
@@ -803,7 +840,7 @@ export default function RollDetail({
                                             entry_date: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 />
                             </div>
 
@@ -819,7 +856,7 @@ export default function RollDetail({
                                             grades_id: Number(e.target.value),
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 >
                                     {grades.length > 0 ? (
                                         grades.map((g) => (
@@ -846,7 +883,7 @@ export default function RollDetail({
                                             weight: Number(e.target.value),
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 />
                             </div>
 
@@ -862,7 +899,7 @@ export default function RollDetail({
                                             locations_id: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 >
                                     <option value="">
                                         Unallocated (No Slot)
@@ -887,7 +924,7 @@ export default function RollDetail({
                                             jops_id: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 >
                                     <option value="">No JOP Assigned</option>
                                     {jops.map((j) => (
@@ -910,7 +947,7 @@ export default function RollDetail({
                                             exmaterial: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full"
+                                    className="form-input w-full h-11 text-xs sm:text-sm"
                                 >
                                     <option value="IMPORT">IMPORT</option>
                                     <option value="LOCAL">LOCAL</option>
@@ -929,7 +966,7 @@ export default function RollDetail({
                                             visual: e.target.value,
                                         }))
                                     }
-                                    className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm"
+                                    className="form-input w-full h-11 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg shadow-sm"
                                 >
                                     <option value="OK">OK</option>
                                     <option value="PKP">PKP</option>
@@ -942,7 +979,7 @@ export default function RollDetail({
                                     Roll Status
                                 </label>
                                 <select
-                                    className="form-input w-full bg-white border border-slate-300 rounded-lg shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
+                                    className="form-input w-full h-11 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
                                     value={editForm.status}
                                     onChange={(e) =>
                                         setEditForm((f) => ({
@@ -961,17 +998,55 @@ export default function RollDetail({
                                     </p>
                                 )}
                             </div>
+
+                            {/* PPIC Re-production Disposition Selection */}
+                            <div className={`sm:col-span-2 lg:col-span-3 p-3.5 rounded-xl border ${isPPIC ? 'bg-indigo-50/60 border-indigo-200' : 'bg-slate-50 border-slate-200'}`}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="form-label text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                        <span>Re-production Disposition (PPIC)</span>
+                                    </label>
+                                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">
+                                        PPIC Role Exclusive
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                                    <div className="sm:col-span-2">
+                                        <select
+                                            value={editForm.reproduction_status}
+                                            onChange={(e) =>
+                                                setEditForm((f) => ({
+                                                    ...f,
+                                                    reproduction_status: e.target.value,
+                                                }))
+                                            }
+                                            disabled={!isPPIC}
+                                            className="form-input w-full h-11 text-xs sm:text-sm font-semibold bg-white border border-slate-300 rounded-lg shadow-xs disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
+                                        >
+                                            <option value="none">Standard / None</option>
+                                            <option value="shipped">Shipped</option>
+                                            <option value="reject">Reject</option>
+                                            <option value="reweigh">Reweigh</option>
+                                            <option value="reproduce_again">Reproduce Again</option>
+                                        </select>
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 leading-snug">
+                                        {isPPIC
+                                            ? "Select disposition when roll has been re-produced by production team."
+                                            : "Only PPIC role can change re-production disposition status."}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
                             <button
-                                className="btn btn-secondary text-xs px-3 py-1.5"
+                                className="btn btn-secondary text-xs sm:text-sm px-4 py-2"
                                 onClick={() => setShowEditModal(false)}
                             >
                                 Cancel
                             </button>
                             <button
-                                className="btn btn-primary text-xs px-3 py-1.5"
+                                className="btn btn-primary text-xs sm:text-sm px-4 py-2 font-bold"
                                 onClick={saveEdit}
                             >
                                 Update Roll

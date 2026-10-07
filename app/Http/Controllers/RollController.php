@@ -57,6 +57,7 @@ class RollController extends Controller
                     'exMaterial' => $roll->exmaterial ?? 'IMPORT',
                     'visual' => $roll->visual ?? 'OK',
                     'roll_status' => $roll->status ?? 'OK',
+                    'reproduction_status' => $roll->reproduction_status,
                     'plybond' => $roll->plybond->plybonds ?? 0,
                     'thickness' => $roll->thickness->thickness ?? 0,
                     'bulk' => $roll->bulk ?? 0,
@@ -123,6 +124,7 @@ class RollController extends Controller
                         'cobb' => $sr->roll->cobb->cobb ?? '—',
                         'location' => $sr->roll->location->location ?? '—',
                         'qc_status' => $sr->qc_status,
+                        'reproduction_status' => $sr->reproduction_status ?? $sr->roll?->reproduction_status,
                         'qc_notes' => $sr->qc_notes,
                         'qc_issues' => $sr->qc_issues,
                         'qc_checked_at' => $sr->qc_checked_at ? \Carbon\Carbon::parse($sr->qc_checked_at)->format('d/m/Y H:i') : null,
@@ -179,6 +181,7 @@ class RollController extends Controller
             'exMaterial' => $roll->exmaterial ?? 'IMPORT',
             'visual' => $roll->visual ?? 'OK',
             'roll_status' => $roll->status ?? 'OK',
+            'reproduction_status' => $roll->reproduction_status,
             'location' => $roll->location?->location ?? 'Unallocated',
             'locations_id' => $roll->locations_id,
             'jop' => $roll->jop?->jop ?? '—',
@@ -249,11 +252,25 @@ class RollController extends Controller
             'jops_id' => 'nullable|exists:jops,id',
             'exmaterial' => 'nullable|in:IMPORT,LOCAL,MIX',
             'visual' => 'nullable|string',
+            'reproduction_status' => 'nullable|string|in:shipped,reject,reweigh,reproduce_again,none',
         ]);
+
+        $userRole = strtolower(Auth::user()->role ?? '');
+        $isPpicOrAdmin = in_array($userRole, ['ppic', 'admin']);
+
+        if ($request->has('reproduction_status')) {
+            $incomingRepro = $request->input('reproduction_status');
+            $cleanedRepro = ($incomingRepro === 'none' || empty($incomingRepro)) ? null : $incomingRepro;
+            if ($cleanedRepro !== $roll->reproduction_status) {
+                if (!$isPpicOrAdmin) {
+                    return redirect()->back()->with('error', 'Only PPIC and Admin are authorized to update roll re-production disposition.');
+                }
+                $validated['reproduction_status'] = $cleanedRepro;
+            }
+        }
 
         $newStatus = $request->input('status');
         if ($roll->status === 'HOLD' && $newStatus === 'OK') {
-            $userRole = strtolower(Auth::user()->role ?? '');
             if (!in_array($userRole, ['qc', 'admin'])) {
                 return redirect()->back()->with('error', 'Only QC and Admin can change Roll status from HOLD to OK.');
             }
@@ -313,6 +330,23 @@ class RollController extends Controller
 
             $roll->update($validated);
 
+            if (array_key_exists('reproduction_status', $validated)) {
+                $activeShipmentRoll = $roll->shipmentRolls->first(function ($sr) {
+                    return $sr->shipment && $sr->shipment->status !== 'canceled';
+                });
+                if ($activeShipmentRoll) {
+                    $srUpdates = ['reproduction_status' => $validated['reproduction_status']];
+                    if ($validated['reproduction_status'] === 'shipped') {
+                        $srUpdates['qc_status'] = 'passed';
+                        $srUpdates['qc_notes'] = ($activeShipmentRoll->qc_notes ? $activeShipmentRoll->qc_notes . ' | ' : '') . 'Approved for shipment by PPIC after re-production';
+                    } elseif ($validated['reproduction_status'] === 'reproduce_again') {
+                        $srUpdates['qc_status'] = 'rejected_replace';
+                        $srUpdates['qc_notes'] = ($activeShipmentRoll->qc_notes ? $activeShipmentRoll->qc_notes . ' | ' : '') . 'Re-production requested again by PPIC';
+                    }
+                    $activeShipmentRoll->update($srUpdates);
+                }
+            }
+
             foreach ($changes as $field => $data) {
                 \App\Models\RollAuditLog::create([
                     'rolls_no' => $roll->no,
@@ -336,6 +370,55 @@ class RollController extends Controller
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to update roll: ' . $e->getMessage());
         }
+    }
+
+    public function setReproductionDisposition(Request $request, int|string $id)
+    {
+        $userRole = strtolower(Auth::user()->role ?? '');
+        if (!in_array($userRole, ['ppic', 'admin'])) {
+            return redirect()->back()->with('error', 'Only PPIC and Admin are authorized to set re-production disposition.');
+        }
+
+        $validated = $request->validate([
+            'reproduction_status' => 'required|in:shipped,reject,reweigh,reproduce_again,none',
+            'notes' => 'nullable|string',
+        ]);
+
+        $roll = Roll::where('no', $id)->orWhere('no_roll', $id)->firstOrFail();
+        $status = $validated['reproduction_status'] === 'none' ? null : $validated['reproduction_status'];
+        $roll->update(['reproduction_status' => $status]);
+
+        // Sync with active shipment rolls if any
+        $activeShipmentRoll = $roll->shipmentRolls->first(function ($sr) {
+            return $sr->shipment && $sr->shipment->status !== 'canceled';
+        });
+
+        if ($activeShipmentRoll) {
+            $updates = ['reproduction_status' => $status];
+            if ($status === 'shipped') {
+                $updates['qc_status'] = 'passed';
+                $updates['qc_notes'] = ($activeShipmentRoll->qc_notes ? $activeShipmentRoll->qc_notes . ' | ' : '') . 'Approved for shipment by PPIC after re-production';
+            } elseif ($status === 'reject') {
+                $updates['qc_status'] = 'rejected_replace';
+                $updates['qc_notes'] = ($activeShipmentRoll->qc_notes ? $activeShipmentRoll->qc_notes . ' | ' : '') . 'Rejected by PPIC';
+            } elseif ($status === 'reproduce_again') {
+                $updates['qc_status'] = 'rejected_replace';
+                $updates['qc_notes'] = ($activeShipmentRoll->qc_notes ? $activeShipmentRoll->qc_notes . ' | ' : '') . 'Re-production requested again by PPIC';
+            } elseif ($status === 'reweigh') {
+                $updates['qc_notes'] = ($activeShipmentRoll->qc_notes ? $activeShipmentRoll->qc_notes . ' | ' : '') . 'Pending Reweighing (PPIC)';
+            }
+            $activeShipmentRoll->update($updates);
+        }
+
+        $labels = [
+            'shipped' => 'Shipped',
+            'reject' => 'Reject',
+            'reweigh' => 'Reweigh',
+            'reproduce_again' => 'Reproduce Again',
+            'none' => 'Standard / None',
+        ];
+
+        return redirect()->back()->with('success', "Roll {$roll->no_roll} re-production disposition updated to: " . ($labels[$validated['reproduction_status']] ?? $status));
     }
 
     public function destroy(int|string $id)

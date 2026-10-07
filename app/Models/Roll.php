@@ -29,6 +29,7 @@ class Roll extends Model
         'locations_id',
         'visual',
         'status',
+        'reproduction_status',
         'users_id',
         'jops_id',
         'jumbo_roll_id',

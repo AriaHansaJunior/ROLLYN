@@ -10,6 +10,7 @@ class ShipmentRoll extends Model
         'shipment_id',
         'roll_no',
         'qc_status',
+        'reproduction_status',
         'qc_notes',
         'qc_issues',
         'qc_checked_at',
