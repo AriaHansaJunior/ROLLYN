@@ -1,134 +1,21 @@
 import React, { useState, useEffect, useMemo } from "react";
-import {
-    CheckCircle,
-    Save,
-    Scale,
-    Edit3,
-    ArrowLeft,
-    ArrowRight,
-    FileText,
-    Layers,
-    Clock,
-    Lock,
-    Printer,
-    RefreshCw,
-    Search,
-    AlertCircle,
-    Check,
-} from "lucide-react";
-import WeightDetectionEngine from "../SPECTRUM/SpectrumWeightDetectionEngine";
-import QRCodeSVG from "@/Components/QRCodeSVG";
-import { SystemUI } from "@/Utils/SystemUI";
-import { router, usePage } from "@inertiajs/react";
+import { usePage, router } from "@inertiajs/react";
 import axios from "axios";
+import { SystemUI } from "@/Utils/SystemUI";
 
-const SCALE_ROI = { x: 0, y: 0, width: 1, height: 1 };
-const steps = [
-    "Scanner & OCR Detection",
-    "Fill Form Data",
-    "Preview Data",
-    "Print Label",
-];
-
-interface WeightState {
-    value: number;
-    display: string;
-    source: "ocr" | "spectrum" | "manual" | "none";
-}
-
-interface JopOption {
-    id: number | string;
-    jop: string;
-    spk?: string;
-    noted_order?: string;
-    grade?: { grade: string } | string;
-    gsm?: { gsm: number } | number | string;
-    customer?: { customer: string } | string;
-    jumboRolls?: any[];
-    jumbo_rolls?: any[];
-}
-
-function calculateNextRollNumber(lastRoll: string | null | undefined): string {
-    if (!lastRoll || !String(lastRoll).trim()) return "";
-    const trimmed = String(lastRoll).trim();
-    const match = trimmed.match(/^(.*?)(\d+)$/);
-    if (!match) return "";
-    const prefix = match[1];
-    const digits = match[2];
-    try {
-        const nextBigInt = BigInt(digits) + 1n;
-        let nextStr = nextBigInt.toString();
-        if (
-            digits.length > 1 &&
-            digits.startsWith("0") &&
-            nextStr.length < digits.length
-        ) {
-            nextStr = nextStr.padStart(digits.length, "0");
-        }
-        return `${prefix}${nextStr}`;
-    } catch {
-        const nextNum = parseInt(digits, 10) + 1;
-        return `${prefix}${nextNum}`;
-    }
-}
-
-function sanitizeNumeric(val: string, allowDecimal = true): string {
-    if (!val) return "";
-    if (!allowDecimal) {
-        return val.replace(/[^0-9]/g, "");
-    }
-    // Remove any character that is not a digit, dot, or comma
-    let cleaned = val.replace(/[^0-9.,]/g, "");
-    // Keep at most one decimal separator
-    const firstSep = cleaned.match(/[.,]/);
-    if (firstSep) {
-        const sep = firstSep[0];
-        const parts = cleaned.split(/[.,]/);
-        cleaned = parts[0] + sep + parts.slice(1).join("");
-    }
-    return cleaned;
-}
-
-function handleNumberKeyDown(
-    e: React.KeyboardEvent<HTMLInputElement>,
-    allowDecimal = true
-) {
-    // Allow control and navigation keys
-    if (
-        [
-            "Backspace",
-            "Delete",
-            "Tab",
-            "Escape",
-            "Enter",
-            "ArrowLeft",
-            "ArrowRight",
-            "ArrowUp",
-            "ArrowDown",
-            "Home",
-            "End",
-        ].includes(e.key) ||
-        e.ctrlKey ||
-        e.metaKey
-    ) {
-        return;
-    }
-
-    // Allow a single decimal point or comma if decimal is enabled
-    if (allowDecimal && (e.key === "." || e.key === ",")) {
-        const val = e.currentTarget.value;
-        if (val.includes(".") || val.includes(",")) {
-            e.preventDefault();
-        }
-        return;
-    }
-
-    // Prevent any key that is not 0-9
-    if (!/^[0-9]$/.test(e.key)) {
-        e.preventDefault();
-    }
-}
-
+import {
+    STEPS,
+    WeightState,
+    JopOption,
+    IncomingRollFormState,
+    calculateNextRollNumber,
+    sanitizeNumeric,
+} from "@/Components/IncomingRoll/IncomingRoll_types";
+import IncomingRoll_S1WeightDetection from "@/Components/IncomingRoll/IncomingRoll_S1WeightDetection";
+import IncomingRoll_S2FormData from "@/Components/IncomingRoll/IncomingRoll_S2FormData";
+import IncomingRoll_S3ReviewData from "@/Components/IncomingRoll/IncomingRoll_S3ReviewData";
+import IncomingRoll_S4PrintLabel from "@/Components/IncomingRoll/IncomingRoll_S4PrintLabel";
+import IncomingRoll_ConfirmSaveModal from "@/Components/IncomingRoll/IncomingRoll_ConfirmSaveModal";
 
 export default function IncomingRoll() {
     const {
@@ -168,20 +55,23 @@ export default function IncomingRoll() {
             sessionStorage.setItem("incomingRoll_recommended", recommendedRoll);
         }
     }, [recommendedRoll]);
-    const [step, setStep] = useState(() => {
+
+    const [step, setStep] = useState<number>(() => {
         const saved = sessionStorage.getItem("incomingRoll_step");
         return saved ? JSON.parse(saved) : 0;
     });
+
     const [weight, setWeight] = useState<WeightState>(() => {
         const saved = sessionStorage.getItem("incomingRoll_weight");
         return saved
             ? JSON.parse(saved)
             : {
-                value: 0,
-                display: "",
-                source: "none",
-            };
+                  value: 0,
+                  display: "",
+                  source: "none",
+              };
     });
+
     const [jops, setJops] = useState<JopOption[]>([]);
     const [jopSearch, setJopSearch] = useState("");
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -189,16 +79,16 @@ export default function IncomingRoll() {
         return sessionStorage.getItem("incomingRoll_savedId") || "";
     });
 
-    const [form, setForm] = useState(() => {
+    const [form, setForm] = useState<IncomingRollFormState>(() => {
         const defaultRoll =
             initialRecommended ||
             (initialLastSaved
                 ? calculateNextRollNumber(String(initialLastSaved))
                 : sessionStorage.getItem("incomingRoll_recommended") || "");
-        const defaultState = {
+        const defaultState: IncomingRollFormState = {
             jop: "",
             jumboRoll: "",
-            jumboRollId: null as number | null | string,
+            jumboRollId: null,
             grade: "",
             gsm: "",
             visual: "OK",
@@ -230,8 +120,12 @@ export default function IncomingRoll() {
                 core: sanitizeNumeric(parsed.core || "", true),
                 bulk: sanitizeNumeric(parsed.bulk || "", true),
                 cobb: sanitizeNumeric(parsed.cobb || "", true),
-                jumboRoll: parsed.jumboRoll !== undefined ? parsed.jumboRoll : "",
-                jumboRollId: parsed.jumboRollId !== undefined ? parsed.jumboRollId : null,
+                jumboRoll:
+                    parsed.jumboRoll !== undefined ? parsed.jumboRoll : "",
+                jumboRollId:
+                    parsed.jumboRollId !== undefined
+                        ? parsed.jumboRollId
+                        : null,
                 rollNumber:
                     parsed.rollNumber !== undefined && parsed.rollNumber !== ""
                         ? parsed.rollNumber
@@ -313,7 +207,8 @@ export default function IncomingRoll() {
             if (jr.jop?.jop && jr.jop.jop === form.jop) return true;
             return false;
         });
-        const fromJop = ((found?.jumboRolls || (found as any)?.jumbo_rolls) || []) as any[];
+        const fromJop =
+            ((found?.jumboRolls || (found as any)?.jumbo_rolls) || []) as any[];
         const map = new Map<string, any>();
         [...fromProps, ...fromJop].forEach((jr) => {
             if (jr && jr.jumbo_roll_number) {
@@ -327,7 +222,9 @@ export default function IncomingRoll() {
         if (!form.jop) return;
 
         axios
-            .get(`/incoming-roll/recommend-jumbo?jop=${encodeURIComponent(form.jop)}`)
+            .get(
+                `/incoming-roll/recommend-jumbo?jop=${encodeURIComponent(form.jop)}`,
+            )
             .then((res) => {
                 if (res.data && res.data.jumbo_roll) {
                     setForm((f) => {
@@ -335,7 +232,8 @@ export default function IncomingRoll() {
                             return {
                                 ...f,
                                 jumboRoll: res.data.jumbo_roll,
-                                jumboRollId: res.data.jumbo_roll_id || f.jumboRollId,
+                                jumboRollId:
+                                    res.data.jumbo_roll_id || f.jumboRollId,
                             };
                         }
                         return f;
@@ -483,7 +381,6 @@ export default function IncomingRoll() {
 
         let widthVal = "";
         if (found) {
-            // Because relationships can be named 'rollsWidth' or 'rolls_width' or 'width'
             const wObj = found.rollsWidth || found.rolls_width || found.width;
             if (typeof wObj === "object" && wObj !== null && "width" in wObj) {
                 widthVal = String(wObj.width);
@@ -528,15 +425,19 @@ export default function IncomingRoll() {
 
         const foundJopId = found?.id;
         const matchingJumbos = (jumboRolls as any[]).filter((jr) => {
-            if (foundJopId && String(jr.jops_id) === String(foundJopId)) return true;
+            if (foundJopId && String(jr.jops_id) === String(foundJopId))
+                return true;
             if (jr.jop?.jop && jr.jop.jop === selectedJop) return true;
             return false;
         });
-        const jopJumbos = ((found?.jumboRolls || (found as any)?.jumbo_rolls) || []) as any[];
+        const jopJumbos =
+            ((found?.jumboRolls || (found as any)?.jumbo_rolls) || []) as any[];
         const combined = [...matchingJumbos, ...jopJumbos];
 
         if (combined.length > 0) {
-            const inProgress = combined.find((jr) => jr.status === "IN_PROGRESS");
+            const inProgress = combined.find(
+                (jr) => jr.status === "IN_PROGRESS",
+            );
             const chosen = inProgress || combined[0];
             autoJumboRoll = chosen.jumbo_roll_number;
             autoJumboRollId = chosen.id;
@@ -555,7 +456,8 @@ export default function IncomingRoll() {
             ...f,
             jop: selectedJop,
             jumboRoll: autoJumboRoll || f.jumboRoll,
-            jumboRollId: autoJumboRollId !== null ? autoJumboRollId : f.jumboRollId,
+            jumboRollId:
+                autoJumboRollId !== null ? autoJumboRollId : f.jumboRollId,
             grade: gradeVal,
             gsm: gsmVal,
             width: widthVal,
@@ -576,19 +478,23 @@ export default function IncomingRoll() {
         }));
     }
 
-    function validateStep1() {
+    function validateStep1(): boolean {
         const errs: Record<string, string> = {};
 
         if (!form.jop.trim()) errs.jop = "JOP is required.";
         if (!form.jumboRoll.trim())
-            errs.jumboRoll = "Jumbo Roll Number is required (Select JOP first).";
+            errs.jumboRoll =
+                "Jumbo Roll Number is required (Select JOP first).";
         if (!form.grade.trim())
             errs.grade = "Grade is required (Select JOP first).";
-        
+
         // GSM Validation (Numeric only)
         if (!form.gsm.trim()) {
             errs.gsm = "GSM is required (Select JOP first).";
-        } else if (isNaN(Number(form.gsm.replace(",", "."))) || Number(form.gsm.replace(",", ".")) <= 0) {
+        } else if (
+            isNaN(Number(form.gsm.replace(",", "."))) ||
+            Number(form.gsm.replace(",", ".")) <= 0
+        ) {
             errs.gsm = "GSM must be a valid positive number.";
         }
 
@@ -605,7 +511,10 @@ export default function IncomingRoll() {
         // Plybond Validation (Numeric only)
         if (!form.plybond.trim()) {
             errs.plybond = "Plybond is required.";
-        } else if (isNaN(Number(form.plybond.replace(",", "."))) || Number(form.plybond.replace(",", ".")) <= 0) {
+        } else if (
+            isNaN(Number(form.plybond.replace(",", "."))) ||
+            Number(form.plybond.replace(",", ".")) <= 0
+        ) {
             errs.plybond = "Plybond must be a valid positive number.";
         }
 
@@ -614,28 +523,40 @@ export default function IncomingRoll() {
         // Roll Width (RW) Validation (Numeric only)
         if (!form.width.trim()) {
             errs.width = "Roll width is required.";
-        } else if (isNaN(Number(form.width.replace(",", "."))) || Number(form.width.replace(",", ".")) <= 0) {
+        } else if (
+            isNaN(Number(form.width.replace(",", "."))) ||
+            Number(form.width.replace(",", ".")) <= 0
+        ) {
             errs.width = "Roll width (RW) must be a valid positive number.";
         }
 
         // Thickness Validation (Numeric only)
         if (!form.thickness.trim()) {
             errs.thickness = "Thickness is required.";
-        } else if (isNaN(Number(form.thickness.replace(",", "."))) || Number(form.thickness.replace(",", ".")) <= 0) {
+        } else if (
+            isNaN(Number(form.thickness.replace(",", "."))) ||
+            Number(form.thickness.replace(",", ".")) <= 0
+        ) {
             errs.thickness = "Thickness must be a valid positive number.";
         }
 
         // Bulk Validation (Numeric only)
         if (!form.bulk.trim()) {
             errs.bulk = "Bulk is required.";
-        } else if (isNaN(Number(form.bulk.replace(",", "."))) || Number(form.bulk.replace(",", ".")) <= 0) {
+        } else if (
+            isNaN(Number(form.bulk.replace(",", "."))) ||
+            Number(form.bulk.replace(",", ".")) <= 0
+        ) {
             errs.bulk = "Bulk must be a valid positive number.";
         }
 
         // Core Validation (Numeric only)
         if (!form.core.trim()) {
             errs.core = "Core is required.";
-        } else if (isNaN(Number(form.core.replace(",", "."))) || Number(form.core.replace(",", ".")) <= 0) {
+        } else if (
+            isNaN(Number(form.core.replace(",", "."))) ||
+            Number(form.core.replace(",", ".")) <= 0
+        ) {
             errs.core = "Core must be a valid positive number.";
         }
         if (!form.exMaterial.trim())
@@ -644,7 +565,10 @@ export default function IncomingRoll() {
         // Cobb Validation (Numeric only)
         if (!form.cobb.trim()) {
             errs.cobb = "Cobb is required.";
-        } else if (isNaN(Number(form.cobb.replace(",", "."))) || Number(form.cobb.replace(",", ".")) <= 0) {
+        } else if (
+            isNaN(Number(form.cobb.replace(",", "."))) ||
+            Number(form.cobb.replace(",", ".")) <= 0
+        ) {
             errs.cobb = "Cobb must be a valid positive number.";
         }
 
@@ -670,8 +594,6 @@ export default function IncomingRoll() {
             setStep(2);
         }
     }
-
-    // Removed handleUpdateTph from here since it's moved/removed as requested
 
     async function handleSave() {
         const payload = {
@@ -752,6 +674,43 @@ export default function IncomingRoll() {
         }
     }
 
+    function handleRegisterNewRoll() {
+        sessionStorage.removeItem("incomingRoll_step");
+        sessionStorage.removeItem("incomingRoll_weight");
+        sessionStorage.removeItem("incomingRoll_form");
+        sessionStorage.removeItem("incomingRoll_savedId");
+        setSavedRollNumber("");
+        setStep(0);
+        setWeight({
+            value: 0,
+            display: "",
+            source: "none",
+        });
+        setForm({
+            jop: "",
+            jumboRoll: "",
+            jumboRollId: null,
+            grade: "",
+            gsm: "",
+            visual: "OK",
+            status: "OK",
+            rollNumber: recommendedRoll || "",
+            formNumber: "",
+            plybond: "",
+            diameter: "",
+            width: "",
+            thickness: "",
+            bulk: "",
+            core: "76",
+            exMaterial: "IMPORT",
+            cobb: "",
+            shift: "1",
+            entry_date: new Date().toISOString().split("T")[0],
+            pic: "",
+        });
+        setErrors({});
+    }
+
     return (
         <div className="py-4 px-2.5 sm:px-6 space-y-4">
             <div>
@@ -765,31 +724,38 @@ export default function IncomingRoll() {
 
             {/* Stepper */}
             <div className="flex items-center gap-2 w-full lg:max-w-4xl py-2">
-                {steps.map((s, i) => (
+                {STEPS.map((s, i) => (
                     <div
                         key={s}
                         className="flex items-center flex-1 last:flex-none"
                     >
                         <div className="flex items-center gap-2">
                             <div
-                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${i < step
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                                    i < step
                                         ? "bg-green-600 text-white"
                                         : i === step
-                                            ? "bg-blue-600 text-white shadow-xs"
-                                            : "bg-slate-200 text-slate-600"
-                                    }`}
+                                          ? "bg-blue-600 text-white shadow-xs"
+                                          : "bg-slate-200 text-slate-600"
+                                }`}
                             >
                                 {i < step ? "✓" : i + 1}
                             </div>
                             <span
-                                className={`text-xs font-semibold whitespace-nowrap min-[680px]:inline hidden ${i === step ? "text-blue-700 font-bold" : "text-slate-500"}`}
+                                className={`text-xs font-semibold whitespace-nowrap min-[680px]:inline hidden ${
+                                    i === step
+                                        ? "text-blue-700 font-bold"
+                                        : "text-slate-500"
+                                }`}
                             >
                                 {s}
                             </span>
                         </div>
-                        {i < steps.length - 1 && (
+                        {i < STEPS.length - 1 && (
                             <div
-                                className={`flex-1 h-0.5 mx-3 transition-colors ${i < step ? "bg-green-500" : "bg-slate-200"}`}
+                                className={`flex-1 h-0.5 mx-3 transition-colors ${
+                                    i < step ? "bg-green-500" : "bg-slate-200"
+                                }`}
                             />
                         )}
                     </div>
@@ -798,1942 +764,65 @@ export default function IncomingRoll() {
 
             {/* Step 0: Weight Detection */}
             {step === 0 && (
-                <div className="space-y-4">
-                    <WeightDetectionEngine
-                        onWeightConfirmed={handleWeightConfirmed}
-                        roi={SCALE_ROI}
-                    />
-
-                    {/* Anti-Salah Quick Roll Number & Barcode Verification Card */}
-                    <div className="card p-3.5 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-200/80 rounded-xl shadow-xs">
-                        {recommendedRoll && (
-                            <div className="mb-2 flex items-center justify-between px-0.5">
-                                {form.rollNumber !== recommendedRoll && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setForm((f) => ({
-                                                ...f,
-                                                rollNumber: recommendedRoll,
-                                            }))
-                                        }
-                                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                                    >
-                                        Use Recommended
-                                    </button>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                            <input
-                                type="text"
-                                value={form.rollNumber}
-                                onChange={(e) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        rollNumber: e.target.value,
-                                    }))
-                                }
-                                placeholder="Scan camera barcode / type roll number (e.g. R-10425)..."
-                                className="form-input text-xs flex-1 bg-white font-mono"
-                            />
-                            {form.rollNumber.trim() && (
-                                <div className="shrink-0 flex items-center gap-1.5">
-                                    {isCheckingDuplicate ? (
-                                        <span className="text-xs text-slate-500 flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 rounded-lg">
-                                            <RefreshCw
-                                                size={12}
-                                                className="animate-spin"
-                                            />{" "}
-                                            Checking...
-                                        </span>
-                                    ) : duplicateWarning ? (
-                                        <span className="text-xs font-bold text-red-700 flex items-center gap-1 px-2.5 py-1.5 bg-red-100 border border-red-200 rounded-lg">
-                                            <AlertCircle size={13} /> DUPLICATE
-                                            DETECTED
-                                        </span>
-                                    ) : (
-                                        <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 border border-emerald-200 rounded-lg">
-                                            <Check size={13} /> ROLL NUMBER
-                                            VALID
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        {duplicateWarning && (
-                            <div className="mt-2 text-[11px] text-red-700 bg-white/95 p-2.5 rounded-lg border border-red-200 flex items-start gap-1.5">
-                                <AlertCircle
-                                    size={14}
-                                    className="shrink-0 mt-0.5 text-red-600"
-                                />
-                                <div>
-                                    <strong className="block font-bold">
-                                        ⚠️ ANTI-DUPLICATE WARNING:
-                                    </strong>
-                                    <span>{duplicateWarning.message}</span>
-                                    <div className="text-[10px] text-red-600 mt-0.5 font-medium">
-                                        Database record: Grade{" "}
-                                        {duplicateWarning.roll?.grade} | GSM{" "}
-                                        {duplicateWarning.roll?.gsm} | Shift{" "}
-                                        {duplicateWarning.roll?.shift} | Date:{" "}
-                                        {duplicateWarning.roll?.entry_date} |
-                                        Status: {duplicateWarning.roll?.status}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Active Incomplete JOPs Target Tracker */}
-                    <div className="card p-4 space-y-3 bg-white border border-slate-200 shadow-xs">
-                        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 font-bold shrink-0">
-                                    <Layers size={16} />
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                                            Incomplete JOP List (Production
-                                            Target)
-                                        </h3>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
-                                            {
-                                                (jopList || []).filter(
-                                                    (j: any) =>
-                                                        !j.production_estimation
-                                                            ?.is_completed,
-                                                ).length
-                                            }{" "}
-                                            Active JOPs
-                                        </span>
-                                    </div>
-                                    <p className="text-[11px] text-slate-500">
-                                        Monitor the remaining rolls needed to
-                                        complete each Job Order Production
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs w-full sm:w-64">
-                                    <Search
-                                        size={14}
-                                        className="text-slate-400 shrink-0"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={jopSearch}
-                                        onChange={(e) =>
-                                            setJopSearch(e.target.value)
-                                        }
-                                        placeholder="Search JOP, SPK, Customer..."
-                                        className="bg-transparent border-none outline-none text-xs w-full text-slate-800 placeholder:text-slate-400"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Incomplete JOPs Table */}
-                        <div className="overflow-x-auto">
-                            <table className="data-table w-full text-xs">
-                                <thead>
-                                    <tr>
-                                        <th style={{ textAlign: "left" }}>
-                                            JOP Number
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            SPK
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Customer
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Grade / GSM
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Target Tonnage
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Actual Prod
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Remaining
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            TPH
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Est. Duration
-                                        </th>
-                                        <th style={{ textAlign: "center" }}>
-                                            Est. Finish
-                                        </th>
-
-                                        <th style={{ textAlign: "center" }}>
-                                            Select JOP
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(() => {
-                                        const incomplete = (jopList || [])
-                                            .map((j: any) => {
-                                                const est =
-                                                    j.production_estimation ||
-                                                    {};
-
-                                                // Calculate Actual Tonnage from rolls (in kg / 1000)
-                                                const actualWeightKg = j.rolls
-                                                    ? j.rolls.reduce(
-                                                        (
-                                                            sum: number,
-                                                            r: any,
-                                                        ) =>
-                                                            sum +
-                                                            (Number(
-                                                                r.weight,
-                                                            ) || 0),
-                                                        0,
-                                                    )
-                                                    : 0;
-                                                const actualTonnage =
-                                                    actualWeightKg / 1000;
-
-                                                // Target Tonnage from Production Schedule (est.target_tonnage) or fallback
-                                                const targetTonnageNum =
-                                                    est.target_tonnage &&
-                                                        est.target_tonnage !== "-"
-                                                        ? Number(
-                                                            est.target_tonnage,
-                                                        )
-                                                        : (Number(j.weight) ||
-                                                            0) / 1000;
-
-                                                const remainingTonnage =
-                                                    targetTonnageNum > 0
-                                                        ? Math.max(
-                                                            0,
-                                                            targetTonnageNum -
-                                                            actualTonnage,
-                                                        )
-                                                        : 0;
-
-                                                const isCompleted =
-                                                    est.is_completed !==
-                                                        undefined
-                                                        ? est.is_completed
-                                                        : (targetTonnageNum >
-                                                            0 &&
-                                                            remainingTonnage <=
-                                                            0) ||
-                                                        (j.rolls
-                                                            ? j.rolls.length
-                                                            : 0) >=
-                                                        (Number(
-                                                            j.quantity,
-                                                        ) || 1);
-
-                                                return {
-                                                    ...j,
-                                                    est: {
-                                                        ...est,
-                                                        target_tonnage:
-                                                            targetTonnageNum > 0
-                                                                ? targetTonnageNum.toFixed(
-                                                                    2,
-                                                                )
-                                                                : est.target_tonnage ||
-                                                                "-",
-                                                        actual_tonnage:
-                                                            actualTonnage.toFixed(
-                                                                2,
-                                                            ),
-                                                        remaining_tonnage:
-                                                            targetTonnageNum > 0
-                                                                ? remainingTonnage.toFixed(
-                                                                    2,
-                                                                )
-                                                                : "-",
-                                                        tph:
-                                                            est.tph ||
-                                                            (j.tph
-                                                                ? String(j.tph)
-                                                                : "-"),
-                                                    },
-                                                    isCompleted,
-                                                };
-                                            })
-                                            .filter((j: any) => !j.isCompleted)
-                                            .filter((j: any) => {
-                                                if (!jopSearch.trim())
-                                                    return true;
-                                                const q =
-                                                    jopSearch.toLowerCase();
-                                                return (
-                                                    (j.jop || "")
-                                                        .toLowerCase()
-                                                        .includes(q) ||
-                                                    (j.spk || "")
-                                                        .toLowerCase()
-                                                        .includes(q) ||
-                                                    (j.po || "")
-                                                        .toLowerCase()
-                                                        .includes(q) ||
-                                                    (j.customer?.customer || "")
-                                                        .toLowerCase()
-                                                        .includes(q) ||
-                                                    (j.grade?.grade || "")
-                                                        .toLowerCase()
-                                                        .includes(q)
-                                                );
-                                            });
-
-                                        if (incomplete.length === 0) {
-                                            return (
-                                                <tr>
-                                                    <td
-                                                        colSpan={9}
-                                                        className="text-center py-6 text-slate-400"
-                                                    >
-                                                        {jopSearch
-                                                            ? "No JOPs matched your search."
-                                                            : "All JOP targets have been completed 100%!"}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        }
-
-                                        return incomplete.map((j: any) => {
-                                            const isSelected =
-                                                form.jop === j.jop;
-                                            return (
-                                                <tr
-                                                    key={j.id || j.jop}
-                                                    className={`hover:bg-slate-50 transition-colors ${isSelected
-                                                            ? "bg-blue-50/60 font-semibold"
-                                                            : ""
-                                                        }`}
-                                                >
-                                                    <td
-                                                        className="font-bold text-blue-700 font-mono text-xs"
-                                                        style={{
-                                                            textAlign: "left",
-                                                        }}
-                                                    >
-                                                        {j.jop}
-                                                    </td>
-                                                    <td
-                                                        className="font-mono text-slate-600"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.spk || "-"}
-                                                    </td>
-                                                    <td
-                                                        className="text-slate-800"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.customer?.customer ||
-                                                            j.customer ||
-                                                            "-"}
-                                                    </td>
-                                                    <td
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        <span className="font-medium text-slate-900">
-                                                            {j.grade?.grade ||
-                                                                j.grade ||
-                                                                "-"}
-                                                        </span>
-                                                        <span className="text-slate-400 mx-1">
-                                                            /
-                                                        </span>
-                                                        <span className="text-slate-600">
-                                                            {j.gsm?.gsm ||
-                                                                j.gsm ||
-                                                                "-"}{" "}
-                                                            g/m²
-                                                        </span>
-                                                    </td>
-                                                    <td
-                                                        className="font-semibold text-slate-700"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.est
-                                                            ?.target_tonnage &&
-                                                            j.est.target_tonnage !==
-                                                            "-"
-                                                            ? `${j.est.target_tonnage} Ton`
-                                                            : "-"}
-                                                    </td>
-                                                    <td
-                                                        className="font-bold text-slate-900"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.est
-                                                            ?.actual_tonnage ??
-                                                            "0.00"}{" "}
-                                                        Ton
-                                                    </td>
-                                                    <td
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-amber-100 text-amber-800 border border-amber-200">
-                                                            Remaining{" "}
-                                                            {j.est
-                                                                ?.remaining_tonnage &&
-                                                                j.est
-                                                                    .remaining_tonnage !==
-                                                                "-"
-                                                                ? `${j.est.remaining_tonnage} Ton`
-                                                                : "-"}
-                                                        </span>
-                                                    </td>
-                                                    <td
-                                                        className="font-semibold text-slate-700"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.est?.tph ?? "-"}
-                                                    </td>
-                                                    <td
-                                                        className="font-mono text-slate-700"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.est
-                                                            ?.estimated_duration_formatted ??
-                                                            "N/A"}
-                                                    </td>
-                                                    <td
-                                                        className="font-mono text-slate-900 text-[11px]"
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        {j.est
-                                                            ?.estimated_finish_time ??
-                                                            "N/A"}
-                                                    </td>
-
-                                                    <td
-                                                        style={{
-                                                            textAlign: "center",
-                                                        }}
-                                                    >
-                                                        <button
-                                                            onClick={() => {
-                                                                handleJopSelect(
-                                                                    j.jop,
-                                                                );
-                                                                SystemUI.toast({
-                                                                    message: `JOP ${j.jop} selected for roll input!`,
-                                                                    type: "success",
-                                                                });
-                                                            }}
-                                                            className={`btn btn-sm text-xs py-1 px-2.5 cursor-pointer flex items-center gap-1 mx-auto ${isSelected
-                                                                    ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
-                                                                    : "btn-primary"
-                                                                }`}
-                                                            title="Select this JOP to fill in Form Data"
-                                                        >
-                                                            {isSelected ? (
-                                                                <>
-                                                                    <Check
-                                                                        size={
-                                                                            12
-                                                                        }
-                                                                    />
-                                                                    <span>
-                                                                        Selected
-                                                                    </span>
-                                                                </>
-                                                            ) : (
-                                                                <span>
-                                                                    Select
-                                                                </span>
-                                                            )}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        });
-                                    })()}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <IncomingRoll_S1WeightDetection
+                    onWeightConfirmed={handleWeightConfirmed}
+                    form={form}
+                    setForm={setForm}
+                    recommendedRoll={recommendedRoll}
+                    isCheckingDuplicate={isCheckingDuplicate}
+                    duplicateWarning={duplicateWarning}
+                    jopList={jopList}
+                    jopSearch={jopSearch}
+                    setJopSearch={setJopSearch}
+                    handleJopSelect={handleJopSelect}
+                />
             )}
 
             {/* Step 1: Form Data */}
             {step === 1 && (
-                <div className="w-full space-y-4 lg:space-y-6">
-                    {/* Weight Card Header */}
-                    <div className="card p-4">
-                        <div className="flex items-center justify-between gap-4 p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl">
-                            <div className="flex items-center gap-3">
-                                <div className="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-xs text-white">
-                                    <Scale size={20} />
-                                </div>
-                                <div>
-                                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                        Confirmed Roll Weight
-                                    </div>
-                                    <div className="text-2xl font-extrabold text-blue-900 font-mono leading-tight">
-                                        {weight.display}{" "}
-                                        <span className="text-sm font-semibold text-slate-500">
-                                            kg
-                                        </span>
-                                    </div>
-                                    <div className="text-[11px] mt-0.5 flex items-center gap-1.5">
-                                        {weight.source === "ocr" ? (
-                                            <>
-                                                <CheckCircle
-                                                    size={12}
-                                                    className="text-green-600 shrink-0"
-                                                />
-                                                <span className="text-green-700 font-semibold">
-                                                    Detected via OCR
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Edit3
-                                                    size={12}
-                                                    className="text-amber-600 shrink-0"
-                                                />
-                                                <span className="text-amber-700 font-semibold">
-                                                    Entered manually by
-                                                    administrator
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                className="btn btn-secondary btn-sm text-xs cursor-pointer shrink-0"
-                                onClick={() => setStep(0)}
-                                title="Go back to re-detect weight"
-                            >
-                                Re-detect
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Roll Data Entry Segments */}
-                    <div className="space-y-4">
-                        {/* Segment 1: Job Order & Auto-Filled Specifications */}
-                        <div className="card p-4 sm:p-5">
-                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                                <FileText size={16} className="text-blue-600" />
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    Job Order & Specification (Auto-filled)
-                                </h3>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
-                                {/* JOP Dropdown */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Job Order Production (JOP){" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        value={form.jop}
-                                        onChange={(e) =>
-                                            handleJopSelect(e.target.value)
-                                        }
-                                        className={`form-input w-full ${errors.jop ? "border-red-500" : ""}`}
-                                    >
-                                        <option value="">
-                                            -- Select JOP --
-                                        </option>
-                                        {jops.map((j) => (
-                                            <option
-                                                key={j.id || j.jop}
-                                                value={j.jop}
-                                            >
-                                                {j.jop}{" "}
-                                                {typeof j.customer ===
-                                                    "object" &&
-                                                    j.customer?.customer
-                                                    ? `(${j.customer.customer})`
-                                                    : typeof j.customer ===
-                                                        "string"
-                                                        ? `(${j.customer})`
-                                                        : ""}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.jop && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.jop}
-                                        </p>
-                                    )}
-                                    {form.jop &&
-                                        jops.find(
-                                            (j) =>
-                                                j.jop === form.jop ||
-                                                String(j.id) === form.jop,
-                                        )?.noted_order && (
-                                            <div className="mt-2 p-2 bg-yellow-50 text-yellow-800 text-[11px] rounded border border-yellow-200 shadow-sm leading-snug">
-                                                <strong>Note:</strong>{" "}
-                                                {
-                                                    jops.find(
-                                                        (j) =>
-                                                            j.jop ===
-                                                            form.jop ||
-                                                            String(j.id) ===
-                                                            form.jop,
-                                                    )?.noted_order
-                                                }
-                                            </div>
-                                        )}
-                                </div>
-
-                                {/* Jumbo Roll Number */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Jumbo Roll Number{" "}
-                                            <span className="text-red-500">*</span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (Auto from JOP / Editable)
-                                        </span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            list="jumbo-roll-datalist"
-                                            value={form.jumboRoll}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                const matched = availableJumboRolls.find(
-                                                    (jr) =>
-                                                        jr.jumbo_roll_number.toUpperCase() ===
-                                                        val.trim().toUpperCase(),
-                                                );
-                                                setForm((f) => ({
-                                                    ...f,
-                                                    jumboRoll: val,
-                                                    jumboRollId: matched ? matched.id : null,
-                                                }));
-                                                if (errors.jumboRoll) {
-                                                    setErrors((err) => ({
-                                                        ...err,
-                                                        jumboRoll: undefined,
-                                                    }));
-                                                }
-                                            }}
-                                            placeholder="e.g. JR-0726-00001"
-                                            className={`form-input w-full font-mono uppercase ${
-                                                errors.jumboRoll ? "border-red-500" : ""
-                                            }`}
-                                        />
-                                        <datalist id="jumbo-roll-datalist">
-                                            {availableJumboRolls.map((jr) => (
-                                                <option
-                                                    key={jr.id}
-                                                    value={jr.jumbo_roll_number}
-                                                >
-                                                    {jr.jumbo_roll_number}{" "}
-                                                    {jr.status ? `(${jr.status})` : ""}{" "}
-                                                    {jr.weight ? `[${jr.weight} kg]` : ""}
-                                                </option>
-                                            ))}
-                                        </datalist>
-                                    </div>
-                                    {errors.jumboRoll ? (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.jumboRoll}
-                                        </p>
-                                    ) : form.jumboRoll ? (
-                                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                                            {availableJumboRolls.some(
-                                                (jr) =>
-                                                    jr.jumbo_roll_number.toUpperCase() ===
-                                                    form.jumboRoll.trim().toUpperCase(),
-                                            ) ? (
-                                                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                    <CheckCircle size={10} /> Registered in Master Jumbo
-                                                </span>
-                                            ) : (
-                                                <span className="text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                    ✨ Auto from JOP
-                                                </span>
-                                            )}
-                                            {availableJumboRolls.length > 1 && (
-                                                <span className="text-[10px] text-slate-500">
-                                                    ({availableJumboRolls.length} options available)
-                                                </span>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <p className="text-slate-400 text-[10px] mt-1">
-                                            Select JOP to auto-fill, or enter manually
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Roll Number */}
-                                <div>
-                                    {recommendedRoll && (
-                                        <div>
-                                            {form.rollNumber !==
-                                                recommendedRoll && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setForm((f) => ({
-                                                                ...f,
-                                                                rollNumber:
-                                                                    recommendedRoll,
-                                                            }));
-                                                            if (errors.rollNumber) {
-                                                                setErrors(
-                                                                    (err) => ({
-                                                                        ...err,
-                                                                        rollNumber:
-                                                                            undefined,
-                                                                    }),
-                                                                );
-                                                            }
-                                                        }}
-                                                        className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 border border-blue-300 px-2.5 py-1 rounded-md shadow-2xs transition-colors shrink-0 cursor-pointer"
-                                                        title="Apply recommended roll number"
-                                                    >
-                                                        Use {recommendedRoll}
-                                                    </button>
-                                                )}
-                                        </div>
-                                    )}
-
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Roll Number{" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        value={form.rollNumber}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                rollNumber: e.target.value,
-                                            }));
-                                            if (errors.rollNumber)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    rollNumber: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full font-mono ${errors.rollNumber || duplicateWarning ? "border-red-500 bg-red-50/20" : ""}`}
-                                        placeholder="e.g. R-10425"
-                                    />
-                                    {isCheckingDuplicate && (
-                                        <p className="text-slate-400 text-[11px] mt-1 flex items-center gap-1">
-                                            <RefreshCw
-                                                size={11}
-                                                className="animate-spin"
-                                            />{" "}
-                                            Checking roll number...
-                                        </p>
-                                    )}
-                                    {errors.rollNumber && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.rollNumber}
-                                        </p>
-                                    )}
-                                    {duplicateWarning && (
-                                        <div className="mt-1.5 p-2 rounded bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-1.5 animate-in fade-in">
-                                            <AlertCircle
-                                                size={14}
-                                                className="shrink-0 mt-0.5"
-                                            />
-                                            <div>
-                                                <strong className="block font-bold">
-                                                    ⚠️ Anti-Duplicate: Duplicate
-                                                    Roll Number!
-                                                </strong>
-                                                <span>
-                                                    {duplicateWarning.message}
-                                                </span>
-                                                <div className="text-[10px] text-red-600 mt-0.5">
-                                                    Spec:{" "}
-                                                    {
-                                                        duplicateWarning.roll
-                                                            ?.grade
-                                                    }{" "}
-                                                    | GSM:{" "}
-                                                    {duplicateWarning.roll?.gsm}{" "}
-                                                    | Shift:{" "}
-                                                    {
-                                                        duplicateWarning.roll
-                                                            ?.shift
-                                                    }{" "}
-                                                    | Status:{" "}
-                                                    {
-                                                        duplicateWarning.roll
-                                                            ?.status
-                                                    }
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Form Number */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Form Number{" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-slate-400 font-normal">
-                                            (Jumbo + Grade + RW)
-                                        </span>
-                                    </label>
-                                    <input
-                                        value={form.formNumber}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                formNumber: e.target.value,
-                                            }));
-                                            if (errors.formNumber)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    formNumber: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.formNumber ? "border-red-500" : ""}`}
-                                        placeholder="e.g. F-2241"
-                                    />
-                                    {errors.formNumber && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.formNumber}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Grade (Editable) */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Grade{" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (Editable / Realisasi Produk
-                                            Samping)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.grade}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                grade: e.target.value,
-                                            }));
-                                            if (errors.grade)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    grade: undefined,
-                                                }));
-                                        }}
-                                        placeholder="Enter Grade"
-                                        className={`form-input w-full ${errors.grade ? "border-red-500" : ""}`}
-                                    />
-                                    {errors.grade && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.grade}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* GSM (Editable) */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            GSM (g/m²){" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (Editable / Realisasi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={form.gsm}
-                                        onKeyDown={(e) => handleNumberKeyDown(e, false)}
-                                        onChange={(e) => {
-                                            const val = sanitizeNumeric(e.target.value, false);
-                                            setForm((f) => ({
-                                                ...f,
-                                                gsm: val,
-                                            }));
-                                            if (errors.gsm)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    gsm: undefined,
-                                                }));
-                                        }}
-                                        placeholder="Enter GSM (e.g. 420)"
-                                        className={`form-input w-full ${errors.gsm ? "border-red-500" : ""}`}
-                                    />
-                                    {errors.gsm && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.gsm}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Roll Width (RW) */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Roll Width (RW) (mm){" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (JOP Recommendation)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={form.width}
-                                        onKeyDown={(e) => handleNumberKeyDown(e, false)}
-                                        onChange={(e) => {
-                                            const val = sanitizeNumeric(e.target.value, false);
-                                            setForm((f) => ({
-                                                ...f,
-                                                width: val,
-                                            }));
-                                            if (errors.width)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    width: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.width ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1650"
-                                    />
-                                    {errors.width && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.width}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Plybond */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Plybond{" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (PPIC Recommendation)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={form.plybond}
-                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
-                                        onChange={(e) => {
-                                            const val = sanitizeNumeric(e.target.value, true);
-                                            setForm((f) => ({
-                                                ...f,
-                                                plybond: val,
-                                            }));
-                                            if (errors.plybond)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    plybond: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.plybond ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1.8 or 400"
-                                    />
-                                    {errors.plybond && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.plybond}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Thickness */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Thickness (mm){" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (PPIC Recommendation)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={form.thickness}
-                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
-                                        onChange={(e) => {
-                                            const val = sanitizeNumeric(e.target.value, true);
-                                            setForm((f) => ({
-                                                ...f,
-                                                thickness: val,
-                                            }));
-                                            if (errors.thickness)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    thickness: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.thickness ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 0.22 or 600"
-                                    />
-                                    {errors.thickness && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.thickness}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Core */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Core (mm / &quot;){" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-blue-600 font-normal">
-                                            (PPIC Recommendation)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={form.core}
-                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
-                                        onChange={(e) => {
-                                            const val = sanitizeNumeric(e.target.value, true);
-                                            setForm((f) => ({
-                                                ...f,
-                                                core: val,
-                                            }));
-                                            if (errors.core)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    core: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.core ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 3 or 76"
-                                    />
-                                    {errors.core && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.core}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Segment 2: Physical & Dimension Specifications (Manual Input) */}
-                        <div className="card p-4 sm:p-5">
-                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                                <Layers
-                                    size={16}
-                                    className="text-emerald-600"
-                                />
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    Roll Physical Measurements (Manual Input)
-                                </h3>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                                {/* Roll Diameter (RD) */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Roll Diameter (RD) (mm){" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-emerald-600 font-normal">
-                                            (Diisi Produksi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={form.diameter}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                diameter: e.target.value,
-                                            }));
-                                            if (errors.diameter)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    diameter: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.diameter ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1120"
-                                    />
-                                    {errors.diameter && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.diameter}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Bulk */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Bulk{" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-emerald-600 font-normal">
-                                            (Diisi Produksi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={form.bulk}
-                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
-                                        onChange={(e) => {
-                                            const val = sanitizeNumeric(e.target.value, true);
-                                            setForm((f) => ({
-                                                ...f,
-                                                bulk: val,
-                                            }));
-                                            if (errors.bulk)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    bulk: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.bulk ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 1.4 or 1,4"
-                                    />
-                                    {errors.bulk && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.bulk}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Cobb */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1 flex items-center justify-between">
-                                        <span>
-                                            Cobb{" "}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </span>
-                                        <span className="text-[10px] text-emerald-600 font-normal">
-                                            (Diisi Produksi)
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={form.cobb}
-                                        onKeyDown={(e) => handleNumberKeyDown(e, true)}
-                                        onChange={(e) => {
-                                            const val = sanitizeNumeric(e.target.value, true);
-                                            setForm((f) => ({
-                                                ...f,
-                                                cobb: val,
-                                            }));
-                                            if (errors.cobb)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    cobb: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.cobb ? "border-red-500" : ""}`}
-                                        placeholder="e.g. 150"
-                                    />
-                                    {errors.cobb && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.cobb}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Ex Material */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Ex Material{" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        value={form.exMaterial}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                exMaterial: e.target.value,
-                                            }));
-                                            if (errors.exMaterial)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    exMaterial: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.exMaterial ? "border-red-500" : ""}`}
-                                    >
-                                        {["IMPORT", "LOCAL", "MIX"].map((o) => (
-                                            <option key={o} value={o}>
-                                                {o}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.exMaterial && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.exMaterial}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Visual Status */}
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Visual Status{" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        value={form.visual}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                visual: e.target.value,
-                                            }));
-                                            if (errors.visual)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    visual: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.visual ? "border-red-500" : ""}`}
-                                    >
-                                        <option value="OK">OK</option>
-                                        <option value="PKP">PKP</option>
-                                        <option value="Reject">Reject</option>
-                                    </select>
-                                    {errors.visual && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.visual}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Segment 3: Shift & Operational Details */}
-                        <div className="card p-4 sm:p-5">
-                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                                <Clock size={16} className="text-purple-600" />
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    Shift & Operations
-                                </h3>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Production Date{" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={form.entry_date}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                entry_date: e.target.value,
-                                            }));
-                                            if (errors.entry_date)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    entry_date: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.entry_date ? "border-red-500" : ""}`}
-                                    />
-                                    {errors.entry_date && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.entry_date}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Shift{" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        value={form.shift}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                shift: e.target.value,
-                                            }));
-                                            if (errors.shift)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    shift: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.shift ? "border-red-500" : ""}`}
-                                    >
-                                        <option value="1">Shift 1</option>
-                                        <option value="2">Shift 2</option>
-                                        <option value="3">Shift 3</option>
-                                    </select>
-                                    {errors.shift && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.shift}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        Label Status (Roll Status){" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        value={form.status}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                status: e.target.value,
-                                            }));
-                                        }}
-                                        className="form-input w-full font-semibold"
-                                    >
-                                        <option value="OK">
-                                            OK (Standard Passed)
-                                        </option>
-                                        <option value="HOLD">
-                                            HOLD (Waiting for QC Spec
-                                            Verification)
-                                        </option>
-                                    </select>
-                                    <p className="text-slate-400 text-[10px] mt-1">
-                                        Select HOLD if there are specification
-                                        deviations requiring QC verification in
-                                        the warehouse.
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <label className="form-label text-xs font-semibold block mb-1">
-                                        PIC (Officer){" "}
-                                        <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        value={form.pic}
-                                        onChange={(e) => {
-                                            setForm((f) => ({
-                                                ...f,
-                                                pic: e.target.value,
-                                            }));
-                                            if (errors.pic)
-                                                setErrors((err) => ({
-                                                    ...err,
-                                                    pic: undefined,
-                                                }));
-                                        }}
-                                        className={`form-input w-full ${errors.pic ? "border-red-500" : ""}`}
-                                        placeholder="e.g. Budi Suprapto"
-                                    />
-                                    {errors.pic && (
-                                        <p className="text-red-600 text-[11px] mt-1">
-                                            {errors.pic}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Navigation buttons */}
-                            <div className="flex gap-2 justify-end pt-4 mt-4 border-t border-slate-100">
-                                <button
-                                    className="btn btn-secondary text-xs"
-                                    onClick={() => setStep(0)}
-                                >
-                                    <ArrowLeft size={13} /> <span>Back</span>
-                                </button>
-                                <button
-                                    className="btn btn-primary text-xs"
-                                    onClick={goToStep2}
-                                >
-                                    <span>Review</span> <ArrowRight size={13} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <IncomingRoll_S2FormData
+                    weight={weight}
+                    form={form}
+                    setForm={setForm}
+                    errors={errors}
+                    setErrors={setErrors}
+                    recommendedRoll={recommendedRoll}
+                    duplicateWarning={duplicateWarning}
+                    isCheckingDuplicate={isCheckingDuplicate}
+                    jops={jops}
+                    availableJumboRolls={availableJumboRolls}
+                    handleJopSelect={handleJopSelect}
+                    onBack={() => setStep(0)}
+                    onNext={goToStep2}
+                />
             )}
 
             {/* Step 2: Review & Save */}
             {step === 2 && (
-                <div className="w-full space-y-4">
-                    <div className="card p-4 sm:p-6 lg:p-8">
-                        <h3 className="text-sm sm:text-base lg:text-xl font-extrabold text-slate-900 mb-4 pb-3 border-b border-slate-200">
-                            Review & Save
-                        </h3>
-                        <div className="grid grid-cols-1 min-[680px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-2 sm:gap-y-3 lg:gap-y-4 text-xs sm:text-sm lg:text-base">
-                            {[
-                                [
-                                    "Job Order Production",
-                                    form.jop || "(not entered)",
-                                ],
-                                [
-                                    "Jumbo Roll Number",
-                                    form.jumboRoll || "(not entered)",
-                                ],
-                                ["Grade", form.grade || "(not entered)"],
-                                [
-                                    "GSM",
-                                    form.gsm
-                                        ? `${form.gsm} g/m²`
-                                        : "(not entered)",
-                                ],
-                                [
-                                    "Visual Status",
-                                    form.visual || "(not entered)",
-                                ],
-                                ["Roll Status", form.status || "(not entered)"],
-                                [
-                                    "Roll Number",
-                                    form.rollNumber || "(not entered)",
-                                ],
-                                [
-                                    "Form Number",
-                                    form.formNumber || "(not entered)",
-                                ],
-                                ["Weight", `${weight.display} kg`],
-                                ["Plybond", form.plybond || "(not entered)"],
-                                [
-                                    "Thickness",
-                                    form.thickness
-                                        ? `${form.thickness} mm`
-                                        : "(not entered)",
-                                ],
-                                [
-                                    "Roll Width",
-                                    form.width
-                                        ? `${form.width} mm`
-                                        : "(not entered)",
-                                ],
-                                [
-                                    "Diameter",
-                                    form.diameter
-                                        ? `${form.diameter} mm`
-                                        : "(not entered)",
-                                ],
-                                ["Core", `${form.core} mm`],
-                                ["Cobb", form.cobb || "(not entered)"],
-                                [
-                                    "Ex Material",
-                                    form.exMaterial || "(not entered)",
-                                ],
-                                [
-                                    "Production Date",
-                                    form.entry_date || "(not entered)",
-                                ],
-                                ["Shift", form.shift || "(not entered)"],
-                                ["PIC (Officer)", form.pic || "(not entered)"],
-                            ].map(([label, value]) => (
-                                <div
-                                    key={label}
-                                    className="flex justify-between items-center py-2 lg:py-3 border-b border-slate-100"
-                                >
-                                    <span className="text-slate-500 font-medium">
-                                        {label}
-                                    </span>
-                                    <span
-                                        className={`font-semibold text-right ${typeof value === "string" && value.includes("(not entered)") ? "text-amber-600" : "text-slate-900"}`}
-                                    >
-                                        {value}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="flex gap-3 justify-end pt-6 mt-6 border-t border-slate-200">
-                            <button
-                                className="btn btn-secondary text-xs sm:text-sm px-4 py-2 lg:px-6 lg:py-2.5"
-                                onClick={() => setStep(1)}
-                            >
-                                <ArrowLeft size={16} /> <span>Edit</span>
-                            </button>
-                            <button
-                                className="btn btn-primary text-xs sm:text-sm px-4 py-2 lg:px-6 lg:py-2.5"
-                                onClick={() => setShowConfirmModal(true)}
-                            >
-                                <Save size={16} />{" "}
-                                <span>Save & Generate QR Label</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <IncomingRoll_S3ReviewData
+                    weight={weight}
+                    form={form}
+                    onBack={() => setStep(1)}
+                    onConfirmSave={() => setShowConfirmModal(true)}
+                />
             )}
 
             {/* Step 3: Print Label & Dynamic QR Generation */}
             {step === 3 && (
-                <div className="w-full space-y-4">
-                    <style>{`
-                        @media print {
-                            @page {
-                                size: auto;
-                                margin: 5mm;
-                            }
-                            
-                            /* Reset page structure */
-                            html, body {
-                                margin: 0 !important;
-                                padding: 0 !important;
-                                width: 100% !important;
-                                height: 100% !important;
-                                overflow: hidden !important;
-                            }
-
-                            /* Hide ALL background/layout elements */
-                            body * {
-                                visibility: hidden !important;
-                            }
-
-                            /* Show ONLY the label and its children */
-                            #printable-roll-label, #printable-roll-label * {
-                                visibility: visible !important;
-                            }
-                            
-                            /* Label fills paper width, starts from top */
-                            #printable-roll-label {
-                                position: absolute !important;
-                                left: 0 !important;
-                                top: 0 !important;
-                                width: 100% !important;
-                                box-sizing: border-box !important;
-                                
-                                border: 2px solid #0f172a !important;
-                                border-radius: 10px !important;
-                                background: white !important;
-                                padding: 14px 20px !important;
-                                font-family: Arial, sans-serif !important;
-                            }
-
-                            /* --- STYLING HEADER --- */
-                            #printable-roll-label #label-header {
-                                display: flex !important;
-                                justify-content: space-between !important;
-                                align-items: center !important;
-                                border-bottom: 2px solid #0f172a !important;
-                                padding-bottom: 8px !important;
-                                margin-bottom: 12px !important;
-                            }
-                            #printable-roll-label #label-header .logo-area {
-                                display: flex !important;
-                                align-items: center !important;
-                                gap: 8px !important;
-                            }
-                            #printable-roll-label #label-header .logo-box {
-                                width: 28px !important;
-                                height: 28px !important;
-                                background: #1d4ed8 !important;
-                                color: white !important;
-                                font-weight: 900 !important;
-                                font-size: 14px !important;
-                                display: flex !important;
-                                align-items: center !important;
-                                justify-content: center !important;
-                                border-radius: 6px !important;
-                            }
-                            #printable-roll-label #label-header .logo-text {
-                                font-size: 18px !important;
-                                font-weight: 900 !important;
-                                color: #0f172a !important;
-                                letter-spacing: 1px !important;
-                            }
-                            #printable-roll-label #label-header .label-title {
-                                font-size: 12px !important;
-                                font-weight: 800 !important;
-                                color: #0f172a !important;
-                                letter-spacing: 0.5px !important;
-                                text-transform: uppercase !important;
-                            }
-
-                            /* --- STYLING BODY --- */
-                            #printable-roll-label #label-body {
-                                display: flex !important;
-                                flex-direction: row !important;
-                                gap: 20px !important;
-                                align-items: flex-start !important;
-                            }
-                            #printable-roll-label #label-specs {
-                                flex: 1 !important;
-                                display: flex !important;
-                                flex-direction: column !important;
-                                gap: 5px !important; 
-                            }
-                            #printable-roll-label .spec-row {
-                                display: flex !important;
-                                flex-direction: row !important;
-                                align-items: baseline !important;
-                                gap: 0 !important;
-                            }
-                            #printable-roll-label .spec-label {
-                                font-size: 11px !important;
-                                font-weight: 700 !important;
-                                color: #64748b !important;
-                                width: 100px !important; 
-                                flex-shrink: 0 !important;
-                            }
-                            #printable-roll-label .spec-value {
-                                font-size: 12px !important;
-                                font-weight: 700 !important;
-                                color: #0f172a !important;
-                            }
-                            #printable-roll-label .spec-value.highlight {
-                                font-size: 14px !important;
-                                font-weight: 900 !important;
-                                color: #1e3a8a !important;
-                            }
-
-                            /* --- STYLING QR CODE --- */
-                            #printable-roll-label #label-qr {
-                                display: flex !important;
-                                flex-direction: column !important;
-                                align-items: center !important;
-                                gap: 5px !important;
-                                flex-shrink: 0 !important;
-                                width: 150px !important;
-                                border: 2px solid #e2e8f0 !important;
-                                padding: 10px !important;
-                                border-radius: 10px !important;
-                            }
-                            #printable-roll-label #label-qr svg {
-                                width: 120px !important;
-                                height: 120px !important;
-                            }
-                            #printable-roll-label #label-qr .qr-caption {
-                                font-size: 9px !important;
-                                font-weight: 800 !important;
-                                color: #64748b !important;
-                                text-transform: uppercase !important;
-                                letter-spacing: 0.5px !important;
-                                text-align: center !important;
-                                margin-top: 3px !important;
-                            }
-                        }
-                    `}</style>
-                    <div className="card p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
-                        {/* Printable Roll Identification Label */}
-                        <div
-                            id="printable-roll-label"
-                            className="w-full max-w-3xl bg-white border-2 border-slate-900 rounded-2xl p-4 sm:p-6 md:p-8 shadow-lg text-slate-900 font-sans"
-                        >
-                            {/* Label Header */}
-                            <div
-                                id="label-header"
-                                className="flex flex-col lg:flex-row items-center justify-between border-b-2 border-slate-900 pb-4 mb-5 gap-3 lg:gap-0 text-center lg:text-left"
-                            >
-                                <div className="logo-area flex items-center gap-2.5">
-                                    <div className="logo-box w-9 h-9 rounded-lg bg-blue-700 text-white font-black text-sm flex items-center justify-center">
-                                        R
-                                    </div>
-                                    <span className="logo-text font-extrabold text-xl tracking-wider text-slate-900">
-                                        ROLLYN
-                                    </span>
-                                </div>
-                                <span className="label-title font-extrabold text-sm tracking-wider text-slate-900 uppercase">
-                                    PRODUCTION IDENTIFICATION LABEL
-                                </span>
-                            </div>
-
-                            {/* Label Body: Specs + QR Side by Side */}
-                            <div
-                                id="label-body"
-                                className="flex flex-col lg:flex-row gap-6 items-center lg:items-start w-full"
-                            >
-                                {/* Specifications list */}
-                                <div
-                                    id="label-specs"
-                                    className="w-full lg:flex-1 flex flex-col gap-2.5 text-sm"
-                                >
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            ROLL ID:
-                                        </span>{" "}
-                                        <span className="spec-value font-extrabold text-slate-900 font-mono text-base">
-                                            {form.rollNumber || "104"}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Grade:
-                                        </span>{" "}
-                                        <span className="spec-value font-bold text-slate-900">
-                                            {form.grade || "SPECTA - TK4"}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Job Order:
-                                        </span>{" "}
-                                        <span className="spec-value font-bold text-slate-900 font-mono">
-                                            {form.jop || "JOP-0726-00028"}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Jumbo Roll:
-                                        </span>{" "}
-                                        <span className="spec-value font-bold text-slate-900 font-mono">
-                                            {form.jumboRoll || "-"}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Thickness:
-                                        </span>{" "}
-                                        <span className="spec-value font-semibold text-slate-900">
-                                            {form.thickness
-                                                ? `${form.thickness} mm`
-                                                : "155 mm"}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Roll Width:
-                                        </span>{" "}
-                                        <span className="spec-value font-semibold text-slate-900">
-                                            {form.width
-                                                ? `${form.width} mm`
-                                                : "1650 mm"}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Weight:
-                                        </span>{" "}
-                                        <span className="spec-value highlight font-extrabold text-blue-900 font-mono text-base">
-                                            {weight.display || "1,044"} kg
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Core Size:
-                                        </span>{" "}
-                                        <span className="spec-value font-semibold text-slate-900">
-                                            {form.core || "76"} mm
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            Visual Status:
-                                        </span>{" "}
-                                        <span className="spec-value font-bold text-slate-900">
-                                            {form.visual || "OK"}
-                                        </span>
-                                    </div>
-                                    <div className="spec-row flex gap-0">
-                                        <span className="spec-label font-bold text-slate-500 w-32 shrink-0">
-                                            PIC:
-                                        </span>{" "}
-                                        <span className="spec-value font-semibold text-slate-900 uppercase">
-                                            {form.pic || "Budi"}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Dynamic QR Code */}
-                                <div
-                                    id="label-qr"
-                                    className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200 shrink-0 w-[200px]"
-                                >
-                                    <QRCodeSVG
-                                        value={JSON.stringify({
-                                            roll: form.rollNumber || "104",
-                                            jumbo: form.jumboRoll || undefined,
-                                            grade: form.grade || "SPECTA-TK4",
-                                            jop: form.jop || "JOP-0726-00028",
-                                            weight: weight.display || "1044",
-                                            width: form.width || "1650",
-                                            thickness: form.thickness || "155",
-                                            core: form.core || "76",
-                                            pic: form.pic || "Budi",
-                                        })}
-                                        size={180}
-                                    />
-                                    <span className="qr-caption text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-3 text-center">
-                                        ATTACH TO ROLL CORE
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Action buttons */}
-                        {form.status === "HOLD" && (
-                            <div className="w-full bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 flex items-center justify-center gap-2">
-                                <Clock size={18} className="text-amber-600" />
-                                <span className="font-semibold text-sm">
-                                    Current Roll status is HOLD. Final label can
-                                    only be printed after specification is
-                                    confirmed by QC.
-                                </span>
-                            </div>
-                        )}
-                        <div className="flex flex-wrap gap-3 justify-center pt-2">
-                            <button
-                                className="btn btn-secondary btn-md flex items-center gap-2 px-6 py-2.5 font-semibold cursor-pointer"
-                                onClick={() => setStep(1)}
-                            >
-                                <ArrowLeft size={16} /> <span>Edit Data</span>
-                            </button>
-                            <button
-                                className="btn btn-primary btn-md flex items-center gap-2 px-6 py-2.5 font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                onClick={() => window.print()}
-                                disabled={form.status === "HOLD"}
-                            >
-                                <Printer size={16} /> <span>Print Label</span>
-                            </button>
-                            <button
-                                className="btn btn-secondary btn-md flex items-center gap-2 px-6 py-2.5 font-semibold cursor-pointer"
-                                onClick={() => {
-                                    sessionStorage.removeItem(
-                                        "incomingRoll_step",
-                                    );
-                                    sessionStorage.removeItem(
-                                        "incomingRoll_weight",
-                                    );
-                                    sessionStorage.removeItem(
-                                        "incomingRoll_form",
-                                    );
-                                    sessionStorage.removeItem(
-                                        "incomingRoll_savedId",
-                                    );
-                                    setSavedRollNumber("");
-                                    setStep(0);
-                                    setWeight({
-                                        value: 0,
-                                        display: "",
-                                        source: "none",
-                                    });
-                                    setForm({
-                                        jop: "",
-                                        jumboRoll: "",
-                                        jumboRollId: null,
-                                        grade: "",
-                                        gsm: "",
-                                        visual: "OK",
-                                        status: "OK",
-                                        rollNumber: recommendedRoll || "",
-                                        formNumber: "",
-                                        plybond: "",
-                                        diameter: "",
-                                        width: "",
-                                        thickness: "",
-                                        bulk: "",
-                                        core: "76",
-                                        exMaterial: "IMPORT",
-                                        cobb: "",
-                                        shift: "1",
-                                        entry_date: new Date()
-                                            .toISOString()
-                                            .split("T")[0],
-                                        pic: "",
-                                    });
-                                    setErrors({});
-                                }}
-                            >
-                                <RefreshCw size={16} />{" "}
-                                <span>Register New Roll</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <IncomingRoll_S4PrintLabel
+                    weight={weight}
+                    form={form}
+                    onEdit={() => setStep(1)}
+                    onRegisterNewRoll={handleRegisterNewRoll}
+                />
             )}
 
-            {showConfirmModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl animate-fade-in-up">
-                        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-5">
-                            <Save size={32} />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-900 text-center mb-2">
-                            Confirm Data
-                        </h3>
-                        <p className="text-slate-500 text-center text-sm mb-6">
-                            Are you sure all filled data is correct? This
-                            process will save the data to the system and
-                            generate the QR Label.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                className="btn btn-secondary flex-1 flex justify-center"
-                                onClick={() => setShowConfirmModal(false)}
-                            >
-                                Review
-                            </button>
-                            <button
-                                className="btn btn-primary flex-1 flex justify-center"
-                                onClick={() => {
-                                    setShowConfirmModal(false);
-                                    handleSave();
-                                }}
-                            >
-                                Yes, Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Confirm Save Modal */}
+            <IncomingRoll_ConfirmSaveModal
+                isOpen={showConfirmModal}
+                onClose={() => setShowConfirmModal(false)}
+                onConfirm={handleSave}
+            />
         </div>
     );
 }

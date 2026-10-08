@@ -1,158 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
-  Search, Filter, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Edit, Trash2, X,
-  Download, MapPin, Package, Camera, QrCode, CheckCircle2, XCircle, Clock,
-  AlertTriangle, UserCheck, Calendar, Building2, Truck, Check, RefreshCw, Layers,
-  Ban, ShieldCheck, ShieldAlert, Printer, FileText, Info, RotateCcw, Scale
+  Package, Layers, Truck, Download, ChevronUp, ChevronDown, ChevronsUpDown
 } from 'lucide-react'
 import { router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import QRScannerModal from '@/Components/QRScannerModal'
-import EmbeddedQRScanner from '@/Components/EmbeddedQRScanner'
 import SpectrumSlotSelectorModal from '@/Components/SpectrumSlotSelectorModal'
-
-interface RollItem {
-  id: string
-  raw_id: number
-  no_roll: string
-  form: string
-  raw_form?: number
-  shift: string
-  shifts_id?: number
-  date: string
-  grade: string
-  grades_id?: number
-  gsm: number
-  gsms_id?: number
-  weight: number
-  width: number
-  location: string
-  locations_id?: number
-  jop: string
-  jops_id?: number
-  pic: string
-  status: string
-  roll_status?: string
-  in_shipment_queue?: boolean
-  shipment_queue_number?: string | null
-  shipment_queue_status?: string | null
-  shipment_queue_qc_status?: string | null
-  exMaterial: string
-  visual: string
-  plybond?: number
-  thickness?: number
-  bulk?: number
-  diameter?: number
-  core?: string
-  cobb?: string
-  jumbo_roll?: string | null
-  jumbo_roll_id?: number | null
-  reproduction_status?: string | null
-}
-
-interface OptionItem {
-  id: number
-  shift?: string
-  grade?: string
-  location?: string
-  jop?: string
-  status?: number
-}
-
-interface ShipmentRollItem {
-  id: number
-  roll_no: number
-  no_roll: string
-  grade: string
-  gsm: number
-  weight: number
-  location: string
-  qc_status: string // 'pending' | 'passed' | 'rejected_replace'
-  reproduction_status?: string | null
-  qc_notes: string | null
-  qc_checked_at: string | null
-}
-
-interface ShipmentData {
-  id: number
-  shipment_number: string
-  customer: string
-  admin: string
-  qc_officer: string
-  qc_users_id: number
-  date: string
-  status: string // 'pending' | 'qc_in_progress' | 'completed' | 'canceled'
-  total_rolls: number
-  checked_rolls: number
-  passed_rolls: number
-  rejected_rolls: number
-  rolls: ShipmentRollItem[]
-}
-
-interface Props {
-  rolls?: RollItem[]
-  shifts?: OptionItem[]
-  grades?: OptionItem[]
-  gsms?: { id: number; gsm: number }[]
-  locations?: OptionItem[]
-  jops?: OptionItem[]
-  customers?: { id: number, customer: string }[]
-  qcUsers?: { id: number, username?: string, name?: string }[]
-  shipments?: ShipmentData[]
-}
-
-const statusColors: Record<string, { bg: string; color: string }> = {
-  'Slotted': { bg: '#d0e8f5', color: '#286090' },
-  'Shipment Plan': { bg: '#d4edda', color: '#3C763D' },
-  'Hold': { bg: '#cce5ff', color: '#004085' },
-  'Non-PO': { bg: '#fde8e8', color: '#C0392B' },
-  'Incoming': { bg: '#fff3cd', color: '#8A6D3B' },
-}
-
-const QC_CHECKLIST = [
-  {
-    category: "Identitas Produk",
-    items: [
-      "Label produk sesuai dengan spesifikasi",
-      "Lebar produk sesuai dengan spesifikasi",
-      "Diameter produk sesuai dengan spesifikasi",
-      "Thickness, Plybond sesuai dengan spesifikasi"
-    ]
-  },
-  {
-    category: "Kondisi Fisik Roll",
-    items: [
-      "Tidak cembung/cekung berlebihan",
-      "Roll tidak sobek",
-      "Roll tidak terdapat lipatan mati",
-      "Roll tidak basah/lembab",
-      "Roll tidak ada kontaminasi (debu, sawang, dll)"
-    ]
-  },
-  {
-    category: "Packing & Proteksi",
-    items: [
-      "Wrapping dalam kondisi bagus",
-      "Core tidak rusak/penyok",
-      "Strap/pallet/pengganjal dalam kondisi tidak rusak",
-      "Penataan Roll diatas kendaraan tidak saling menekan"
-    ]
-  },
-  {
-    category: "Proses Loading",
-    items: [
-      "Penggunaan forklift clam untuk produk roll",
-      "Penggunaan forklift garpu untuk produk slitting",
-      "Arah roll sesuai dengan standar (vertical)"
-    ]
-  },
-  {
-    category: "Dokumen",
-    items: [
-      "Roll yang dimuat sesuai dengan weight list"
-    ]
-  }
-]
+import {
+  RollItem, OptionItem, ShipmentRollItem, ShipmentData, Props
+} from '@/Components/RollInventory/RollInventory_types'
+import RollInventory_StorageTab from '@/Components/RollInventory/RollInventory_StorageTab'
+import RollInventory_ShipmentsTab from '@/Components/RollInventory/RollInventory_ShipmentsTab'
+import RollInventory_CreateShipmentModal from '@/Components/RollInventory/RollInventory_CreateShipmentModal'
+import RollInventory_QcRejectModal from '@/Components/RollInventory/RollInventory_QcRejectModal'
+import RollInventory_EditRollModal from '@/Components/RollInventory/RollInventory_EditRollModal'
+import RollInventory_PpicDispositionModal from '@/Components/RollInventory/RollInventory_PpicDispositionModal'
+import RollInventory_QcReportModal from '@/Components/RollInventory/RollInventory_QcReportModal'
+import RollInventory_QcRollEvaluatorModal from '@/Components/RollInventory/RollInventory_QcRollEvaluatorModal'
 
 export default function RollInventory({
   rolls = [],
@@ -246,7 +110,6 @@ export default function RollInventory({
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [modalMode, setModalMode] = useState<'assign' | 'move'>('assign')
   const [assigningRoll, setAssigningRoll] = useState<RollItem | null>(null)
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('')
   const lastNotifyRef = useRef<number>(0)
 
   // Storage Scanner Modal
@@ -263,7 +126,7 @@ export default function RollInventory({
   const [isProcessingScan, setIsProcessingScan] = useState(false)
   const [showQcReportModal, setShowQcReportModal] = useState(false)
 
-  // New states for QC Evaluation Flow
+  // QC Evaluation Flow
   const [activeQcRoll, setActiveQcRoll] = useState<any>(null)
   const [qcEvaluationMode, setQcEvaluationMode] = useState<'decision' | 'checklist'>('decision')
   const [selectedQcIssues, setSelectedQcIssues] = useState<string[]>([])
@@ -290,7 +153,6 @@ export default function RollInventory({
 
   const [qcIssueSearch, setQcIssueSearch] = useState('')
   const [expandedQcCategories, setExpandedQcCategories] = useState<string[]>([])
-
   const lastScannedThrottleRef = useRef<{ code: string; time: number }>({ code: '', time: 0 })
 
   // QC Reject Modal State
@@ -380,7 +242,6 @@ export default function RollInventory({
   }
 
   function toggleSelectAllVisible() {
-    // Only select rolls that are NOT in shipment queue
     const selectableRolls = paged.filter(r => !r.in_shipment_queue)
     const selectableIds = selectableRolls.map(r => r.id)
 
@@ -760,7 +621,6 @@ export default function RollInventory({
           type: 'info'
         })
         setActiveShipmentId(otherShipment.id)
-
       } else {
         // Anti-spam camera frame throttle
         const now = Date.now()
@@ -829,7 +689,7 @@ export default function RollInventory({
         setQcReportNotes({})
         SystemUI.toast({ message: `QC Report submitted successfully!`, type: 'success' })
       },
-      onError: (err) => {
+      onError: () => {
         setIsProcessingScan(false)
         SystemUI.toast({ message: 'Failed to submit QC report.', type: 'error' })
       }
@@ -1031,1552 +891,139 @@ export default function RollInventory({
         </div>
       </div>
 
-      {/* ========================================================================= */}
       {/* VIEW MODE 1: STORAGE (INVENTORY) TAB */}
-      {/* ========================================================================= */}
       {viewMode === 'inventory' && (
-        <div className="space-y-4">
-          {/* Filter Card */}
-          <div className="card p-3 sm:p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-between">
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full sm:max-w-md min-w-0">
-                <Search size={16} className="text-slate-400 shrink-0" />
-                <input
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); setPage(1) }}
-                  placeholder="Search roll number, grade, JOP, location, shipment..."
-                  className="w-full min-w-0 bg-transparent border-none outline-none text-sm text-slate-800 placeholder:text-slate-400"
-                />
-                {search && (
-                  <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600">
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-              <div className="flex items-center gap-2 justify-between w-full sm:w-auto sm:justify-end">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Filter size={13} className="text-slate-500 shrink-0" />
-                  <select
-                    value={statusFilter}
-                    onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-                    className="form-input text-xs py-1.5 min-w-[130px] w-auto"
-                  >
-                    {statuses.map(s => (
-                      <option key={s} value={s}>{s === 'All' ? 'All Storage Status' : s}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={qcStatusFilter}
-                    onChange={e => { setQcStatusFilter(e.target.value); setPage(1) }}
-                    className="form-input text-xs py-1.5 min-w-[125px] w-auto font-medium"
-                  >
-                    <option value="All">All Label Status</option>
-                    <option value="OK">OK (Released)</option>
-                    <option value="HOLD">HOLD (Verification)</option>
-                  </select>
-                  <select
-                    value={reproductionFilter}
-                    onChange={e => { setReproductionFilter(e.target.value); setPage(1) }}
-                    className="form-input text-xs py-1.5 min-w-[150px] w-auto font-medium"
-                  >
-                    <option value="All">All Re-production</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="reject">Reject</option>
-                    <option value="reweigh">Reweigh</option>
-                    <option value="reproduce_again">Reproduce Again</option>
-                    <option value="none">Standard / None</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Advanced Filters */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-              <select value={advFilters.width} onChange={e => {setAdvFilters(f => ({...f, width: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All Width</option>
-                {Array.from(new Set(rolls.map(r => String(r.width || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.grade} onChange={e => {setAdvFilters(f => ({...f, grade: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All Grade</option>
-                {Array.from(new Set(rolls.map(r => String(r.grade || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.gsm} onChange={e => {setAdvFilters(f => ({...f, gsm: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All GSM</option>
-                {Array.from(new Set(rolls.map(r => String(r.gsm || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.plybond} onChange={e => {setAdvFilters(f => ({...f, plybond: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All PlyBond</option>
-                {Array.from(new Set(rolls.map(r => String(r.plybond || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.thickness} onChange={e => {setAdvFilters(f => ({...f, thickness: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All Thickness</option>
-                {Array.from(new Set(rolls.map(r => String(r.thickness || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.bulk} onChange={e => {setAdvFilters(f => ({...f, bulk: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All BULK</option>
-                {Array.from(new Set(rolls.map(r => String(r.bulk || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.diameter} onChange={e => {setAdvFilters(f => ({...f, diameter: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All Diameter</option>
-                {Array.from(new Set(rolls.map(r => String(r.diameter || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.core} onChange={e => {setAdvFilters(f => ({...f, core: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All Core</option>
-                {Array.from(new Set(rolls.map(r => String(r.core || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.weight} onChange={e => {setAdvFilters(f => ({...f, weight: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All Weight</option>
-                {Array.from(new Set(rolls.map(r => String(r.weight || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-              <select value={advFilters.cobb} onChange={e => {setAdvFilters(f => ({...f, cobb: e.target.value})); setPage(1)}} className="form-input text-xs py-1.5 min-w-[120px] flex-1">
-                <option value="">All Cobb</option>
-                {Array.from(new Set(rolls.map(r => String(r.cobb || '')).filter(Boolean))).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
-
-            {/* Shipment Queue Switch Filter Pills */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center bg-slate-100 p-1 rounded-lg text-xs gap-1 border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => { setQueueFilter('all'); setPage(1) }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${queueFilter === 'all' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                >
-                  All Rolls ({rolls.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setQueueFilter('not_queued'); setPage(1) }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${queueFilter === 'not_queued' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  Available ({unqueuedRollsCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setQueueFilter('queued'); setPage(1) }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${queueFilter === 'queued' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                  Shipment Queued ({queuedRollsCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQcStatusFilter(qcStatusFilter === 'HOLD' ? 'All' : 'HOLD');
-                    setPage(1);
-                  }}
-                  className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${qcStatusFilter === 'HOLD'
-                      ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-bold'
-                      : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                  HOLD Verification ({holdRollsCount})
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <span className="font-semibold text-slate-500">
-                  Showing <strong className="text-slate-800">{filtered.length}</strong> rolls
-                </span>
-                {checkedRollIds.length > 0 && (
-                  <span className="font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                    {checkedRollIds.length} rolls selected
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Table Card */}
-          <div className="card overflow-x-auto relative">
-            <table className="data-table w-full min-w-[1250px] table-fixed border-collapse text-xs">
-              <colgroup>
-                {!isQC && <col className="w-[45px]" />}  {/* Checkbox */}
-                <col className="w-[85px]" />  {/* SHIFT */}
-                <col className="w-[105px]" /> {/* ENTRY DATE */}
-                <col className="w-[140px]" /> {/* GRADE */}
-                <col className="w-[70px]" />  {/* GSM */}
-                <col className="w-[110px]" /> {/* WEIGHT (KG) */}
-                <col className="w-[100px]" /> {/* WIDTH (MM) */}
-                <col className="w-[110px]" /> {/* LOCATION */}
-                <col className="w-[130px]" /> {/* JOP */}
-                <col className="w-[95px]" />  {/* PIC */}
-                <col className="w-[130px]" /> {/* STATUS */}
-                <col className="w-[140px]" /> {/* ACTIONS */}
-              </colgroup>
-              <thead>
-                <tr>
-                  {!isQC && (
-                    <th style={{ textAlign: 'center' }} className="py-2.5">
-                      <input
-                        type="checkbox"
-                        checked={paged.length > 0 && paged.filter(r => !r.in_shipment_queue).length > 0 && paged.filter(r => !r.in_shipment_queue).every(r => checkedRollIds.includes(r.id))}
-                        onChange={toggleSelectAllVisible}
-                        title="Select all available rolls on this page"
-                        className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
-                      />
-                    </th>
-                  )}
-                  {cols.map(col => (
-                    <th
-                      key={col.key}
-                      onClick={() => sort(col.key)}
-                      className="cursor-pointer select-none tracking-wider text-[11px] font-bold text-slate-700"
-                      style={{ textAlign: 'center' }}
-                    >
-                      {col.label}
-                      <span className="inline-block align-middle ml-1"><SortIcon k={col.key} /></span>
-                    </th>
-                  ))}
-                  <th style={{ textAlign: 'center' }} className="tracking-wider text-[11px] font-bold text-slate-700">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.length === 0 ? (
-                  <tr>
-                    <td colSpan={cols.length + 2} className="text-center py-10 text-slate-400">
-                      No rolls found matching the filter criteria.
-                    </td>
-                  </tr>
-                ) : paged.map(r => {
-                  const sc = statusColors[r.status] || { bg: '#EEEEEE', color: '#333' }
-                  const isSlotted = Boolean(r.locations_id) || (Boolean(r.location) && r.location !== 'No Slot' && r.location !== 'Unallocated' && r.location !== '—')
-                  const shiftNum = r.shift ? r.shift.replace(/Shift\s*/i, '') : '1'
-                  const isChecked = checkedRollIds.includes(r.id)
-                  const isQueued = Boolean(r.in_shipment_queue)
-
-                  return (
-                    <tr
-                      key={r.raw_id || r.id}
-                      className={`transition-colors border-b border-slate-100 ${isQueued
-                          ? 'bg-indigo-50/20 hover:bg-indigo-50/40 text-slate-600'
-                          : isChecked
-                            ? 'bg-blue-50/60 hover:bg-blue-50'
-                            : 'hover:bg-slate-50/80'
-                        }`}
-                    >
-                      {!isQC && (
-                        <td style={{ textAlign: 'center' }}>
-                          {isQueued ? (
-                            <input
-                              type="checkbox"
-                              disabled
-                              checked={false}
-                              title={`Roll already queued in shipment ${r.shipment_queue_number || ''}`}
-                              className="w-4 h-4 text-slate-300 rounded border-slate-200 cursor-not-allowed opacity-40"
-                            />
-                          ) : (
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleRollChecked(r.id, isQueued)}
-                              className="w-4 h-4 text-blue-600 rounded border-slate-300 accent-blue-600 cursor-pointer"
-                            />
-                          )}
-                        </td>
-                      )}
-                      <td style={{ textAlign: 'center' }}>
-                        <span className="inline-flex flex-col items-center justify-center bg-slate-100/90 text-slate-700 px-2.5 py-0.5 rounded border border-slate-200">
-                          <span className="text-[10px] text-slate-500 font-semibold leading-none">Shift</span>
-                          <span className="font-bold text-slate-800 text-xs leading-tight">{shiftNum}</span>
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.date}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span className="font-bold text-slate-800 text-xs">{r.grade}</span>
-                        <div className="text-[10px] text-slate-400 font-mono">{r.no_roll}</div>
-                      </td>
-                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.gsm}</td>
-                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-700 font-medium">{r.weight ? r.weight.toLocaleString('en-US') : 0}</td>
-                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-700">{r.width}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        {r.location ? (
-                          <span className="inline-block font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 text-xs font-mono">
-                            {r.location}
-                          </span>
-                        ) : (
-                          <span className="text-red-600 font-semibold text-xs">No Slot</span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-600 font-mono">{r.jop}</td>
-                      <td style={{ textAlign: 'center' }} className="text-xs text-slate-700 uppercase font-medium">{r.pic}</td>
-                      <td style={{ textAlign: 'center' }} className="whitespace-nowrap px-2 py-2">
-                        <div className="flex flex-col items-center gap-1">
-                          <span
-                            className="badge inline-flex justify-center px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap rounded-md"
-                            style={{ backgroundColor: sc.bg, color: sc.color }}
-                          >
-                            {r.status}
-                          </span>
-                          <span
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${r.roll_status === 'HOLD'
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                              }`}
-                          >
-                            Label: {r.roll_status || 'OK'}
-                          </span>
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            Visual: {r.visual || 'OK'}
-                          </span>
-                          {r.reproduction_status && r.reproduction_status !== 'none' && (
-                            <span
-                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                r.reproduction_status === 'shipped'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                                  : r.reproduction_status === 'reject'
-                                  ? 'bg-red-50 text-red-700 border border-red-300'
-                                  : r.reproduction_status === 'reweigh'
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-300'
-                                  : 'bg-purple-50 text-purple-700 border border-purple-300'
-                              }`}
-                              title={`PPIC Disposition: ${r.reproduction_status}`}
-                            >
-                              {r.reproduction_status === 'shipped' && <Truck size={10} />}
-                              {r.reproduction_status === 'reject' && <XCircle size={10} />}
-                              {r.reproduction_status === 'reweigh' && <Scale size={10} />}
-                              {r.reproduction_status === 'reproduce_again' && <RotateCcw size={10} />}
-                              {r.reproduction_status === 'shipped'
-                                ? 'Shipped'
-                                : r.reproduction_status === 'reject'
-                                ? 'Reject'
-                                : r.reproduction_status === 'reweigh'
-                                ? 'Reweigh'
-                                : 'Reproduce Again'}
-                            </span>
-                          )}
-                          {isQueued && (
-                            <span
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full"
-                              title={`Queued in shipment: ${r.shipment_queue_number}`}
-                            >
-                              <Truck size={10} />
-                              Queued
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'center' }} className="whitespace-nowrap px-2 py-2">
-                        <div className="flex gap-1.5 justify-center items-center">
-                          {!isQC && (
-                            <button
-                              className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
-                              onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
-                              title="View Roll Detail"
-                            >
-                              <Eye size={14} />
-                            </button>
-                          )}
-                          <button
-                            className={`p-1.5 rounded transition-colors cursor-pointer border ${r.roll_status === 'HOLD'
-                                ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 shadow-xs'
-                                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 border-slate-200'
-                              }`}
-                            onClick={() => openEdit(r)}
-                            title={r.roll_status === 'HOLD' ? 'Verify & Release HOLD Roll' : 'Edit Roll Data'}
-                          >
-                            <Edit size={14} />
-                          </button>
-                          {!isQC && (
-                            <>
-                              <button
-                                className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
-                                onClick={() => handleAssignClick(r, isSlotted ? 'move' : 'assign')}
-                                title={isSlotted ? `Move Roll Location (Current: ${r.location})` : 'Assign Location Slot'}
-                              >
-                                <MapPin size={14} />
-                              </button>
-                              <button
-                                className="p-1.5 rounded bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer shadow-xs"
-                                onClick={() => handleDelete(r)}
-                                title="Delete Roll"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination & Sticky Action Bar */}
-          <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-500">
-                Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
-              </span>
-              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                <span className="text-xs text-slate-500">Rows per page:</span>
-                <select
-                  value={perPage}
-                  onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
-                  className="text-xs border-slate-200 rounded-md py-1 px-2 pr-7 text-slate-600 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
-                >
-                  {[5, 10, 25, 50].map(n => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-1">
-              <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-secondary'} min-w-[30px] justify-center`} onClick={() => setPage(p)}>{p}</button>
-              ))}
-              <button className="btn btn-secondary btn-sm" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}>Next</button>
-            </div>
-          </div>
-
-          {/* Floating Confirm Shipment Bar */}
-          {!isQC && checkedRollIds.length > 0 && (
-            <div className="sticky bottom-4 z-30 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex flex-wrap items-center justify-between gap-4 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-sm shadow-inner">
-                  {checkedRollIds.length}
-                </div>
-                <div>
-                  <div className="text-sm font-bold">Rolls Selected for Shipment</div>
-                  <div className="text-xs text-slate-300">Ready to assign customer and QC officer</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
-                  onClick={() => setCheckedRollIds([])}
-                >
-                  Clear Selection
-                </button>
-                <button
-                  className="btn btn-primary bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-2 rounded-lg shadow cursor-pointer transition-all flex items-center gap-1.5"
-                  onClick={openShipmentModal}
-                >
-                  <Truck size={14} />
-                  Confirm Shipment ({checkedRollIds.length})
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <RollInventory_StorageTab
+          rolls={rolls}
+          filtered={filtered}
+          paged={paged}
+          totalPages={totalPages}
+          search={search}
+          setSearch={setSearch}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          statuses={statuses}
+          queueFilter={queueFilter}
+          setQueueFilter={setQueueFilter}
+          qcStatusFilter={qcStatusFilter}
+          setQcStatusFilter={setQcStatusFilter}
+          reproductionFilter={reproductionFilter}
+          setReproductionFilter={setReproductionFilter}
+          page={page}
+          setPage={setPage}
+          perPage={perPage}
+          setPerPage={setPerPage}
+          advFilters={advFilters}
+          setAdvFilters={setAdvFilters}
+          checkedRollIds={checkedRollIds}
+          setCheckedRollIds={setCheckedRollIds}
+          toggleRollChecked={toggleRollChecked}
+          toggleSelectAllVisible={toggleSelectAllVisible}
+          cols={cols}
+          sort={sort}
+          SortIcon={SortIcon}
+          isQC={isQC}
+          openEdit={openEdit}
+          handleAssignClick={handleAssignClick}
+          handleDelete={handleDelete}
+          openShipmentModal={openShipmentModal}
+          queuedRollsCount={queuedRollsCount}
+          unqueuedRollsCount={unqueuedRollsCount}
+          holdRollsCount={holdRollsCount}
+        />
       )}
 
-      {/* ========================================================================= */}
       {/* VIEW MODE 2: SHIPMENTS & QC TAB */}
-      {/* ========================================================================= */}
       {viewMode === 'shipments' && (
-        <div className="space-y-4">
-          {/* Metrics summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="card p-3.5 bg-white border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Total Shipments</span>
-                <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md"><Truck size={15} /></div>
-              </div>
-              <div className="text-xl font-extrabold text-slate-900 mt-1">{totalShipmentsCount}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">{totalShipmentRolls} rolls in total</div>
-            </div>
-
-            <div className="card p-3.5 bg-white border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Pending QC</span>
-                <div className="p-1.5 bg-amber-50 text-amber-600 rounded-md"><Clock size={15} /></div>
-              </div>
-              <div className="text-xl font-extrabold text-amber-600 mt-1">{pendingShipmentsCount}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Awaiting complete verification</div>
-            </div>
-
-            <div className="card p-3.5 bg-white border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">Completed</span>
-                <div className="p-1.5 bg-green-50 text-green-600 rounded-md"><CheckCircle2 size={15} /></div>
-              </div>
-              <div className="text-xl font-extrabold text-green-600 mt-1">{completedShipmentsCount}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Ready for final dispatch</div>
-            </div>
-
-            <div className="card p-3.5 bg-white border border-slate-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500">QC Verified</span>
-                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md"><UserCheck size={15} /></div>
-              </div>
-              <div className="text-xl font-extrabold text-indigo-600 mt-1">
-                {totalCheckedRolls} <span className="text-xs font-normal text-slate-400">/ {totalShipmentRolls}</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
-                {totalShipmentRolls > 0 ? `${Math.round((totalCheckedRolls / totalShipmentRolls) * 100)}% verified` : '0%'}
-              </div>
-            </div>
-          </div>
-
-          {/* Main 2-Column Split: Shipments Sidebar & Inspection View */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-            {/* Left Column: Shipment List (4 cols) */}
-            <div className="lg:col-span-4 space-y-3">
-              <div className="card p-3.5 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                    <Truck size={15} className="text-blue-600" />
-                    {isQC ? 'My Assigned Shipments' : 'All Shipments'}
-                  </h3>
-                  <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {filteredShipments.length}
-                  </span>
-                </div>
-
-                {/* Search & Filter pills */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
-                    <Search size={14} className="text-slate-400 shrink-0" />
-                    <input
-                      value={shipmentSearch}
-                      onChange={e => setShipmentSearch(e.target.value)}
-                      placeholder="Search SHP, customer, QC..."
-                      className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
-                    />
-                    {shipmentSearch && (
-                      <button onClick={() => setShipmentSearch('')} className="text-slate-400 hover:text-slate-600">
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex gap-1 bg-slate-100 p-1 rounded-lg text-[11px]">
-                    <button
-                      className={`flex-1 py-1 text-center font-bold rounded-md transition-all cursor-pointer ${shipmentFilter === 'all' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-                      onClick={() => setShipmentFilter('all')}
-                    >
-                      All
-                    </button>
-                    <button
-                      className={`flex-1 py-1 text-center font-bold rounded-md transition-all cursor-pointer ${shipmentFilter === 'pending' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-                      onClick={() => setShipmentFilter('pending')}
-                    >
-                      Pending
-                    </button>
-                    <button
-                      className={`flex-1 py-1 text-center font-bold rounded-md transition-all cursor-pointer ${shipmentFilter === 'completed' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-                      onClick={() => setShipmentFilter('completed')}
-                    >
-                      Completed
-                    </button>
-                    {!isQC && (
-                      <button
-                        className={`flex-1 py-1 text-center font-bold rounded-md transition-all cursor-pointer ${shipmentFilter === 'canceled' ? 'bg-white text-red-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-                        onClick={() => setShipmentFilter('canceled')}
-                      >
-                        Canceled
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Shipment Cards List */}
-                <div className="space-y-2 max-h-[620px] overflow-y-auto pr-1">
-                  {filteredShipments.length === 0 ? (
-                    <div className="py-8 text-center text-slate-400 space-y-1">
-                      <Truck size={28} className="mx-auto opacity-30" />
-                      <p className="text-xs font-semibold">No shipments found</p>
-                      <p className="text-[10px] text-slate-400">
-                        {isQC ? 'No shipments currently assigned to your account.' : 'Create a shipment from the Storage tab.'}
-                      </p>
-                    </div>
-                  ) : (
-                    filteredShipments.map(s => {
-                      const isActive = activeShipmentId === s.id
-                      const isComplete = s.status === 'completed'
-                      const isCanceled = s.status === 'canceled'
-                      const progressPct = s.total_rolls > 0 ? Math.round((s.checked_rolls / s.total_rolls) * 100) : 0
-
-                      return (
-                        <div
-                          key={s.id}
-                          onClick={() => setActiveShipmentId(s.id)}
-                          className={`p-3 rounded-xl border transition-all cursor-pointer ${isActive
-                              ? 'bg-blue-50/80 border-blue-400 shadow-sm ring-1 ring-blue-300'
-                              : isCanceled
-                                ? 'bg-slate-50/60 border-slate-200 opacity-75'
-                                : 'bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50'
-                            }`}
-                        >
-                          <div className="flex justify-between items-start mb-1.5">
-                            <span className="text-xs font-bold text-slate-900 font-mono flex items-center gap-1">
-                              {s.shipment_number}
-                            </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isCanceled
-                                ? 'bg-red-100 text-red-700 border border-red-200'
-                                : isComplete
-                                  ? 'bg-green-100 text-green-700 border border-green-200'
-                                  : 'bg-amber-100 text-amber-700 border border-amber-200'
-                              }`}>
-                              {isCanceled ? 'Canceled' : isComplete ? 'Completed' : 'QC Pending'}
-                            </span>
-                          </div>
-
-                          <div className="text-xs font-semibold text-slate-800 flex items-center gap-1 mb-1">
-                            <Building2 size={12} className="text-slate-400 shrink-0" />
-                            <span className="truncate">{s.customer}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
-                            <span className="flex items-center gap-1">
-                              <Calendar size={11} className="text-slate-400" />
-                              {s.date}
-                            </span>
-                            <span className="flex items-center gap-1 font-medium text-slate-700">
-                              <UserCheck size={11} className="text-blue-500" />
-                              {s.qc_officer}
-                            </span>
-                          </div>
-
-                          {/* Progress bar */}
-                          {!isCanceled && (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px]">
-                                <span className="text-slate-500">QC Progress</span>
-                                <span className="font-bold text-slate-700">
-                                  {s.checked_rolls} / {s.total_rolls} Rolls ({progressPct}%)
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-300 ${isComplete ? 'bg-green-500' : 'bg-blue-600'}`}
-                                  style={{ width: `${progressPct}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Active Shipment QC Station (8 cols) */}
-            <div className="lg:col-span-8 space-y-4">
-              {activeShipment ? (
-                <>
-                  {/* Shipment Header Banner */}
-                  <div className="card p-4 bg-white border border-slate-200 space-y-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-base font-extrabold text-slate-900 font-mono">
-                            {activeShipment.shipment_number}
-                          </h3>
-                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${activeShipment.status === 'canceled'
-                              ? 'bg-red-100 text-red-700 border border-red-200'
-                              : activeShipment.status === 'completed'
-                                ? 'bg-green-100 text-green-800 border border-green-200'
-                                : 'bg-amber-100 text-amber-800 border border-amber-200'
-                            }`}>
-                            {activeShipment.status === 'canceled'
-                              ? '✕ Canceled'
-                              : activeShipment.status === 'completed'
-                                ? '✓ Completed'
-                                : 'QC In Progress'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Created by <strong>{activeShipment.admin}</strong> • Target Date: <strong>{activeShipment.date}</strong>
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Customer</div>
-                          <div className="text-xs font-bold text-slate-900">{activeShipment.customer}</div>
-                        </div>
-                        <div className="h-7 w-px bg-slate-200" />
-                        <div className="text-right">
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">QC Officer</div>
-                          <div className="text-xs font-bold text-blue-700">{activeShipment.qc_officer}</div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="pl-2 border-l border-slate-200 flex gap-2">
-                          <button
-                            onClick={() => window.open(`/shipments/${activeShipment.id}/print`, '_blank')}
-                            className="btn btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
-                            title="Print Weight List"
-                          >
-                            <Printer size={13} />
-                            Print Weight List
-                          </button>
-                          <button
-                            onClick={() => window.open(`/shipments/${activeShipment.id}/print-qc`, '_blank')}
-                            className="btn btn-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
-                            title="Print QC Report"
-                          >
-                            <Printer size={13} />
-                            Print QC Report
-                          </button>
-                          
-                          {/* Admin/PPIC Cancel Shipment Button */}
-                          {!isQC && activeShipment.status !== 'canceled' && activeShipment.status !== 'completed' && (
-                            <button
-                              onClick={() => handleCancelShipment(activeShipment)}
-                              className="btn btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
-                              title="Cancel entire shipment order"
-                            >
-                              <Ban size={13} />
-                              Cancel Shipment
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cancel notice if shipment is canceled */}
-                    {activeShipment.status === 'canceled' && (
-                      <div className="bg-red-50 border border-red-200 text-red-800 text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-2">
-                        <AlertTriangle size={16} className="text-red-600 shrink-0" />
-                        <span>
-                          <strong>This shipment order was canceled.</strong> All rolls have been unlinked and returned to available inventory.
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Progress summary stats */}
-                    {activeShipment.status !== 'canceled' && (
-                      <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                          <div className="text-[10px] text-slate-500 font-semibold">Total Rolls</div>
-                          <div className="text-sm font-extrabold text-slate-800">{activeShipment.total_rolls}</div>
-                        </div>
-                        <div className="bg-green-50 p-2 rounded-lg border border-green-100">
-                          <div className="text-[10px] text-green-700 font-semibold">Passed</div>
-                          <div className="text-sm font-extrabold text-green-700">{activeShipment.passed_rolls}</div>
-                        </div>
-                        <div className="bg-red-50 p-2 rounded-lg border border-red-100">
-                          <div className="text-[10px] text-red-700 font-semibold">Replaced / Rejected</div>
-                          <div className="text-sm font-extrabold text-red-700">{activeShipment.rejected_rolls}</div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* QC Report Trigger */}
-                    {isQC && activeShipment.status === 'qc_in_progress' && activeShipment.total_rolls === activeShipment.checked_rolls && activeShipment.total_rolls > 0 && (
-                      <div className="pt-2 border-t border-slate-100 mt-3">
-                        <button
-                          onClick={() => setShowQcReportModal(true)}
-                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm text-sm flex items-center justify-center gap-2 transition-colors"
-                        >
-                          <FileText size={18} />
-                          Buat Laporan QC
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* QR Scanner Station */}
-                  {isQC && activeShipment.status !== 'completed' && activeShipment.status !== 'canceled' && (
-                    <>
-                      <div className="card p-0 overflow-hidden border border-blue-200 shadow-xs">
-                        <div className="bg-blue-600 px-4 py-2.5 text-white flex items-center justify-between">
-                          <span className="text-xs font-bold flex items-center gap-1.5">
-                            <Camera size={15} />
-                            Live QC Barcode Scanner
-                          </span>
-                          <span className="text-[11px] text-blue-100">
-                            Scan barcode to verify quality
-                          </span>
-                        </div>
-
-                        <div className="p-3 bg-slate-900">
-                          <EmbeddedQRScanner onScanSuccess={handleQCScan} />
-                        </div>
-
-                        {/* Manual Barcode Input Fallback */}
-                        <form onSubmit={handleManualScanSubmit} className="p-3 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
-                          <QrCode size={16} className="text-slate-400 shrink-0" />
-                          <input
-                            value={manualScanInput}
-                            onChange={e => setManualScanInput(e.target.value)}
-                            placeholder="Or type roll barcode (e.g. 260731-11.04.04) and press Enter..."
-                            disabled={isProcessingScan}
-                            className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 outline-none focus:border-blue-500"
-                          />
-                          <button
-                            type="submit"
-                            disabled={!manualScanInput.trim() || isProcessingScan}
-                            className="btn btn-primary text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            Verify Roll
-                          </button>
-                        </form>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Rolls Table for Active Shipment */}
-                  <div className="card p-4 space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                        Rolls in Shipment ({activeShipment.rolls.length})
-                      </h4>
-                      <span className="text-[11px] text-slate-500">
-                        {activeShipment.checked_rolls} of {activeShipment.total_rolls} checked
-                      </span>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="border-b border-slate-200 text-slate-500 font-bold">
-                            <th className="pb-2 pl-1">Roll Number</th>
-                            <th className="pb-2">Grade & GSM</th>
-                            <th className="pb-2">Weight</th>
-                            <th className="pb-2">Location</th>
-                            <th className="pb-2">QC Status</th>
-                            <th className="pb-2 text-right pr-1">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {activeShipment.rolls.length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="text-center py-6 text-slate-400">
-                                No rolls assigned to this shipment.
-                              </td>
-                            </tr>
-                          ) : activeShipment.rolls.map((r, idx) => {
-                            const isPassed = r.qc_status === 'passed'
-                            const isReplace = r.qc_status === 'rejected_replace'
-                            const isPending = r.qc_status === 'pending'
-                            const isShipmentCanceled = activeShipment.status === 'canceled'
-
-                            return (
-                              <tr key={r.id || idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
-                                <td className="py-3 pl-1 font-bold text-slate-900 font-mono">
-                                  {r.no_roll}
-                                </td>
-                                <td className="py-3 text-slate-700">
-                                  <span className="font-semibold text-slate-900">{r.grade}</span>
-                                  <span className="text-[11px] text-slate-500 block">{r.gsm} GSM</span>
-                                </td>
-                                <td className="py-3 text-slate-700 font-medium">
-                                  {r.weight ? r.weight.toLocaleString('en-US') : 0} kg
-                                </td>
-                                <td className="py-3">
-                                  <span className="inline-block font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px] font-mono">
-                                    {r.location || '—'}
-                                  </span>
-                                </td>
-                                <td className="py-3">
-                                  {isPassed ? (
-                                    <div className="space-y-0.5">
-                                      <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-bold text-[10px] border border-green-200">
-                                        <CheckCircle2 size={12} /> Passed
-                                      </span>
-                                      {r.qc_notes && (
-                                        <div className="text-[10px] text-slate-500 italic truncate max-w-[150px]" title={r.qc_notes}>
-                                          {r.qc_notes}
-                                        </div>
-                                      )}
-                                      {r.qc_checked_at && (
-                                        <div className="text-[9px] text-slate-400">{r.qc_checked_at}</div>
-                                      )}
-                                    </div>
-                                  ) : isReplace ? (
-                                    <div className="space-y-1">
-                                      <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-full font-bold text-[10px] border border-red-200">
-                                        <XCircle size={12} /> Replace Requested
-                                      </span>
-                                      {r.reproduction_status && r.reproduction_status !== 'none' && (
-                                        <span
-                                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                            r.reproduction_status === 'shipped'
-                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                                              : r.reproduction_status === 'reject'
-                                              ? 'bg-red-50 text-red-700 border border-red-300'
-                                              : r.reproduction_status === 'reweigh'
-                                              ? 'bg-amber-50 text-amber-700 border border-amber-300'
-                                              : 'bg-purple-50 text-purple-700 border border-purple-300'
-                                          }`}
-                                        >
-                                          {r.reproduction_status === 'shipped' && <Truck size={10} />}
-                                          {r.reproduction_status === 'reject' && <XCircle size={10} />}
-                                          {r.reproduction_status === 'reweigh' && <Scale size={10} />}
-                                          {r.reproduction_status === 'reproduce_again' && <RotateCcw size={10} />}
-                                          PPIC: {r.reproduction_status === 'shipped'
-                                            ? 'Shipped'
-                                            : r.reproduction_status === 'reject'
-                                            ? 'Reject'
-                                            : r.reproduction_status === 'reweigh'
-                                            ? 'Reweigh'
-                                            : 'Reproduce Again'}
-                                        </span>
-                                      )}
-                                      {r.qc_notes && (
-                                        <div className="text-[10px] text-red-600 truncate max-w-[150px]" title={r.qc_notes}>
-                                          {r.qc_notes}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-bold text-[10px] border border-amber-200">
-                                      <Clock size={12} /> Pending Scan
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="py-3 text-right pr-1">
-                                  {isQC && isPending && !isShipmentCanceled ? (
-                                    <div className="flex items-center justify-end gap-1.5">
-                                      <button
-                                        onClick={() => handleManualPassRoll(r)}
-                                        disabled={isProcessingScan}
-                                        className="btn btn-sm bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors"
-                                        title="Mark roll as passed"
-                                      >
-                                        Pass
-                                      </button>
-                                      <button
-                                        onClick={() => openRejectModal(r)}
-                                        disabled={isProcessingScan}
-                                        className="btn btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors"
-                                        title="Report defect or roll issue"
-                                      >
-                                        Reject
-                                      </button>
-                                    </div>
-                                  ) : !isShipmentCanceled && isPpicOrAdmin && (isReplace || (r.reproduction_status && r.reproduction_status !== 'none')) ? (
-                                    <div className="flex items-center justify-end gap-1.5">
-                                      <button
-                                        onClick={() => openPpicDispositionModal(r)}
-                                        className="btn btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1 ml-auto"
-                                        title="Manage Re-produced Roll Disposition (PPIC)"
-                                      >
-                                        <RotateCcw size={11} />
-                                        PPIC Disposition
-                                      </button>
-                                      <button
-                                        onClick={() => handleCancelRollFromShipment(r)}
-                                        className="p-1 rounded text-red-400 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
-                                        title="Remove roll from this shipment"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  ) : !isQC && !isShipmentCanceled && isPending ? (
-                                    <button
-                                      onClick={() => handleCancelRollFromShipment(r)}
-                                      className="btn btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1 ml-auto"
-                                      title="Remove roll from this shipment"
-                                    >
-                                      <Trash2 size={11} />
-                                      Remove
-                                    </button>
-                                  ) : (
-                                    <span className="text-[11px] text-slate-400">—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="card p-12 text-center text-slate-400 space-y-2 border border-dashed border-slate-200">
-                  <Package size={40} className="mx-auto opacity-30 text-slate-400" />
-                  <h4 className="text-sm font-bold text-slate-600">No Shipment Selected</h4>
-                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                    Select a shipment from the list on the left to inspect rolls or manage the order.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <RollInventory_ShipmentsTab
+          totalShipmentsCount={totalShipmentsCount}
+          totalShipmentRolls={totalShipmentRolls}
+          pendingShipmentsCount={pendingShipmentsCount}
+          completedShipmentsCount={completedShipmentsCount}
+          totalCheckedRolls={totalCheckedRolls}
+          isQC={isQC}
+          isPpicOrAdmin={isPpicOrAdmin}
+          filteredShipments={filteredShipments}
+          shipmentSearch={shipmentSearch}
+          setShipmentSearch={setShipmentSearch}
+          shipmentFilter={shipmentFilter}
+          setShipmentFilter={setShipmentFilter}
+          activeShipmentId={activeShipmentId}
+          setActiveShipmentId={setActiveShipmentId}
+          activeShipment={activeShipment}
+          handleCancelShipment={handleCancelShipment}
+          setShowQcReportModal={setShowQcReportModal}
+          handleQCScan={handleQCScan}
+          manualScanInput={manualScanInput}
+          setManualScanInput={setManualScanInput}
+          isProcessingScan={isProcessingScan}
+          handleManualScanSubmit={handleManualScanSubmit}
+          handleManualPassRoll={handleManualPassRoll}
+          openRejectModal={openRejectModal}
+          openPpicDispositionModal={openPpicDispositionModal}
+          handleCancelRollFromShipment={handleCancelRollFromShipment}
+        />
       )}
 
-      {/* ========================================================================= */}
       {/* MODALS */}
-      {/* ========================================================================= */}
 
       {/* 1. Create Shipment Modal */}
-      {showShipmentModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-md p-5 bg-white rounded-2xl shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
-                <Truck size={17} className="text-blue-600" />
-                Create New Shipment
-              </h3>
-              <button onClick={() => setShowShipmentModal(false)} className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-3.5 text-sm">
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
-                  Select Customer(s) <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-2">
-                  {shipmentForm.customers_id.map((customerId, index) => (
-                    <div key={index} className="flex gap-2 items-center">
-                      <select
-                        value={customerId}
-                        onChange={e => {
-                          const newCustomers = [...shipmentForm.customers_id];
-                          newCustomers[index] = e.target.value;
-                          setShipmentForm(f => ({ ...f, customers_id: newCustomers }));
-                        }}
-                        className="form-input w-full text-xs"
-                      >
-                        <option value="">-- Choose Customer --</option>
-                        {customers.map(c => (
-                          <option key={c.id} value={c.id}>{c.customer}</option>
-                        ))}
-                      </select>
-                      {shipmentForm.customers_id.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newCustomers = shipmentForm.customers_id.filter((_, i) => i !== index);
-                            setShipmentForm(f => ({ ...f, customers_id: newCustomers }));
-                          }}
-                          className="text-red-500 hover:bg-red-50 p-1.5 rounded-md cursor-pointer shrink-0"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setShipmentForm(f => ({ ...f, customers_id: [...f.customers_id, ''] }))}
-                    className="text-blue-600 text-[11px] font-bold hover:underline flex items-center gap-1 mt-1 cursor-pointer"
-                  >
-                    + Add Customer
-                  </button>
-                </div>
-                {shipmentErrors.customers_id && <p className="text-red-600 text-[11px] mt-0.5">{shipmentErrors.customers_id}</p>}
-              </div>
-
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
-                  Assign QC Officer <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={shipmentForm.qc_users_id}
-                  onChange={e => setShipmentForm(f => ({ ...f, qc_users_id: e.target.value }))}
-                  className="form-input w-full text-xs"
-                >
-                  <option value="">-- Choose QC Officer --</option>
-                  {qcUsers.map(qc => (
-                    <option key={qc.id} value={qc.id}>{qc.username || qc.name || `QC User #${qc.id}`}</option>
-                  ))}
-                </select>
-                {shipmentErrors.qc_users_id && <p className="text-red-600 text-[11px] mt-0.5">{shipmentErrors.qc_users_id}</p>}
-              </div>
-
-              <div>
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
-                  Shipment Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={shipmentForm.shipment_date}
-                  onChange={e => setShipmentForm(f => ({ ...f, shipment_date: e.target.value }))}
-                  className="form-input w-full text-xs"
-                />
-                {shipmentErrors.shipment_date && <p className="text-red-600 text-[11px] mt-0.5">{shipmentErrors.shipment_date}</p>}
-              </div>
-
-              <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                <div className="flex items-center gap-2 text-xs font-bold text-blue-900">
-                  <Package size={14} className="text-blue-600 shrink-0" />
-                  <span>{checkedRollIds.length} Rolls Selected</span>
-                </div>
-                <p className="text-[11px] text-blue-700 mt-1">
-                  These rolls will be bundled into a new shipment order and assigned to the selected QC Officer for verification.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                className="btn btn-secondary text-xs px-3.5 py-1.5"
-                onClick={() => setShowShipmentModal(false)}
-                disabled={isSubmittingShipment}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary text-xs px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 cursor-pointer"
-                onClick={handleConfirmShipments}
-                disabled={isSubmittingShipment}
-              >
-                {isSubmittingShipment ? 'Creating...' : 'Create Shipment'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RollInventory_CreateShipmentModal
+        isOpen={showShipmentModal}
+        onClose={() => setShowShipmentModal(false)}
+        shipmentForm={shipmentForm}
+        setShipmentForm={setShipmentForm}
+        shipmentErrors={shipmentErrors}
+        customers={customers}
+        qcUsers={qcUsers}
+        checkedRollIds={checkedRollIds}
+        isSubmittingShipment={isSubmittingShipment}
+        onConfirm={handleConfirmShipments}
+      />
 
       {/* 2. QC Reject Decision Modal */}
-      {showRejectModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5">
-          <div className="card w-full max-w-[95vw] sm:max-w-lg md:max-w-xl p-6 sm:p-7 bg-white rounded-2xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 text-red-600">
-                  <AlertTriangle size={20} />
-                  Reject Roll QC Inspection
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500 font-mono mt-0.5">Roll: {rejectForm.roll_display}</p>
-              </div>
-              <button onClick={() => setShowRejectModal(false)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-2">Action & Resolution</label>
-                <div className="space-y-2.5">
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${rejectForm.reject_type === 'replace' ? 'bg-red-50/80 border-red-300' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <input
-                      type="radio"
-                      className="mt-1 text-red-600 accent-red-600 w-4 h-4"
-                      name="reject_type"
-                      value="replace"
-                      checked={rejectForm.reject_type === 'replace'}
-                      onChange={e => setRejectForm(f => ({ ...f, reject_type: e.target.value as any }))}
-                    />
-                    <div>
-                      <div className="text-sm font-bold text-red-900">Request Replacement (Replace)</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Roll is damaged/defective and unfit for shipping. It will be flagged for a replacement JOP.</div>
-                    </div>
-                  </label>
-
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${rejectForm.reject_type === 'fixed' ? 'bg-green-50/80 border-green-300' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <input
-                      type="radio"
-                      className="mt-1 text-green-600 accent-green-600 w-4 h-4"
-                      name="reject_type"
-                      value="fixed"
-                      checked={rejectForm.reject_type === 'fixed'}
-                      onChange={e => setRejectForm(f => ({ ...f, reject_type: e.target.value as any }))}
-                    />
-                    <div>
-                      <div className="text-sm font-bold text-green-900">Fixed Locally (Fixed)</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Minor damage has been fixed locally by QC. Roll status is now Passed.</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Notes / Remarks (Optional)</label>
-                <textarea
-                  className="form-input w-full text-sm rounded-lg p-3"
-                  rows={3}
-                  value={rejectForm.notes}
-                  onChange={e => setRejectForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="Description of damage or repair action..."
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
-                className="btn btn-secondary text-sm px-4 py-2.5 rounded-lg"
-                onClick={() => setShowRejectModal(false)}
-                disabled={isSubmittingReject}
-              >
-                Cancel
-              </button>
-              <button
-                className={`btn text-sm px-6 py-2.5 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-sm ${rejectForm.reject_type === 'replace' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
-                onClick={submitReject}
-                disabled={isSubmittingReject}
-              >
-                {isSubmittingReject ? 'Submitting...' : 'Confirm Decision'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RollInventory_QcRejectModal
+        isOpen={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        rejectForm={rejectForm}
+        setRejectForm={setRejectForm}
+        isSubmittingReject={isSubmittingReject}
+        onSubmit={submitReject}
+      />
 
       {/* 3. Edit Roll Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5">
-          <div className="card w-full max-w-[95vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl p-6 sm:p-7 bg-white rounded-2xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900">Edit Roll Data</h3>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-mono">
-                  Roll: {editingRoll?.no_roll || editingRoll?.id}
-                </p>
-              </div>
-              <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
-                <X size={20} />
-              </button>
-            </div>
+      <RollInventory_EditRollModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        editingRoll={editingRoll}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        editErrors={editErrors}
+        shifts={shifts}
+        grades={grades}
+        gsms={gsms}
+        locations={locations}
+        jops={jops}
+        isQC={isQC}
+        userRole={userRole}
+        isPpicOrAdmin={isPpicOrAdmin}
+        onSave={saveEdit}
+      />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Roll Number <span className="text-red-500">*</span></label>
-                <input
-                  value={editForm.no_roll}
-                  onChange={e => setEditForm(f => ({ ...f, no_roll: e.target.value }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                />
-                {editErrors.no_roll && <p className="text-red-600 text-xs mt-1">{editErrors.no_roll}</p>}
-              </div>
+      {/* 4. PPIC Re-production Disposition Quick Modal */}
+      <RollInventory_PpicDispositionModal
+        isOpen={showPpicDispositionModal}
+        onClose={() => setShowPpicDispositionModal(false)}
+        roll={ppicDispositionRoll}
+        status={ppicDispositionStatus}
+        setStatus={setPpicDispositionStatus}
+        notes={ppicDispositionNotes}
+        setNotes={setPpicDispositionNotes}
+        isSubmitting={isSubmittingPpicDisposition}
+        onSubmit={submitPpicDisposition}
+      />
 
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Form Number</label>
-                <input
-                  type="number"
-                  value={editForm.form}
-                  onChange={e => setEditForm(f => ({ ...f, form: e.target.value }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                  placeholder="e.g. 1"
-                />
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Shift</label>
-                <select
-                  value={editForm.shifts_id}
-                  onChange={e => setEditForm(f => ({ ...f, shifts_id: Number(e.target.value) }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                >
-                  {shifts.map(s => (
-                    <option key={s.id} value={s.id}>Shift {s.shift}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Entry Date</label>
-                <input
-                  type="date"
-                  value={editForm.entry_date}
-                  onChange={e => setEditForm(f => ({ ...f, entry_date: e.target.value }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                />
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Grade</label>
-                <select
-                  value={editForm.grades_id}
-                  onChange={e => setEditForm(f => ({ ...f, grades_id: Number(e.target.value) }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                >
-                  {grades.map(g => (
-                    <option key={g.id} value={g.id}>{g.grade}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">GSM (g/m²)</label>
-                <select
-                  value={editForm.gsms_id}
-                  onChange={e => setEditForm(f => ({ ...f, gsms_id: e.target.value }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                >
-                  <option value="">Default from JOP</option>
-                  {gsms.map(g => (
-                    <option key={g.id} value={g.id}>{g.gsm} g/m²</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Weight (kg)</label>
-                <input
-                  type="number"
-                  value={editForm.weight}
-                  onChange={e => setEditForm(f => ({ ...f, weight: Number(e.target.value) }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                />
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Warehouse Location</label>
-                <select
-                  value={editForm.locations_id}
-                  onChange={e => setEditForm(f => ({ ...f, locations_id: e.target.value }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                >
-                  <option value="">Unallocated (No Slot)</option>
-                  {locations.map(l => (
-                    <option key={l.id} value={l.id}>{l.location}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">JOP Order</label>
-                <select
-                  value={editForm.jops_id}
-                  onChange={e => setEditForm(f => ({ ...f, jops_id: e.target.value }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                >
-                  <option value="">No JOP Assigned</option>
-                  {jops.map(j => (
-                    <option key={j.id} value={j.id}>{j.jop}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Ex Material</label>
-                <select
-                  value={editForm.exmaterial}
-                  onChange={e => setEditForm(f => ({ ...f, exmaterial: e.target.value }))}
-                  className="form-input w-full h-11 text-sm rounded-lg px-3.5"
-                >
-                  <option value="IMPORT">IMPORT</option>
-                  <option value="LOCAL">LOCAL</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Visual</label>
-                <select
-                  className="form-input w-full h-11 text-sm bg-white border border-slate-300 rounded-lg px-3.5 shadow-sm"
-                  value={editForm.visual}
-                  onChange={e => setEditForm(f => ({ ...f, visual: e.target.value }))}
-                >
-                  <option value="OK">OK</option>
-                  <option value="PKP">PKP</option>
-                  <option value="Reject">Reject</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">Label Status (Roll Status)</label>
-                <select
-                  className="form-input w-full h-11 text-sm bg-white border border-slate-300 rounded-lg px-3.5 shadow-sm disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed font-semibold"
-                  value={editForm.status}
-                  onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
-                  disabled={!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD'}
-                >
-                  <option value="OK">OK (Released / Passed)</option>
-                  <option value="HOLD">HOLD (Pending QC Verification)</option>
-                </select>
-                {!isQC && userRole !== 'admin' && editingRoll?.roll_status === 'HOLD' && (
-                  <p className="text-xs text-amber-600 font-semibold mt-1">
-                    Only QC and Admin are authorized to release HOLD status to OK
-                  </p>
-                )}
-              </div>
-
-              {/* Re-production Disposition (PPIC) */}
-              <div className="col-span-1 sm:col-span-2 lg:col-span-3 p-4 bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200 rounded-xl space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="form-label text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <RotateCcw size={16} className="text-blue-600" />
-                    Re-production Disposition (PPIC)
-                  </label>
-                  {isPpicOrAdmin ? (
-                    <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
-                      Managed by PPIC
-                    </span>
-                  ) : (
-                    <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                      Managed by PPIC
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500">
-                  Select disposition if this roll was re-produced by the production team.
-                </p>
-                <select
-                  className="form-input w-full h-11 text-sm bg-white border border-slate-300 rounded-lg px-3.5 font-semibold disabled:bg-slate-100 disabled:opacity-75 disabled:cursor-not-allowed"
-                  value={editForm.reproduction_status}
-                  onChange={e => setEditForm(f => ({ ...f, reproduction_status: e.target.value }))}
-                  disabled={!isPpicOrAdmin}
-                >
-                  <option value="none">None (Standard Production)</option>
-                  <option value="shipped">Shipped (Approved for delivery)</option>
-                  <option value="reject">Reject (Roll scrapped / rejected)</option>
-                  <option value="reweigh">Reweigh (Roll sent for re-weighing)</option>
-                  <option value="reproduce_again">Reproduce Again (Roll sent back for re-production)</option>
-                </select>
-                {!isPpicOrAdmin && (
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Only PPIC and Admin are authorized to update re-production disposition.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
-              <button className="btn btn-secondary text-sm px-4 py-2.5 rounded-lg" onClick={() => setShowEditModal(false)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary text-sm font-bold px-6 py-2.5 rounded-lg shadow-sm" onClick={saveEdit}>
-                Update Roll
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PPIC Re-production Disposition Quick Modal for Shipment Rolls */}
-      {showPpicDispositionModal && ppicDispositionRoll && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-5">
-          <div className="card w-full max-w-[95vw] sm:max-w-lg md:max-w-xl p-6 sm:p-7 bg-white rounded-2xl shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2 text-blue-600">
-                  <RotateCcw size={20} />
-                  Re-production Disposition (PPIC)
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500 font-mono mt-0.5">
-                  Roll: {ppicDispositionRoll.no_roll || ppicDispositionRoll.id}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowPpicDispositionModal(false)}
-                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-2">
-                  Disposition Choice for Re-produced Roll
-                </label>
-                <div className="space-y-2.5">
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'shipped' ? 'bg-emerald-50/80 border-emerald-300' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <input
-                      type="radio"
-                      className="mt-1 text-emerald-600 accent-emerald-600 w-4 h-4"
-                      name="ppic_disposition"
-                      value="shipped"
-                      checked={ppicDispositionStatus === 'shipped'}
-                      onChange={() => setPpicDispositionStatus('shipped')}
-                    />
-                    <div>
-                      <div className="text-sm font-bold text-emerald-900 flex items-center gap-1.5">
-                        <Truck size={14} /> Shipped
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        Roll has been successfully re-produced and is approved for shipping.
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'reject' ? 'bg-red-50/80 border-red-300' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <input
-                      type="radio"
-                      className="mt-1 text-red-600 accent-red-600 w-4 h-4"
-                      name="ppic_disposition"
-                      value="reject"
-                      checked={ppicDispositionStatus === 'reject'}
-                      onChange={() => setPpicDispositionStatus('reject')}
-                    />
-                    <div>
-                      <div className="text-sm font-bold text-red-900 flex items-center gap-1.5">
-                        <XCircle size={14} /> Reject
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        Roll remains defective/unfit and is rejected / scrapped.
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'reweigh' ? 'bg-amber-50/80 border-amber-300' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <input
-                      type="radio"
-                      className="mt-1 text-amber-600 accent-amber-600 w-4 h-4"
-                      name="ppic_disposition"
-                      value="reweigh"
-                      checked={ppicDispositionStatus === 'reweigh'}
-                      onChange={() => setPpicDispositionStatus('reweigh')}
-                    />
-                    <div>
-                      <div className="text-sm font-bold text-amber-900 flex items-center gap-1.5">
-                        <Scale size={14} /> Reweigh
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        Roll requires re-weighing verification before final determination.
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors ${ppicDispositionStatus === 'reproduce_again' ? 'bg-purple-50/80 border-purple-300' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <input
-                      type="radio"
-                      className="mt-1 text-purple-600 accent-purple-600 w-4 h-4"
-                      name="ppic_disposition"
-                      value="reproduce_again"
-                      checked={ppicDispositionStatus === 'reproduce_again'}
-                      onChange={() => setPpicDispositionStatus('reproduce_again')}
-                    />
-                    <div>
-                      <div className="text-sm font-bold text-purple-900 flex items-center gap-1.5">
-                        <RotateCcw size={14} /> Reproduce Again
-                      </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        Roll needs another round of re-production by the production team.
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="form-label text-sm font-semibold text-slate-700 block mb-1.5">
-                  PPIC Notes / Remarks (Optional)
-                </label>
-                <textarea
-                  className="form-input w-full text-sm rounded-lg p-3"
-                  rows={3}
-                  value={ppicDispositionNotes}
-                  onChange={e => setPpicDispositionNotes(e.target.value)}
-                  placeholder="Additional notes for production or shipping..."
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-              <button
-                className="btn btn-secondary text-sm px-4 py-2.5 rounded-lg"
-                onClick={() => setShowPpicDispositionModal(false)}
-                disabled={isSubmittingPpicDisposition}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary text-sm px-6 py-2.5 font-bold rounded-lg cursor-pointer transition-colors shadow-sm"
-                onClick={submitPpicDisposition}
-                disabled={isSubmittingPpicDisposition}
-              >
-                {isSubmittingPpicDisposition ? 'Updating...' : 'Confirm Disposition'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. SPECTRUM AI Slot Selector Modal */}
+      {/* 5. SPECTRUM AI Slot Selector Modal */}
       <SpectrumSlotSelectorModal
         isOpen={showAssignModal}
         onClose={() => setShowAssignModal(false)}
@@ -2588,305 +1035,39 @@ export default function RollInventory({
         currentLocationCode={assigningRoll?.location}
       />
 
-      {/* 5. QR Code Scanner Camera Modal (For Storage tab) */}
+      {/* 6. QR Code Scanner Camera Modal (For Storage tab) */}
       <QRScannerModal
         isOpen={showQRScanner}
         onClose={() => setShowQRScanner(false)}
         onScanSuccess={handleStorageQRScanSuccess}
       />
 
-      {/* Final QC Report Modal (Simple View) */}
-      {showQcReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-                  <FileText className="text-blue-600" size={20} />
-                  QC Inspection Report
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">Shipment: <span className="font-bold text-slate-700">{activeShipment?.shipment_number}</span></p>
-              </div>
-              <button 
-                onClick={() => setShowQcReportModal(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {/* 7. Final QC Report Modal */}
+      <RollInventory_QcReportModal
+        isOpen={showQcReportModal}
+        onClose={() => setShowQcReportModal(false)}
+        activeShipment={activeShipment}
+        aggregatedQcIssues={aggregatedQcIssues}
+        qcReportNotes={qcReportNotes}
+        setQcReportNotes={setQcReportNotes}
+        isProcessingScan={isProcessingScan}
+        onSubmit={submitQcReport}
+      />
 
-            <form onSubmit={submitQcReport}>
-              <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                {aggregatedQcIssues.length > 0 ? (
-                  <>
-                    <div className="bg-amber-50 text-amber-800 text-sm p-4 rounded-xl border border-amber-100 mb-6 flex gap-3">
-                      <AlertTriangle className="shrink-0 text-amber-600" size={18} />
-                      <p>The following issues were reported during scanning. Please provide a brief note or action taken for each category before submitting the final report.</p>
-                    </div>
-
-                    <div className="space-y-6">
-                      {aggregatedQcIssues.map((issue, idx) => (
-                        <div key={idx}>
-                          <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                            <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                            {issue}
-                          </label>
-                          <textarea 
-                            className="w-full border-slate-200 rounded-xl text-sm p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-y min-h-[80px]"
-                            placeholder={`Enter remarks for: ${issue}`}
-                            value={qcReportNotes[issue] || ''}
-                            onChange={e => setQcReportNotes({...qcReportNotes, [issue]: e.target.value})}
-                            required
-                          ></textarea>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle2 size={32} />
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-lg mb-2">All Clear!</h4>
-                    <p className="text-slate-500 text-sm">No issues were reported during the QC scanning process for this shipment.</p>
-                  </div>
-                )}
-                
-                {/* General Notes Field (Optional) */}
-                <div className="mt-6 border-t border-slate-100 pt-6">
-                  <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-2">
-                    <FileText size={16} className="text-slate-400" />
-                    Notes (Optional)
-                  </label>
-                  <textarea 
-                    className="w-full border-slate-200 rounded-xl text-sm p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-y min-h-[80px]"
-                    placeholder="Enter any additional notes here..."
-                    value={qcReportNotes['General Note'] || ''}
-                    onChange={e => setQcReportNotes({...qcReportNotes, ['General Note']: e.target.value})}
-                  ></textarea>
-                </div>
-              </div>
-
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowQcReportModal(false)}
-                  className="px-4 py-2 font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isProcessingScan || (aggregatedQcIssues.length > 0 && aggregatedQcIssues.some(issue => !qcReportNotes[issue]?.trim()))}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isProcessingScan ? (
-                    <>
-                      <RefreshCw size={16} className="animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    'Submit Report & Complete Shipment'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* QC Roll Evaluator Full Modal */}
-      {activeQcRoll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="bg-blue-600 px-6 py-4 text-white flex justify-between items-center shrink-0">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <CheckCircle2 size={20} />
-                Roll Quality Control
-              </h3>
-              <div className="flex items-center gap-3">
-                <div className="text-sm bg-blue-700/50 px-3 py-1 rounded-lg font-mono font-bold tracking-wider">{activeQcRoll.no_roll}</div>
-                <button 
-                  onClick={() => setActiveQcRoll(null)}
-                  className="p-1 hover:bg-blue-700 rounded-lg transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-            
-            <div className="overflow-y-auto custom-scrollbar flex-1 p-6">
-              {qcEvaluationMode === 'decision' ? (
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider mb-3 border-b border-slate-100 pb-2">Specification</h4>
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Grade</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.grade}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">GSM</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.gsm} g/m²</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Plybond</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.plybond}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Thickness</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.thickness} µm</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Bulk</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.bulk}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Roll Width</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.roll_width} mm</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Roll Diameter</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.roll_diameter} mm</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Core</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.core} inch</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Weight</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.weight} kg</span>
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-slate-500 text-sm">Cobb</span>
-                        <span className="font-bold text-slate-800">{activeQcRoll.cobb}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 flex gap-4 border-t border-slate-100 mt-2">
-                    <button
-                      onClick={() => submitQcScan([])}
-                      className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle2 size={20} />
-                      OK
-                    </button>
-                    <button
-                      onClick={() => setQcEvaluationMode('checklist')}
-                      className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
-                    >
-                      <XCircle size={20} />
-                      NOT OK
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Select issues found</h4>
-                    <button 
-                      onClick={() => setQcEvaluationMode('decision')}
-                      className="text-blue-600 hover:underline text-sm font-semibold flex items-center gap-1"
-                    >
-                      <ChevronDown className="rotate-90" size={16} />
-                      Back to Specs
-                    </button>
-                  </div>
-                  
-                  <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input 
-                      type="text"
-                      placeholder="Search issues..."
-                      value={qcIssueSearch}
-                      onChange={(e) => setQcIssueSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none bg-slate-50 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    {QC_CHECKLIST.map((category, idx) => {
-                      const filteredItems = category.items.filter(item => 
-                        item.toLowerCase().includes(qcIssueSearch.toLowerCase())
-                      )
-                      if (filteredItems.length === 0 && qcIssueSearch) return null
-                      
-                      const isExpanded = expandedQcCategories.includes(category.category) || qcIssueSearch !== ''
-                      
-                      return (
-                        <div key={idx} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                          <button 
-                            type="button"
-                            className="w-full flex items-center justify-between p-3.5 bg-slate-50 hover:bg-slate-100 text-left transition-colors"
-                            onClick={() => {
-                              if (isExpanded) {
-                                setExpandedQcCategories([])
-                              } else {
-                                setExpandedQcCategories([category.category])
-                              }
-                            }}
-                          >
-                            <span className="font-bold text-slate-800 text-sm">{category.category}</span>
-                            <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                              <ChevronDown size={16} className="text-slate-400" />
-                            </div>
-                          </button>
-                          
-                          <div 
-                            className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
-                          >
-                            <div className="overflow-hidden">
-                              <div className="p-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {filteredItems.map((item, iIdx) => (
-                                  <label key={iIdx} className="flex items-start gap-3 cursor-pointer group p-2 hover:bg-slate-50 rounded-lg transition-colors">
-                                    <input 
-                                      type="checkbox" 
-                                      className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                      checked={selectedQcIssues.includes(item)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedQcIssues([...selectedQcIssues, item])
-                                        } else {
-                                          setSelectedQcIssues(selectedQcIssues.filter(i => i !== item))
-                                        }
-                                      }}
-                                    />
-                                    <span className="text-sm text-slate-600 group-hover:text-slate-900 leading-tight">
-                                      {item}
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  
-                  <div className="pt-4 flex gap-3 border-t border-slate-100 mt-6">
-                    <button
-                      onClick={() => setActiveQcRoll(null)}
-                      className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-bold transition-colors"
-                    >
-                      Cancel Scan
-                    </button>
-                    <button
-                      onClick={() => submitQcScan(selectedQcIssues)}
-                      disabled={selectedQcIssues.length === 0}
-                      className="flex-[2] py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors"
-                    >
-                      Submit Issues & Pass Roll
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* 8. QC Roll Evaluator Full Modal */}
+      <RollInventory_QcRollEvaluatorModal
+        activeQcRoll={activeQcRoll}
+        onClose={() => setActiveQcRoll(null)}
+        qcEvaluationMode={qcEvaluationMode}
+        setQcEvaluationMode={setQcEvaluationMode}
+        qcIssueSearch={qcIssueSearch}
+        setQcIssueSearch={setQcIssueSearch}
+        expandedQcCategories={expandedQcCategories}
+        setExpandedQcCategories={setExpandedQcCategories}
+        selectedQcIssues={selectedQcIssues}
+        setSelectedQcIssues={setSelectedQcIssues}
+        onSubmitQcScan={submitQcScan}
+      />
     </div>
   )
 }

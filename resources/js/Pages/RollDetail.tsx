@@ -362,7 +362,7 @@ export default function RollDetail({
         });
     }
 
-    function handlePrintSticker() {
+    function handlePrintLabel() {
         window.print();
     }
 
@@ -632,7 +632,7 @@ export default function RollDetail({
                         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                             <h3 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
                                 <Printer size={17} className="text-blue-600" />
-                                <span>Roll Core Identification Sticker</span>
+                                <span>Roll Core Identification Label</span>
                             </h3>
                             <button
                                 onClick={() => setShowLabelModal(false)}
@@ -642,7 +642,7 @@ export default function RollDetail({
                             </button>
                         </div>
 
-                        {/* Printable Sticker Label Preview */}
+                        {/* Printable Label Preview */}
                         <div className="p-4 bg-white border-2 border-slate-800 rounded-xl space-y-3 font-sans text-slate-900 shadow-sm print:border-black">
                             <div className="flex justify-between items-center border-b-2 border-slate-800 pb-2">
                                 <div>
@@ -725,10 +725,10 @@ export default function RollDetail({
                             </button>
                             <button
                                 className="btn btn-primary text-xs px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 cursor-pointer"
-                                onClick={handlePrintSticker}
+                                onClick={handlePrintLabel}
                             >
                                 <Printer size={13} />
-                                <span>Print Sticker</span>
+                                <span>Print Label</span>
                             </button>
                         </div>
                     </div>

@@ -28,36 +28,16 @@ import {
     type SpectrumResult,
 } from '@/SPECTRUM/SpectrumService';
 
-interface DatasetStats {
-    total_samples: number;
-    corrections_count: number;
-    last_trained: string;
-    recent_entries: Array<{
-        filename: string;
-        correct_weight: string;
-        spectrum_predicted_weight: string;
-        is_corrected: string | boolean;
-    }>;
-}
+import {
+    DatasetStats,
+    TrainingResult,
+    FrameSizeMode,
+    RoiConfig,
+    strToBool,
+} from '@/Components/Training/Training_types';
+import Training_LiveCamera from '@/Components/Training/Training_LiveCamera';
+import Training_SampleHistory from '@/Components/Training/Training_SampleHistory';
 
-interface TrainingResult {
-    status: string;
-    samples_processed?: number;
-    corrections_learned?: number;
-    accuracy_gain?: string;
-    val_accuracy?: string;
-    crops_saved?: number;
-    epochs?: number;
-    model_version?: string;
-    message?: string;
-    phase?: string;
-    progress_pct?: number;
-}
-
-function strToBool(val: string | boolean): boolean {
-    if (typeof val === 'boolean') return val;
-    return String(val).toLowerCase() === 'true';
-}
 
 interface StatCardProps {
     icon: React.ReactNode;
@@ -676,246 +656,24 @@ export default function Training() {
                     </div>
                 )}
 
-                {isCameraOpen && (
-                    <div style={{
-                        background: '#0f172a',
-                        border: '2px solid #3b82f6',
-                        borderRadius: 14,
-                        padding: 20,
-                        marginBottom: 20,
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#38bdf8', fontSize: 14, fontWeight: 800 }}>
-                                <Camera size={18} /> LIVE CAMERA VIEW — PRECISION TARGETING FRAME
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Frame Size:</span>
-                                {[
-                                    { id: 'small', label: '📱 Small (50%)' },
-                                    { id: 'medium', label: '📷 Medium (65%)' },
-                                    { id: 'large', label: '🖼️ Large (80%)' },
-                                    { id: 'full', label: '🖥️ Full' },
-                                ].map(size => (
-                                    <button
-                                        key={size.id}
-                                        onClick={() => setFrameSizeMode(size.id as any)}
-                                        style={{
-                                            fontSize: 10, fontWeight: 700,
-                                            padding: '4px 8px', borderRadius: 5, cursor: 'pointer',
-                                            background: frameSizeMode === size.id ? '#2563eb' : '#1e293b',
-                                            color: frameSizeMode === size.id ? '#fff' : '#94a3b8',
-                                            border: `1px solid ${frameSizeMode === size.id ? '#3b82f6' : '#334155'}`,
-                                        }}
-                                    >
-                                        {size.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }} className="min-[900px]:grid-cols-[1fr_360px]!">
-                            <div style={{
-                                position: 'relative',
-                                background: '#000',
-                                borderRadius: 10,
-                                overflow: 'hidden',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minHeight: 320,
-                                border: '1px solid #334155',
-                            }}>
-                                <video
-                                    ref={videoRef}
-                                    playsInline
-                                    muted
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                />
-
-                                {(() => {
-                                    const roi = getRoiConfig();
-                                    return (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: `${roi.y * 100}%`,
-                                            left: `${roi.x * 100}%`,
-                                            width: `${roi.width * 100}%`,
-                                            height: `${roi.height * 100}%`,
-                                            border: '2px solid #22c55e',
-                                            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.55)',
-                                            borderRadius: 8,
-                                            pointerEvents: 'none',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            padding: 6,
-                                            boxSizing: 'border-box',
-                                            transition: 'all 0.3s ease',
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <div style={{ width: 14, height: 14, borderTop: '3px solid #4ade80', borderLeft: '3px solid #4ade80' }} />
-                                                <div style={{ width: 14, height: 14, borderTop: '3px solid #4ade80', borderRight: '3px solid #4ade80' }} />
-                                            </div>
-
-                                            <div style={{ textAlign: 'center' }}>
-                                                <span style={{
-                                                    fontSize: 10, fontWeight: 800,
-                                                    background: 'rgba(22, 163, 74, 0.9)', color: '#fff',
-                                                    padding: '3px 8px', borderRadius: 4,
-                                                    letterSpacing: '0.04em',
-                                                }}>
-                                                    🎯 Position Scale LED Here
-                                                </span>
-                                            </div>
-
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <div style={{ width: 14, height: 14, borderBottom: '3px solid #4ade80', borderLeft: '3px solid #4ade80' }} />
-                                                <div style={{ width: 14, height: 14, borderBottom: '3px solid #4ade80', borderRight: '3px solid #4ade80' }} />
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-
-                                <div style={{
-                                    position: 'absolute', bottom: 12, left: 12, right: 12,
-                                    display: 'flex', justifyContent: 'center', gap: 10,
-                                }}>
-                                    <button
-                                        onClick={handleCaptureAndDetect}
-                                        disabled={isCapturing || isDetecting}
-                                        style={{
-                                            display: 'inline-flex', alignItems: 'center', gap: 8,
-                                            padding: '10px 22px', fontSize: 13, fontWeight: 800,
-                                            background: '#22c55e', color: '#fff',
-                                            border: 'none', borderRadius: 8,
-                                            cursor: isCapturing || isDetecting ? 'wait' : 'pointer',
-                                            boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
-                                        }}
-                                    >
-                                        {isCapturing || isDetecting ? (
-                                            <>
-                                                <RotateCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                                                Processing Photo...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Camera size={16} /> 📸 Capture LED Photo
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div style={{
-                                background: '#1e293b',
-                                borderRadius: 10,
-                                border: '1px solid #334155',
-                                padding: 14,
-                                display: 'flex',
-                                flexDirection: 'column',
-                            }}>
-                                <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <Sparkles size={14} style={{ color: '#38bdf8' }} /> Photo Reading Result
-                                </h4>
-
-                                {capturedFrame ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                            <div>
-                                                <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 4, fontWeight: 600 }}>Original Cropped Photo</div>
-                                                <img src={capturedFrame} alt="Cropped Frame" style={{ width: '100%', height: 100, objectFit: 'contain', background: '#000', borderRadius: 6, border: '1px solid #475569' }} />
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: 10, color: '#38bdf8', marginBottom: 4, fontWeight: 600 }}>Precision Detection</div>
-                                                {spectrumData?.spectrum_processed_image ? (
-                                                    <img src={spectrumData.spectrum_processed_image} alt="Mask Processed" style={{ width: '100%', height: 100, objectFit: 'contain', background: '#000', borderRadius: 6, border: '1px solid #0284c7' }} />
-                                                ) : (
-                                                    <div style={{ width: '100%', height: 100, background: '#090d16', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 10 }}>
-                                                        {isDetecting ? 'Processing...' : 'LED Mark'}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ background: '#0f172a', borderRadius: 8, padding: 12, border: '1px solid #334155' }}>
-                                            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Reading Result Number:</div>
-                                            {isCorrecting ? (
-                                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                                    <input
-                                                        type="number"
-                                                        value={confirmedWeightInput}
-                                                        onChange={(e) => setConfirmedWeightInput(e.target.value)}
-                                                        placeholder="Type weight number..."
-                                                        autoFocus
-                                                        style={{
-                                                            width: '100%',
-                                                            background: '#1e293b',
-                                                            border: '1px solid #3b82f6',
-                                                            color: '#fff',
-                                                            padding: '6px 10px',
-                                                            borderRadius: 6,
-                                                            fontSize: 16,
-                                                            fontWeight: 800,
-                                                        }}
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                                                    <div style={{ fontSize: 24, fontWeight: 900, color: confirmedWeightInput !== '0' ? '#4ade80' : '#f59e0b' }}>
-                                                        {confirmedWeightInput || '0'} <span style={{ fontSize: 14, fontWeight: 600 }}>kg</span>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => setIsCorrecting(true)}
-                                                        style={{ fontSize: 11, color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-                                                    >
-                                                        ✏️ Edit Number
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <button
-                                            onClick={handleSaveCapturedToDataset}
-                                            disabled={isSaving}
-                                            style={{
-                                                marginTop: 'auto',
-                                                width: '100%',
-                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                                padding: '10px 14px',
-                                                fontSize: 12, fontWeight: 800,
-                                                background: isSaving ? '#64748b' : '#16a34a',
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: 8,
-                                                cursor: isSaving ? 'wait' : 'pointer',
-                                                boxShadow: '0 4px 12px rgba(22,163,74,0.3)',
-                                            }}
-                                        >
-                                            {isSaving ? (
-                                                <>
-                                                    <RotateCw size={15} style={{ animation: 'spin 1s linear infinite' }} />
-                                                    Saving Sample Photo...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Check size={16} />
-                                                    💾 Save Sample & Update System
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#64748b', padding: '30px 10px', textAlign: 'center', border: '2px dashed #334155', borderRadius: 8 }}>
-                                        <Camera size={32} style={{ color: '#475569', marginBottom: 8 }} />
-                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>No photo captured yet</div>
-                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Position phone screen / scale within the green frame, then click "📸 Capture LED Photo".</div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <Training_LiveCamera
+                    isCameraOpen={isCameraOpen}
+                    videoRef={videoRef}
+                    frameSizeMode={frameSizeMode}
+                    setFrameSizeMode={setFrameSizeMode}
+                    getRoiConfig={getRoiConfig}
+                    handleCaptureAndDetect={handleCaptureAndDetect}
+                    isCapturing={isCapturing}
+                    isDetecting={isDetecting}
+                    capturedFrame={capturedFrame}
+                    spectrumData={spectrumData}
+                    confirmedWeightInput={confirmedWeightInput}
+                    setConfirmedWeightInput={setConfirmedWeightInput}
+                    isCorrecting={isCorrecting}
+                    setIsCorrecting={setIsCorrecting}
+                    handleSaveCapturedToDataset={handleSaveCapturedToDataset}
+                    isSaving={isSaving}
+                />
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }} className="min-[900px]:grid-cols-[320px_1fr]!">
 
@@ -1030,118 +788,12 @@ export default function Training() {
                         </div>
                     </div>
 
-                    <div style={{
-                        background: '#fff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: 10,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                    }}>
-                        <div style={{
-                            padding: '14px 18px',
-                            borderBottom: '1px solid #f1f5f9',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
-                        }}>
-                            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Layers size={14} style={{ color: '#2563eb' }} />
-                                Scale Photo Sample History
-                                {stats?.total_samples != null && (
-                                    <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: '#dbeafe', color: '#1e40af', padding: '2px 7px', borderRadius: 10 }}>
-                                        {stats.total_samples} samples
-                                    </span>
-                                )}
-                            </h3>
-                            <button
-                                onClick={fetchStats}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#475569', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '5px 10px', borderRadius: 6, cursor: 'pointer' }}
-                            >
-                                <RotateCw size={11} style={{ animation: isLoadingStats ? 'spin 1s linear infinite' : 'none' }} />
-                                Refresh
-                            </button>
-                        </div>
-
-                        <div style={{ overflowX: 'auto', flex: 1 }}>
-                            {isLoadingStats ? (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0', color: '#94a3b8', gap: 8 }}>
-                                    <RotateCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                                    <span style={{ fontSize: 13 }}>Loading sample data…</span>
-                                </div>
-                            ) : stats?.recent_entries && stats.recent_entries.length > 0 ? (
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                                    <thead>
-                                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                                Photo
-                                            </th>
-                                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                File Name
-                                            </th>
-                                            <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                                Operator Confirmation
-                                            </th>
-                                            <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                                                System Detection Result
-                                            </th>
-                                            <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: '#475569', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                Status
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {stats.recent_entries.map((row, idx) => {
-                                            const isCorr = strToBool(row.is_corrected);
-                                            const imgSrc = `/storage/dataset/images/${row.filename}`;
-                                            return (
-                                                <tr key={idx} className="entry-row" style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                    <td style={{ padding: '8px 14px' }}>
-                                                        <img
-                                                            src={imgSrc}
-                                                            alt={row.filename}
-                                                            className="preview-thumb"
-                                                            onClick={() => setSelectedImage(imgSrc)}
-                                                            onError={(e) => {
-                                                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="35" viewBox="0 0 50 35"><rect width="50" height="35" fill="%23f1f5f9"/><text x="25" y="20" font-size="9" text-anchor="middle" fill="%2394a3b8">No Image</text></svg>';
-                                                            }}
-                                                            style={{ width: 50, height: 35, objectFit: 'cover', borderRadius: 4, border: '1px solid #cbd5e1', background: '#f1f5f9' }}
-                                                        />
-                                                    </td>
-                                                    <td style={{ padding: '8px 14px', fontFamily: 'monospace', fontSize: 11, color: '#334155' }}>
-                                                        {row.filename}
-                                                    </td>
-                                                    <td style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 800, color: '#16a34a', fontSize: 13 }}>
-                                                        {row.correct_weight} <span style={{ fontSize: 10, fontWeight: 500, color: '#64748b' }}>kg</span>
-                                                    </td>
-                                                    <td style={{ padding: '8px 14px', textAlign: 'center', fontFamily: 'monospace', fontSize: 12, color: '#64748b' }}>
-                                                        {row.spectrum_predicted_weight || '—'} kg
-                                                    </td>
-                                                    <td style={{ padding: '8px 14px', textAlign: 'center' }}>
-                                                        {isCorr ? (
-                                                            <span style={{ fontSize: 10, fontWeight: 700, background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: 99 }}>
-                                                                Corrected
-                                                            </span>
-                                                        ) : (
-                                                            <span style={{ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#166534', padding: '3px 8px', borderRadius: 99 }}>
-                                                                Matched
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '50px 20px', textAlign: 'center' }}>
-                                    <Database size={36} style={{ color: '#cbd5e1', marginBottom: 10 }} />
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>No sample photos saved yet</div>
-                                    <div style={{ fontSize: 12, color: '#94a3b8', maxWidth: 360 }}>
-                                        Take scale photos via the live camera frame above or upload photo files to start collecting samples.
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <Training_SampleHistory
+                        stats={stats}
+                        isLoadingStats={isLoadingStats}
+                        fetchStats={fetchStats}
+                        setSelectedImage={setSelectedImage}
+                    />
                 </div>
 
                 {selectedImage && (
