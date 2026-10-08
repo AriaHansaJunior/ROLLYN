@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { usePage, router, Link } from "@inertiajs/react";
 import {
     Disc,
