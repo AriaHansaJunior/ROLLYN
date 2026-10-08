@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts'
 import { usePage, router } from '@inertiajs/react'
-import { Search, Filter, Package, Download, Eye, X, Calendar } from 'lucide-react'
+import { Search, Filter, Package, Download, Eye, X, Calendar, Activity } from 'lucide-react'
 import { SystemUI } from '@/Utils/SystemUI'
 import axios from 'axios'
 import { useEffect } from 'react'
@@ -48,6 +48,7 @@ export default function Reports() {
   const [logType, setLogType] = useState('jumbo')
   const [logs, setLogs] = useState<any[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [logSearch, setLogSearch] = useState('')
 
   useEffect(() => {
     setLoadingLogs(true)
@@ -108,8 +109,21 @@ export default function Reports() {
     SystemUI.toast({ message: `Exported ${dataToExport.length} outgoing roll records to CSV.`, type: 'success' })
   }
 
+  const filteredLogs = logs.filter((log: any) => {
+    if (!logSearch) return true
+    const q = logSearch.toLowerCase()
+    return (
+      (log.number || '').toLowerCase().includes(q) ||
+      (log.grade || '').toLowerCase().includes(q) ||
+      (log.customer || '').toLowerCase().includes(q) ||
+      (log.status || '').toLowerCase().includes(q) ||
+      (log.jop || '').toLowerCase().includes(q)
+    )
+  })
+
   function exportLogsExcel() {
-    if (logs.length === 0) {
+    const dataToExport = filteredLogs.length > 0 ? filteredLogs : logs
+    if (dataToExport.length === 0) {
       SystemUI.toast({ message: 'No logs to export.', type: 'warning' })
       return
     }
@@ -118,7 +132,7 @@ export default function Reports() {
     const rows = [
       'sep=,',
       headers.join(','),
-      ...logs.map((log: any) => {
+      ...dataToExport.map((log: any) => {
         const spec = `${log.grade || '-'} / ${log.gsm || '-'} gsm`
         let jopCust = '-'
         if (logType === 'jop' && log.customer) jopCust = log.customer
@@ -149,7 +163,7 @@ export default function Reports() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
 
-    SystemUI.toast({ message: `Exported ${logs.length} ${logType} logs to Excel.`, type: 'success' })
+    SystemUI.toast({ message: `Exported ${dataToExport.length} ${logType} logs to Excel.`, type: 'success' })
   }
 
   const totalPages = Math.ceil(filteredShipments.length / perPage)
@@ -158,86 +172,170 @@ export default function Reports() {
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
       <div>
-        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Reports & Analytics - UPDATED</h2>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Reports & Analytics</h2>
         <p className="text-xs text-slate-500 mt-0.5">Historical operational summary, OCR performance, and warehouse utilization</p>
       </div>
 
-      {/* Process Activity Logs Section - MOVED TO TOP SO YOU CAN SEE IT IMMEDIATELY */}
-      <div className="space-y-3 mt-6 mb-8 border-2 border-indigo-200 bg-indigo-50/20 p-4 rounded-xl">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700">
-              <Eye size={16} />
+      {/* Process Activity Logs Section */}
+      <div className="card p-4 sm:p-5 border border-slate-200/90 shadow-2xs rounded-xl bg-white space-y-3.5 mt-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shadow-2xs shrink-0">
+              <Activity size={18} />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900">Process Activity Logs</h3>
-              <p className="text-[11px] text-slate-500">Track Jumbo, JOP, and Reproduction status over time</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900">Process Activity Logs</h3>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                  {filteredLogs.length} Records
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">Track Jumbo Roll, JOP Production, and Reproduction disposition history</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
+            {/* Search within logs */}
+            <div className="relative w-full sm:w-48">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search logs..."
+                value={logSearch}
+                onChange={(e) => setLogSearch(e.target.value)}
+                className="form-input text-xs w-full !pl-8 py-1.5 bg-slate-50 hover:bg-white focus:bg-white border-slate-200 rounded-lg"
+                style={{ paddingLeft: '2rem' }}
+              />
+            </div>
+
+            {/* Type selector */}
             <select
               value={logType}
-              onChange={(e) => setLogType(e.target.value)}
-              className="form-select text-xs min-w-[150px] font-medium border-indigo-200 bg-white"
+              onChange={(e) => {
+                setLogType(e.target.value);
+                setLogSearch('');
+              }}
+              className="form-input text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-white border-slate-200 rounded-lg py-1.5 px-3 cursor-pointer transition-colors shadow-2xs w-full sm:w-auto"
             >
               <option value="jumbo">Jumbo Roll Status</option>
               <option value="jop">JOP Production Status</option>
               <option value="reproduction">Re-production Disposition</option>
             </select>
+
+            {/* Export button */}
             <button
               onClick={exportLogsExcel}
-              className="btn btn-secondary text-xs min-w-0 bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex items-center justify-center gap-1"
+              className="btn btn-secondary text-xs flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold shadow-2xs transition-colors whitespace-nowrap w-full sm:w-auto"
+              title="Export Activity Logs as CSV / Excel"
             >
-              <Download size={13} />
+              <Download size={13} className="text-slate-500" />
               <span>Export</span>
             </button>
           </div>
         </div>
 
-        <div className="card p-0 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto max-h-[400px]">
-            <table className="data-table w-full text-xs">
-              <thead className="sticky top-0 bg-slate-50 z-10 shadow-sm">
+        {/* Table container */}
+        <div className="border border-slate-200/90 rounded-lg overflow-hidden bg-white shadow-2xs">
+          <div className="overflow-x-auto max-h-[380px]">
+            <table className="data-table w-full min-w-[720px] text-xs border-collapse">
+              <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 border-b border-slate-200 shadow-2xs">
                 <tr>
-                  <th style={{ textAlign: 'left' }}>Date</th>
-                  <th style={{ textAlign: 'left' }}>Reference</th>
-                  <th style={{ textAlign: 'left' }}>Specification</th>
-                  <th style={{ textAlign: 'right' }}>Target</th>
-                  <th style={{ textAlign: 'right' }}>Actual</th>
-                  <th style={{ textAlign: 'center' }}>Status</th>
+                  <th style={{ textAlign: 'left', width: '130px' }}>Date</th>
+                  <th style={{ textAlign: 'left', width: '120px' }}>Reference</th>
+                  <th style={{ textAlign: 'left' }}>Specification & Order</th>
+                  <th style={{ textAlign: 'right', width: '120px' }}>Target</th>
+                  <th style={{ textAlign: 'right', width: '120px' }}>Actual</th>
+                  <th style={{ textAlign: 'center', width: '160px' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingLogs ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-slate-500">Loading logs...</td></tr>
-                ) : logs.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-slate-500">No activity logs found.</td></tr>
+                  <tr>
+                    <td colSpan={6} className="text-center py-10 text-slate-500">
+                      <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500">
+                        <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        Loading activity logs...
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-10 text-slate-500">
+                      <div className="text-xs text-slate-400">No activity logs found.</div>
+                    </td>
+                  </tr>
                 ) : (
-                  logs.map((log, i) => (
-                    <tr key={i} className="hover:bg-slate-50/50">
-                      <td className="whitespace-nowrap font-medium text-slate-700">{log.date}</td>
-                      <td className="font-bold text-slate-900">{log.number}</td>
+                  filteredLogs.map((log, i) => (
+                    <tr key={i} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="whitespace-nowrap font-medium text-slate-600 font-mono text-[11.5px]">
+                        {log.date}
+                      </td>
                       <td>
-                        {logType === 'jop' && <div className="text-[10px] text-slate-500 mb-0.5">{log.customer}</div>}
-                        <span className="font-medium">{log.grade} / {log.gsm} gsm</span>
-                        {logType === 'reproduction' && log.jop && log.jop !== '-' && <div className="text-[10px] text-slate-500 mt-0.5">JOP: {log.jop}</div>}
+                        <span className="font-mono font-bold text-blue-700 bg-blue-50/80 border border-blue-200/70 px-2 py-0.5 rounded text-xs inline-block">
+                          {log.number}
+                        </span>
                       </td>
-                      <td className="text-right">
-                        {logType === 'reproduction' ? '—' : `${log.target_weight} ${logType === 'jop' ? 'Ton' : 'kg'}`}
+                      <td>
+                        <div className="font-semibold text-slate-800">{log.grade || '—'}</div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                          <span className="font-medium text-slate-600">{log.gsm} gsm</span>
+                          {logType === 'jop' && log.customer && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-slate-600 font-medium truncate max-w-[200px]" title={log.customer}>
+                                {log.customer}
+                              </span>
+                            </>
+                          )}
+                          {logType === 'reproduction' && log.jop && log.jop !== '-' && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-blue-600 font-mono">JOP: {log.jop}</span>
+                            </>
+                          )}
+                        </div>
                       </td>
-                      <td className="text-right font-medium text-slate-900">
-                        {logType === 'reproduction' ? `${log.weight} kg` : `${log.actual_weight} ${logType === 'jop' ? 'Ton' : 'kg'}`}
+                      <td className="text-right font-mono text-slate-600">
+                        {logType === 'reproduction' ? '—' : `${Number(log.target_weight || 0).toLocaleString()} ${logType === 'jop' ? 'Ton' : 'kg'}`}
+                      </td>
+                      <td className="text-right font-mono font-bold text-slate-900">
+                        {logType === 'reproduction' ? `${Number(log.weight || 0).toLocaleString()} kg` : `${Number(log.actual_weight || 0).toLocaleString()} ${logType === 'jop' ? 'Ton' : 'kg'}`}
                       </td>
                       <td className="text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          log.status === 'Completed' || log.status === 'OK (Released / Passed)' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
-                          log.status === 'In Progress' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
-                          log.status === 'Shipped (Approved for delivery)' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                          log.status === 'Reject (Roll scrapped / rejected)' || log.status === 'Reweigh (Roll sent for re-weighing)' ? 'bg-red-100 text-red-700 border border-red-200' :
-                          'bg-slate-100 text-slate-700 border border-slate-200'
-                        }`}>
-                          {log.status}
-                        </span>
+                        {(() => {
+                          const st = (log.status || '').toLowerCase();
+                          const isDone = st === 'completed' || st.includes('ok') || st.includes('released') || st.includes('passed');
+                          const isProgress = st.includes('in progress') || st.includes('in_progress');
+                          const isShipped = st.includes('shipped') || st.includes('approved');
+                          const isDanger = st.includes('reject') || st.includes('reweigh') || st.includes('hold');
+
+                          const badgeClass = isDone
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : isProgress
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : isShipped
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : isDanger
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : 'bg-slate-50 text-slate-700 border-slate-200';
+
+                          const dotColor = isDone
+                            ? 'bg-emerald-500'
+                            : isProgress
+                            ? 'bg-amber-500'
+                            : isShipped
+                            ? 'bg-blue-500'
+                            : isDanger
+                            ? 'bg-red-500'
+                            : 'bg-slate-400';
+
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badgeClass} whitespace-nowrap`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                              {log.status}
+                            </span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))
@@ -245,6 +343,9 @@ export default function Reports() {
               </tbody>
             </table>
           </div>
+        </div>
+        <div className="sm:hidden text-[10.5px] text-slate-400 text-center">
+          ← Swipe horizontally to see all columns →
         </div>
       </div>
 

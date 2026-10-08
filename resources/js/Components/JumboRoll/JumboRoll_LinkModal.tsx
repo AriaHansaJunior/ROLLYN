@@ -68,7 +68,8 @@ export default function JumboRoll_LinkModal({
               placeholder="Search by Roll Number, Form, or Grade..."
               value={linkRollSearch}
               onChange={(e) => setLinkRollSearch(e.target.value)}
-              className="form-input text-xs pl-8 w-full"
+              className="form-input text-xs w-full !pl-9"
+              style={{ paddingLeft: '2.35rem' }}
             />
           </div>
           <div className="text-xs text-slate-600 font-semibold shrink-0">

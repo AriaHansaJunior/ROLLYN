@@ -10,6 +10,9 @@
   outline: none;
   transition: border-color 0.15s;
 }
+.form-input.pl-8, .form-input.\!pl-8 { padding-left: 2rem !important; }
+.form-input.pl-9, .form-input.\!pl-9 { padding-left: 2.25rem !important; }
+.form-input.pl-10, .form-input.\!pl-10 { padding-left: 2.5rem !important; }
 .form-input:focus {
   border-color: #337AB7;
   box-shadow: 0 0 0 2px rgba(51,122,183,0.15);

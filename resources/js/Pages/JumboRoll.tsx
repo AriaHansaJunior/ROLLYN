@@ -514,10 +514,10 @@ export default function JumboRoll() {
             </div>
 
             {/* Filter and Search Bar */}
-            <div className="card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+            <div className="card p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 flex-1 w-full">
                     {/* Search Input */}
-                    <div className="relative flex-1 min-w-[200px] max-w-sm">
+                    <div className="relative w-full sm:max-w-xs md:max-w-sm">
                         <Search
                             size={14}
                             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
@@ -530,57 +530,59 @@ export default function JumboRoll() {
                                 setSearchTerm(e.target.value);
                                 setCurrentPage(1);
                             }}
-                            className="form-input text-xs pl-8 w-full"
+                            className="form-input text-xs w-full !pl-9"
+                            style={{ paddingLeft: '2.35rem' }}
                         />
                     </div>
 
-                    {/* Status Filter */}
-                    <div className="w-36">
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => {
-                                setStatusFilter(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="form-input text-xs w-full py-1.5"
-                        >
-                            <option value="ALL">All Statuses</option>
-                            <option value="IN_PROGRESS">In Progress</option>
-                            <option value="COMPLETED">Completed</option>
-                            <option value="HOLD">On Hold</option>
-                        </select>
-                    </div>
+                    {/* Status & Date Filters */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="flex-1 sm:w-36">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => {
+                                    setStatusFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="form-input text-xs w-full py-1.5"
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="COMPLETED">Completed</option>
+                                <option value="HOLD">On Hold</option>
+                            </select>
+                        </div>
 
-                    {/* Date Filter */}
-                    <div className="w-40">
-                        <input
-                            type="date"
-                            value={dateFilter}
-                            onChange={(e) => {
-                                setDateFilter(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="form-input text-xs w-full py-1.5"
-                            title="Filter by Production Date"
-                        />
-                    </div>
+                        <div className="flex-1 sm:w-40">
+                            <input
+                                type="date"
+                                value={dateFilter}
+                                onChange={(e) => {
+                                    setDateFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="form-input text-xs w-full py-1.5"
+                                title="Filter by Production Date"
+                            />
+                        </div>
 
-                    {(searchTerm || statusFilter !== "ALL" || dateFilter) && (
-                        <button
-                            onClick={() => {
-                                setSearchTerm("");
-                                setStatusFilter("ALL");
-                                setDateFilter("");
-                                setCurrentPage(1);
-                            }}
-                            className="btn btn-secondary btn-sm py-1.5 px-2 text-[11px] text-slate-600 hover:text-slate-900"
-                        >
-                            Clear
-                        </button>
-                    )}
+                        {(searchTerm || statusFilter !== "ALL" || dateFilter) && (
+                            <button
+                                onClick={() => {
+                                    setSearchTerm("");
+                                    setStatusFilter("ALL");
+                                    setDateFilter("");
+                                    setCurrentPage(1);
+                                }}
+                                className="btn btn-secondary btn-sm py-1.5 px-2.5 text-[11px] text-slate-600 hover:text-slate-900 whitespace-nowrap"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                <div className="text-xs text-slate-500 font-medium">
+                <div className="text-xs text-slate-500 font-medium self-end sm:self-auto">
                     Showing <strong>{filteredJumboRolls.length}</strong> Jumbo Rolls
                 </div>
             </div>
