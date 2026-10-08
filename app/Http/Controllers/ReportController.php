@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\Jop;
 use App\Models\Shift;
 use App\Models\Shipment;
+use App\Models\JumboRoll;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -97,7 +98,7 @@ class ReportController extends Controller
 
         // Shipments for outgoing shipments section
         $shipments = Shipment::with([
-            'customer', 
+            'customers',
             'admin', 
             'qc', 
             'shipmentRolls.roll.grade',
@@ -111,7 +112,7 @@ class ReportController extends Controller
             return [
                 'id' => $shipment->id,
                 'shipment_number' => $shipment->shipment_number,
-                'customer' => $shipment->customer->customer ?? '—',
+                'customer' => $shipment->customers->pluck('customer')->join(', ') ?: '—',
                 'admin' => $shipment->admin->username ?? '—',
                 'qc' => $shipment->qc->username ?? '—',
                 'date' => $shipment->shipment_date,
@@ -151,5 +152,81 @@ class ReportController extends Controller
     public function export()
     {
         return response()->json(['message' => 'Export feature coming soon']);
+    }
+
+    public function logs(Request $request)
+    {
+        $type = $request->query('type', 'jumbo');
+
+        if ($type === 'jumbo') {
+            $data = JumboRoll::with(['jop.grade', 'jop.gsm', 'rolls'])
+                        ->orderBy('created_at', 'desc')
+                        ->limit(200)
+                        ->get()
+                        ->map(function($j) {
+                            return [
+                                'id' => $j->id,
+                                'number' => $j->jumbo_roll_number,
+                                'grade' => $j->jop->grade->grade ?? '-',
+                                'gsm' => $j->jop->gsm->gsm ?? '-',
+                                'target_weight' => $j->weight,
+                                'actual_weight' => $j->total_cut_weight,
+                                'status' => $j->status,
+                                'date' => $j->created_at->format('Y-m-d H:i')
+                            ];
+                        });
+            return response()->json($data);
+        }
+
+        if ($type === 'jop') {
+            $data = Jop::with(['customer', 'grade', 'gsm', 'rolls'])
+                        ->orderBy('created_at', 'desc')
+                        ->limit(200)
+                        ->get()
+                        ->map(function($j) {
+                            $actual = $j->rolls->sum('weight') / 1000; // ton
+                            $target = $j->weight ?? 0;
+                            $status = ($actual >= $target && $target > 0) ? 'Completed' : 'In Progress';
+                            if ($j->production_estimation && isset($j->production_estimation['is_completed']) && $j->production_estimation['is_completed']) {
+                                $status = 'Completed';
+                            }
+                            return [
+                                'id' => $j->id,
+                                'number' => $j->jop,
+                                'customer' => $j->customer->customer ?? '-',
+                                'grade' => $j->grade->grade ?? '-',
+                                'gsm' => $j->gsm->gsm ?? '-',
+                                'target_weight' => $target,
+                                'actual_weight' => $actual,
+                                'status' => $status,
+                                'date' => $j->created_at->format('Y-m-d H:i')
+                            ];
+                        });
+            return response()->json($data);
+        }
+
+        if ($type === 'reproduction') {
+            $data = Roll::with(['grade', 'gsm', 'jop'])
+                        ->whereNotNull('reproduction_status')
+                        ->where('reproduction_status', '!=', 'None (Standard Production)')
+                        ->orderBy('updated_at', 'desc')
+                        ->limit(200)
+                        ->get()
+                        ->map(function($r) {
+                            return [
+                                'id' => $r->no,
+                                'number' => $r->no_roll ?? ('R-'.$r->no),
+                                'jop' => $r->jop->jop ?? '-',
+                                'grade' => $r->grade->grade ?? '-',
+                                'gsm' => $r->gsm->gsm ?? '-',
+                                'weight' => $r->weight,
+                                'status' => $r->reproduction_status,
+                                'date' => $r->updated_at->format('Y-m-d H:i')
+                            ];
+                        });
+            return response()->json($data);
+        }
+
+        return response()->json([]);
     }
 }

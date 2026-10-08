@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/jop', [JopController::class, 'store']);
         Route::redirect('/spk-po', '/jop');
         Route::get('/reports', [ReportController::class, 'index']);
+        Route::get('/api/reports/logs', [ReportController::class, 'logs']);
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
 
@@ -92,6 +93,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/production-schedule/{id}', [ProductionScheduleController::class, 'update']);
 
         // Jumbo Roll Management
+        Route::get('/jumbo-roll/export-excel', [JumboRollController::class, 'exportExcel']);
         Route::get('/jumbo-roll', [JumboRollController::class, 'index']);
         Route::get('/jumbo-roll/{id}', [JumboRollController::class, 'show']);
         Route::post('/jumbo-roll', [JumboRollController::class, 'store']);

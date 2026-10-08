@@ -19,7 +19,7 @@ class ProductionScheduleController extends Controller
             'jop.plybond',
             'jop.thickness',
             'jop.core',
-        ])->latest()->get()->map(function ($s) {
+        ])->orderBy('start_time', 'asc')->get()->map(function ($s) {
             $j = $s->jop;
             return [
                 'id'               => $s->id,
@@ -97,6 +97,8 @@ class ProductionScheduleController extends Controller
             'status'           => 'OPEN',
         ]);
 
+        $this->cascadeSchedules();
+
         return response()->json([
             'message' => 'Production schedule created successfully.',
             'data'    => $schedule,
@@ -133,6 +135,8 @@ class ProductionScheduleController extends Controller
             'stop_time'        => $stopTime,
         ]));
 
+        $this->cascadeSchedules();
+
         return response()->json([
             'message' => 'Production schedule updated successfully.',
             'data'    => $schedule,
@@ -143,6 +147,41 @@ class ProductionScheduleController extends Controller
     {
         $schedule = ProductionSchedule::findOrFail($id);
         $schedule->delete();
+
+        $this->cascadeSchedules();
+
         return response()->json(['message' => 'Production schedule deleted.']);
+    }
+
+    private function cascadeSchedules()
+    {
+        $schedules = ProductionSchedule::where('status', 'OPEN')
+            ->orderBy('start_time', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $previousStopTime = null;
+
+        foreach ($schedules as $schedule) {
+            if ($previousStopTime === null) {
+                // The first schedule dictates the starting point for the rest
+                $startTime = Carbon::parse($schedule->start_time);
+            } else {
+                $startTime = Carbon::parse($previousStopTime);
+            }
+
+            $productionHours = (int) ceil($schedule->tonnage / $schedule->tph);
+            $stopTime = $startTime->copy()->addHours($productionHours);
+
+            if ($schedule->start_time->ne($startTime) || $schedule->stop_time->ne($stopTime)) {
+                $schedule->update([
+                    'start_time' => $startTime,
+                    'stop_time' => $stopTime,
+                    'production_hours' => $productionHours,
+                ]);
+            }
+
+            $previousStopTime = $stopTime;
+        }
     }
 }

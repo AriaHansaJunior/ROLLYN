@@ -90,35 +90,45 @@ export default function SpectrumWeightDetectionEngine({
 
     const startCamera = useCallback(async () => {
         setEngineState("requesting");
+        let stream;
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
+            stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: "environment",
+                    facingMode: { ideal: "environment" },
                     width: { ideal: 1920 },
                     height: { ideal: 1080 },
                 },
             });
-            streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
+        } catch (err: any) {
+            console.warn("[OCR] Initial camera request failed, trying fallback:", err);
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true
+                });
+            } catch (fallbackErr: any) {
+                console.error("[OCR] Camera access denied (fallback failed):", fallbackErr);
+                setEngineState("camera_denied");
+                try {
+                    localStorage.setItem("rollyn_camera_error", fallbackErr?.name || fallbackErr?.message || String(fallbackErr));
+                } catch (e) { }
+                return;
             }
-            setEngineState("camera_active");
-            try {
-                localStorage.setItem("rollyn_camera_permission", "granted");
-            } catch (e) { }
-            SystemUI.toast({
-                message: "Camera active. Point at display to capture weight.",
-                type: "info",
-                duration: 4000,
-            });
-        } catch (err) {
-            console.error("[OCR] Camera access denied:", err);
-            setEngineState("camera_denied");
-            try {
-                localStorage.removeItem("rollyn_camera_permission");
-            } catch (e) { }
         }
+        
+        streamRef.current = stream;
+        if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+        }
+        setEngineState("camera_active");
+        try {
+            localStorage.setItem("rollyn_camera_permission", "granted");
+        } catch (e) { }
+        SystemUI.toast({
+            message: "Camera active. Point at display to capture weight.",
+            type: "info",
+            duration: 4000,
+        });
     }, []);
 
     useEffect(() => {
@@ -469,6 +479,9 @@ export default function SpectrumWeightDetectionEngine({
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 20, textAlign: "center" }}>
                             <AlertCircle size={36} style={{ color: "#e74c3c" }} />
                             <span style={{ color: "#e74c3c", fontSize: 13, fontWeight: 600 }}>Camera access denied</span>
+                            <span style={{ color: "#e74c3c", fontSize: 11, opacity: 0.8 }}>
+                                {localStorage.getItem("rollyn_camera_error") || "Permission rejected by browser or hardware unavailable"}
+                            </span>
                         </div>
                     )}
                 </div>

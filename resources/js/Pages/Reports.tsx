@@ -3,6 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { usePage, router } from '@inertiajs/react'
 import { Search, Filter, Package, Download, Eye, X, Calendar } from 'lucide-react'
 import { SystemUI } from '@/Utils/SystemUI'
+import axios from 'axios'
+import { useEffect } from 'react'
 
 interface OutgoingRoll {
   id: number
@@ -42,6 +44,21 @@ export default function Reports() {
     if (newShift && newShift !== 'all' && newShift !== '') params.history_shift = newShift;
     router.get('/reports', params, { preserveState: true, preserveScroll: true, replace: true });
   }
+
+  const [logType, setLogType] = useState('jumbo')
+  const [logs, setLogs] = useState<any[]>([])
+  const [loadingLogs, setLoadingLogs] = useState(false)
+
+  useEffect(() => {
+    setLoadingLogs(true)
+    axios.get(`/api/reports/logs?type=${logType}`)
+      .then(res => setLogs(res.data))
+      .catch(err => {
+        console.error(err)
+        SystemUI.toast({ message: 'Failed to fetch process logs', type: 'error' })
+      })
+      .finally(() => setLoadingLogs(false))
+  }, [logType])
 
   const [outgoingSearch, setOutgoingSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -91,14 +108,144 @@ export default function Reports() {
     SystemUI.toast({ message: `Exported ${dataToExport.length} outgoing roll records to CSV.`, type: 'success' })
   }
 
+  function exportLogsExcel() {
+    if (logs.length === 0) {
+      SystemUI.toast({ message: 'No logs to export.', type: 'warning' })
+      return
+    }
+
+    const headers = ['Date', 'Reference Number', 'Specification (Grade / GSM)', 'JOP/Customer', 'Target', 'Actual', 'Status']
+    const rows = [
+      'sep=,',
+      headers.join(','),
+      ...logs.map((log: any) => {
+        const spec = `${log.grade || '-'} / ${log.gsm || '-'} gsm`
+        let jopCust = '-'
+        if (logType === 'jop' && log.customer) jopCust = log.customer
+        if (logType === 'reproduction' && log.jop) jopCust = log.jop
+
+        const target = logType === 'reproduction' ? '-' : `${log.target_weight || 0} ${logType === 'jop' ? 'Ton' : 'kg'}`
+        const actual = logType === 'reproduction' ? `${log.weight || 0} kg` : `${log.actual_weight || 0} ${logType === 'jop' ? 'Ton' : 'kg'}`
+
+        return [
+          `"${(log.date || '').replace(/"/g, '""')}"`,
+          `"${(log.number || '').replace(/"/g, '""')}"`,
+          `"${spec.replace(/"/g, '""')}"`,
+          `"${jopCust.replace(/"/g, '""')}"`,
+          `"${target.replace(/"/g, '""')}"`,
+          `"${actual.replace(/"/g, '""')}"`,
+          `"${(log.status || '').replace(/"/g, '""')}"`
+        ].join(',')
+      })
+    ]
+
+    const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `rollyn_${logType}_logs_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    SystemUI.toast({ message: `Exported ${logs.length} ${logType} logs to Excel.`, type: 'success' })
+  }
+
   const totalPages = Math.ceil(filteredShipments.length / perPage)
   const pagedShipments = filteredShipments.slice((page - 1) * perPage, page * perPage)
 
   return (
     <div className="py-4 px-2.5 sm:px-6 space-y-4">
       <div>
-        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Reports & Analytics</h2>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Reports & Analytics - UPDATED</h2>
         <p className="text-xs text-slate-500 mt-0.5">Historical operational summary, OCR performance, and warehouse utilization</p>
+      </div>
+
+      {/* Process Activity Logs Section - MOVED TO TOP SO YOU CAN SEE IT IMMEDIATELY */}
+      <div className="space-y-3 mt-6 mb-8 border-2 border-indigo-200 bg-indigo-50/20 p-4 rounded-xl">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700">
+              <Eye size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">Process Activity Logs</h3>
+              <p className="text-[11px] text-slate-500">Track Jumbo, JOP, and Reproduction status over time</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={logType}
+              onChange={(e) => setLogType(e.target.value)}
+              className="form-select text-xs min-w-[150px] font-medium border-indigo-200 bg-white"
+            >
+              <option value="jumbo">Jumbo Roll Status</option>
+              <option value="jop">JOP Production Status</option>
+              <option value="reproduction">Re-production Disposition</option>
+            </select>
+            <button
+              onClick={exportLogsExcel}
+              className="btn btn-secondary text-xs min-w-0 bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex items-center justify-center gap-1"
+            >
+              <Download size={13} />
+              <span>Export</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="card p-0 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto max-h-[400px]">
+            <table className="data-table w-full text-xs">
+              <thead className="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                <tr>
+                  <th style={{ textAlign: 'left' }}>Date</th>
+                  <th style={{ textAlign: 'left' }}>Reference</th>
+                  <th style={{ textAlign: 'left' }}>Specification</th>
+                  <th style={{ textAlign: 'right' }}>Target</th>
+                  <th style={{ textAlign: 'right' }}>Actual</th>
+                  <th style={{ textAlign: 'center' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loadingLogs ? (
+                  <tr><td colSpan={6} className="text-center py-8 text-slate-500">Loading logs...</td></tr>
+                ) : logs.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-8 text-slate-500">No activity logs found.</td></tr>
+                ) : (
+                  logs.map((log, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50">
+                      <td className="whitespace-nowrap font-medium text-slate-700">{log.date}</td>
+                      <td className="font-bold text-slate-900">{log.number}</td>
+                      <td>
+                        {logType === 'jop' && <div className="text-[10px] text-slate-500 mb-0.5">{log.customer}</div>}
+                        <span className="font-medium">{log.grade} / {log.gsm} gsm</span>
+                        {logType === 'reproduction' && log.jop && log.jop !== '-' && <div className="text-[10px] text-slate-500 mt-0.5">JOP: {log.jop}</div>}
+                      </td>
+                      <td className="text-right">
+                        {logType === 'reproduction' ? '—' : `${log.target_weight} ${logType === 'jop' ? 'Ton' : 'kg'}`}
+                      </td>
+                      <td className="text-right font-medium text-slate-900">
+                        {logType === 'reproduction' ? `${log.weight} kg` : `${log.actual_weight} ${logType === 'jop' ? 'Ton' : 'kg'}`}
+                      </td>
+                      <td className="text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          log.status === 'Completed' || log.status === 'OK (Released / Passed)' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                          log.status === 'In Progress' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                          log.status === 'Shipped (Approved for delivery)' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                          log.status === 'Reject (Roll scrapped / rejected)' || log.status === 'Reweigh (Roll sent for re-weighing)' ? 'bg-red-100 text-red-700 border border-red-200' :
+                          'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          {log.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {}
@@ -392,7 +539,8 @@ export default function Reports() {
               )}
             </tbody>
           </table>
-        </div>        {/* Pagination */}
+        </div>
+        {/* Pagination */}
         <div className="flex flex-wrap justify-between items-center gap-3 pt-1">
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500">

@@ -419,15 +419,26 @@ export default function JumboRoll() {
                         Track raw paper jumbo rolls, cutting/rewinding outputs, and associated incoming rolls.
                     </p>
                 </div>
-                {canManage && (
-                    <button
-                        onClick={handleOpenCreate}
-                        className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                <div className="flex items-center gap-2">
+                    <a
+                        href={`/jumbo-roll/export-excel?search=${encodeURIComponent(searchTerm)}&status=${encodeURIComponent(statusFilter)}&date_from=${encodeURIComponent(dateFilter)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-secondary flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
                     >
-                        <Plus size={15} />
-                        <span>New Jumbo Roll</span>
-                    </button>
-                )}
+                        <FileText size={15} className="text-slate-500" />
+                        <span className="font-semibold text-sm">Export</span>
+                    </a>
+                    {canManage && (
+                        <button
+                            onClick={handleOpenCreate}
+                            className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                        >
+                            <Plus size={15} />
+                            <span>New Jumbo Roll</span>
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Summary Cards */}

@@ -420,4 +420,190 @@ class JumboRollController extends Controller
 
         return response()->json($availableRolls);
     }
+
+    public function exportExcel(Request $request)
+    {
+        $search = trim($request->input('search', ''));
+        $status = trim($request->input('status', ''));
+        $dateFrom = trim($request->input('date_from', ''));
+        $dateTo = trim($request->input('date_to', ''));
+
+        $query = JumboRoll::with([
+            'jop.customer',
+            'jop.grade',
+            'jop.gsm',
+            'user',
+            'rolls.grade',
+            'rolls.gsm',
+            'rolls.shift',
+            'rolls.user',
+        ]);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('jumbo_roll_number', 'like', "%{$search}%")
+                    ->orWhereHas('jop', function ($jq) use ($search) {
+                        $jq->where('jop', 'like', "%{$search}%")
+                            ->orWhere('spk', 'like', "%{$search}%")
+                            ->orWhere('po', 'like', "%{$search}%")
+                            ->orWhereHas('customer', function ($cq) use ($search) {
+                                $cq->where('customer', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
+
+        if ($status !== '' && $status !== 'ALL') {
+            $query->where('status', $status);
+        }
+
+        if ($dateFrom !== '') {
+            $query->whereDate('production_date', '>=', $dateFrom);
+        }
+
+        if ($dateTo !== '') {
+            $query->whereDate('production_date', '<=', $dateTo);
+        }
+
+        $jumboRolls = $query->orderBy('production_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Jumbo Roll');
+
+        $headers = [
+            'A1' => 'No.',
+            'B1' => 'No Roll Rewinder',
+            'C1' => 'No JOP',
+            'D1' => 'No Jumbo PM',
+            'E1' => 'Berat Jumbo',
+            'F1' => 'Tgl Produksi Jumbo',
+            'G1' => 'Grade PM',
+            'H1' => 'Grade Rewinder',
+            'I1' => 'PKP',
+            'J1' => 'Tgl Proses Rewinder',
+            'K1' => 'Shift',
+            'L1' => 'PIC',
+        ];
+
+        foreach ($headers as $cell => $val) {
+            $sheet->setCellValue($cell, $val);
+        }
+
+        $sheet->getStyle('A1:L1')->applyFromArray([
+            'font' => [
+                'name' => 'Times New Roman',
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 11,
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '2B579A'],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'FFFFFF'],
+                ],
+            ],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+
+        $rowNum = 2;
+        $no = 1;
+
+        foreach ($jumboRolls as $jr) {
+            if ($jr->rolls->count() > 0) {
+                foreach ($jr->rolls as $roll) {
+                    $sheet->setCellValue('A' . $rowNum, $no);
+                    $sheet->setCellValue('B' . $rowNum, $roll->no_roll ?? ('R-' . $roll->no));
+                    $sheet->setCellValue('C' . $rowNum, $jr->jop->jop ?? '-');
+                    $sheet->setCellValue('D' . $rowNum, $jr->jumbo_roll_number);
+                    $sheet->setCellValue('E' . $rowNum, (float)$jr->weight);
+                    $sheet->setCellValue('F' . $rowNum, $jr->production_date ? $jr->production_date->format('d/m/Y') : '-');
+                    $sheet->setCellValue('G' . $rowNum, $jr->jop->grade->grade ?? '-');
+                    $sheet->setCellValue('H' . $rowNum, $roll->grade->grade ?? '-');
+                    $sheet->setCellValue('I' . $rowNum, '');
+                    $sheet->setCellValue('J' . $rowNum, $roll->entry_date ? \Carbon\Carbon::parse($roll->entry_date)->format('d/m/Y') : '-');
+                    $sheet->setCellValue('K' . $rowNum, $roll->shift->shift ?? '-');
+                    $sheet->setCellValue('L' . $rowNum, $roll->user->username ?? $roll->user->name ?? '-');
+                    $rowNum++;
+                }
+            } else {
+                $sheet->setCellValue('A' . $rowNum, $no);
+                $sheet->setCellValue('B' . $rowNum, '-');
+                $sheet->setCellValue('C' . $rowNum, $jr->jop->jop ?? '-');
+                $sheet->setCellValue('D' . $rowNum, $jr->jumbo_roll_number);
+                $sheet->setCellValue('E' . $rowNum, (float)$jr->weight);
+                $sheet->setCellValue('F' . $rowNum, $jr->production_date ? $jr->production_date->format('d/m/Y') : '-');
+                $sheet->setCellValue('G' . $rowNum, $jr->jop->grade->grade ?? '-');
+                $sheet->setCellValue('H' . $rowNum, '-');
+                $sheet->setCellValue('I' . $rowNum, '');
+                $sheet->setCellValue('J' . $rowNum, '-');
+                $sheet->setCellValue('K' . $rowNum, '-');
+                $sheet->setCellValue('L' . $rowNum, '-');
+                $rowNum++;
+            }
+            $no++;
+        }
+
+        $lastRow = max(2, $rowNum - 1);
+        $dataRange = 'A2:L' . $lastRow;
+
+        $sheet->getStyle($dataRange)->applyFromArray([
+            'font' => [
+                'name' => 'Times New Roman',
+                'size' => 10,
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'D9D9D9'],
+                ],
+            ],
+        ]);
+
+        $sheet->setAutoFilter('A1:L' . $lastRow);
+
+        $colWidths = [
+            'A' => 6,
+            'B' => 18,
+            'C' => 18,
+            'D' => 16,
+            'E' => 12,
+            'F' => 18,
+            'G' => 16,
+            'H' => 16,
+            'I' => 10,
+            'J' => 20,
+            'K' => 8,
+            'L' => 14,
+        ];
+
+        foreach ($colWidths as $col => $w) {
+            $sheet->getColumnDimension($col)->setWidth($w);
+        }
+
+        $filename = 'JumboRoll_Export_' . date('Y_m_d_His') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
 }
