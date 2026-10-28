@@ -22,62 +22,126 @@ class ShipmentController extends Controller
 
     public function history(Request $request)
     {
-        $date = $request->input('date', now()->format('Y-m-d'));
-        
-        $shipments = Shipment::with([
+        $status = $request->input('status', 'all');
+
+        // Smart date selection:
+        // 1. If explicit 'date' query parameter provided, use it.
+        // 2. Otherwise, check if today has shipments (filtered by status if specified).
+        // 3. Otherwise, automatically default to the most recent shipment date in the database.
+        // 4. Fallback to today if database has no shipments at all.
+        if ($request->filled('date')) {
+            $date = $request->input('date');
+        } else {
+            $today = now()->format('Y-m-d');
+            $shipmentQuery = Shipment::query();
+            if ($status !== 'all') {
+                $shipmentQuery->where('status', $status);
+            }
+
+            $hasToday = (clone $shipmentQuery)->whereDate('shipment_date', $today)->exists();
+            if ($hasToday) {
+                $date = $today;
+            } else {
+                $latestDate = (clone $shipmentQuery)->latest('shipment_date')->value('shipment_date');
+                $date = $latestDate ? \Carbon\Carbon::parse($latestDate)->format('Y-m-d') : $today;
+            }
+        }
+
+        $query = Shipment::with([
                 'customers', 
                 'admin', 
                 'qc', 
                 'shipmentRolls.roll.grade',
-                'shipmentRolls.roll.jop.gsm',
-                'shipmentRolls.roll.core'
+                'shipmentRolls.roll.gsm',
+                'shipmentRolls.roll.rollsWidth',
+                'shipmentRolls.roll.rollsDiameter',
+                'shipmentRolls.roll.core',
+                'shipmentRolls.roll.location',
+                'shipmentRolls.roll.jop.gsm'
             ])
-            ->where('status', 'completed')
-            ->whereDate('shipment_date', $date)
-            ->orderBy('created_at', 'desc')
+            ->whereDate('shipment_date', $date);
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $shipments = $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($shipment) {
                 return [
                     'id' => $shipment->id,
                     'shipment_number' => $shipment->shipment_number,
-                    'shipment_date' => $shipment->shipment_date,
+                    'shipment_date' => \Carbon\Carbon::parse($shipment->shipment_date)->format('Y-m-d'),
                     'status' => $shipment->status,
-                    'customer' => ['id' => $shipment->customers->pluck('id')->toArray(), 'customer' => $shipment->customers->pluck('customer')->join(', ') ?: '—'],
-                    'admin' => ['id' => $shipment->admin_users_id, 'username' => $shipment->admin->username ?? '—'],
-                    'qc' => ['id' => $shipment->qc_users_id, 'username' => $shipment->qc->username ?? '—'],
+                    'customer' => [
+                        'id' => $shipment->customers->pluck('id')->toArray(), 
+                        'customer' => $shipment->customers->pluck('customer')->join(', ') ?: '—'
+                    ],
+                    'admin' => [
+                        'id' => $shipment->admin_users_id, 
+                        'username' => $shipment->admin->username ?? '—'
+                    ],
+                    'qc' => [
+                        'id' => $shipment->qc_users_id, 
+                        'username' => $shipment->qc->username ?? '—'
+                    ],
+                    'qc_report_notes' => $shipment->qc_report_notes,
                     'shipment_rolls' => $shipment->shipmentRolls->map(function ($sr) {
                         return [
                             'id' => $sr->id,
                             'roll_no' => $sr->roll_no,
                             'qc_status' => $sr->qc_status,
                             'qc_notes' => $sr->qc_notes,
-                            'qc_checked_at' => $sr->qc_checked_at,
+                            'qc_issues' => $sr->qc_issues,
+                            'qc_checked_at' => $sr->qc_checked_at ? \Carbon\Carbon::parse($sr->qc_checked_at)->format('d/m/Y H:i') : null,
                             'roll' => [
+                                'id' => $sr->roll->no ?? $sr->roll_no,
+                                'no' => $sr->roll->no ?? $sr->roll_no,
                                 'no_roll' => $sr->roll->no_roll ?? ('R-' . $sr->roll_no),
                                 'grade' => $sr->roll->grade->grade ?? '—',
-                                'gsm' => $sr->roll->jop->gsm->gsm ?? ($sr->roll->gsm ?? 150),
+                                'gsm' => $sr->roll->gsm->gsm ?? ($sr->roll->jop->gsm->gsm ?? 150),
                                 'weight' => $sr->roll->weight ?? 0,
-                                'width' => 1650, // default if no specific jop width
+                                'width' => $sr->roll->rollsWidth->width ?? 1650,
+                                'diameter' => $sr->roll->rollsDiameter->diameter ?? '—',
                                 'length' => 0, 
                                 'joint' => 0,
                                 'type' => $sr->roll->exmaterial ?? 'IMPORT',
                                 'core' => $sr->roll->core->core ?? '76',
+                                'status' => $sr->roll->status ?? '—',
+                                'location' => $sr->roll->location->location ?? '—',
                             ]
                         ];
                     }),
                 ];
             });
             
-        $shipmentDates = Shipment::where('status', 'completed')
-            ->selectRaw('DATE(shipment_date) as date')
+        $datesQuery = Shipment::query();
+        if ($status !== 'all') {
+            $datesQuery->where('status', $status);
+        }
+        $shipmentDates = $datesQuery
+            ->selectRaw('DATE(shipment_date) as sdate')
             ->distinct()
-            ->pluck('date')
+            ->orderBy('sdate', 'desc')
+            ->pluck('sdate')
+            ->map(fn($d) => \Carbon\Carbon::parse($d)->format('Y-m-d'))
+            ->values()
             ->toArray();
+
+        $statusCounts = [
+            'all' => Shipment::count(),
+            'completed' => Shipment::where('status', 'completed')->count(),
+            'pending' => Shipment::where('status', 'pending')->count(),
+            'qc_in_progress' => Shipment::where('status', 'qc_in_progress')->count(),
+            'canceled' => Shipment::where('status', 'canceled')->count(),
+        ];
 
         return Inertia::render('ShipmentHistory', [
             'shipments' => $shipments,
             'selectedDate' => $date,
-            'shipmentDates' => $shipmentDates
+            'shipmentDates' => $shipmentDates,
+            'selectedStatus' => $status,
+            'statusCounts' => $statusCounts,
         ]);
     }
 
@@ -367,6 +431,8 @@ class ShipmentController extends Controller
             'shipmentRolls.roll.rollsDiameter'
         ])->findOrFail($id);
 
+        Gate::authorize('view', $shipment);
+
         return view('print.weight_list', compact('shipment'));
     }
 
@@ -374,6 +440,8 @@ class ShipmentController extends Controller
     {
         $shipment = Shipment::with(['customers', 'qc'])->findOrFail($id);
         
+        Gate::authorize('view', $shipment);
+
         return view('print.qc_report', compact('shipment'));
     }
 }

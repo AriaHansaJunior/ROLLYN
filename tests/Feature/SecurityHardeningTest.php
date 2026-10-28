@@ -166,7 +166,84 @@ class SecurityHardeningTest extends TestCase
         // 4. PPIC creator can cancel
         $this->assertTrue(Gate::forUser($ppic)->allows('cancel', $shipment));
 
-        // 5. Random QC cannot cancel
+        // 5. Another PPIC officer can also cancel (shift handover)
+        $anotherPpic = User::factory()->create(['role' => 'ppic']);
+        $this->assertTrue(Gate::forUser($anotherPpic)->allows('cancel', $shipment));
+
+        // 6. Random QC cannot cancel
         $this->assertFalse(Gate::forUser($otherQc)->allows('cancel', $shipment));
+    }
+
+    public function test_root_route_redirects_by_role(): void
+    {
+        // 1. Guest -> /login
+        $this->get('/')->assertRedirect('/login');
+
+        // 2. Production -> /incoming-roll
+        $prod = User::factory()->create(['role' => 'production']);
+        $this->actingAs($prod)->get('/')->assertRedirect('/incoming-roll');
+
+        // 3. QC -> /roll-inventory
+        $qc = User::factory()->create(['role' => 'qc']);
+        $this->actingAs($qc)->get('/')->assertRedirect('/roll-inventory');
+
+        // 4. PPIC -> /dashboard
+        $ppic = User::factory()->create(['role' => 'ppic']);
+        $this->actingAs($ppic)->get('/')->assertRedirect('/dashboard');
+
+        // 5. Admin -> /dashboard
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)->get('/')->assertRedirect('/dashboard');
+    }
+
+    public function test_user_policy_blocks_admin_self_deletion(): void
+    {
+        $adminA = User::factory()->create(['role' => 'admin']);
+        $adminB = User::factory()->create(['role' => 'admin']);
+
+        // Admin cannot delete own account
+        $this->assertFalse(Gate::forUser($adminA)->allows('delete', $adminA));
+
+        // Admin can delete other account
+        $this->assertTrue(Gate::forUser($adminA)->allows('delete', $adminB));
+    }
+
+    public function test_roll_policy_prevents_deleting_roll_in_active_shipment_even_for_admin(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $ppic = User::factory()->create(['role' => 'ppic']);
+        $qc = User::factory()->create(['role' => 'qc']);
+
+        $roll = Roll::create([
+            'no' => 201,
+            'no_roll' => 'ROLL-SHIP-01',
+            'shifts_id' => 1,
+            'grades_id' => 1,
+            'users_id' => $ppic->id,
+            'entry_date' => now()->toDateString(),
+        ]);
+
+        $shipment = Shipment::create([
+            'shipment_number' => 'SHP-ACT-001',
+            'admin_users_id' => $ppic->id,
+            'qc_users_id' => $qc->id,
+            'status' => 'pending',
+            'shipment_date' => now()->toDateString(),
+        ]);
+
+        \App\Models\ShipmentRoll::create([
+            'shipment_id' => $shipment->id,
+            'roll_no' => $roll->no,
+            'qc_status' => 'pending',
+        ]);
+
+        // Neither admin nor PPIC nor creator can delete roll while in active shipment
+        $this->assertFalse(Gate::forUser($admin)->allows('delete', $roll));
+        $this->assertFalse(Gate::forUser($ppic)->allows('delete', $roll));
+
+        // Once shipment is canceled, admin and PPIC can delete it
+        $shipment->update(['status' => 'canceled']);
+        $this->assertTrue(Gate::forUser($admin)->allows('delete', $roll));
+        $this->assertTrue(Gate::forUser($ppic)->allows('delete', $roll));
     }
 }

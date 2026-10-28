@@ -132,7 +132,7 @@ export default function RollDetail({
 }: Props) {
     const { props } = usePage();
     const userRole = ((props.auth as any)?.user?.role ?? "").toLowerCase();
-    const isQC = userRole === "qc";
+    const isQC = userRole === "qc" || userRole === "admin";
     const isPPIC = userRole === "ppic" || userRole === "admin";
 
     const currentRoll = roll || {

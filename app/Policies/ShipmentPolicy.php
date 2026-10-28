@@ -47,20 +47,22 @@ class ShipmentPolicy
 
     /**
      * Determine whether the user can update or modify rolls in the shipment.
-     * Only Admin or the creator PPIC who initiated the shipment.
+     * Admin, PPIC officers, or the creator who initiated the shipment.
      */
     public function update(User $user, Shipment $shipment): bool
     {
-        return (int)$shipment->admin_users_id === (int)$user->id;
+        $role = strtolower($user->role);
+        return $role === 'ppic' || (int)$shipment->admin_users_id === (int)$user->id;
     }
 
     /**
      * Determine whether the user can cancel the shipment.
-     * Only Admin or the creator PPIC who initiated the shipment.
+     * Admin, PPIC officers, or the creator who initiated the shipment.
      */
     public function cancel(User $user, Shipment $shipment): bool
     {
-        return (int)$shipment->admin_users_id === (int)$user->id;
+        $role = strtolower($user->role);
+        return $role === 'ppic' || (int)$shipment->admin_users_id === (int)$user->id;
     }
 
     /**

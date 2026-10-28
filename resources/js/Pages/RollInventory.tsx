@@ -923,6 +923,7 @@ export default function RollInventory({
           sort={sort}
           SortIcon={SortIcon}
           isQC={isQC}
+          isPpicOrAdmin={isPpicOrAdmin}
           openEdit={openEdit}
           handleAssignClick={handleAssignClick}
           handleDelete={handleDelete}

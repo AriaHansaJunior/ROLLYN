@@ -12,6 +12,9 @@ class UserPolicy
     public function before(User $user, string $ability): ?bool
     {
         if (strtolower($user->role) === 'admin') {
+            if ($ability === 'delete') {
+                return null;
+            }
             return true;
         }
 

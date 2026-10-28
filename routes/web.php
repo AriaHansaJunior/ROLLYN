@@ -17,7 +17,19 @@ use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\JumboRollController;
 
 Route::get('/', function () {
-    return redirect('/dashboard');
+    if (auth()->check()) {
+        $role = strtolower(auth()->user()->role ?? '');
+        if ($role === 'production') {
+            return redirect('/incoming-roll');
+        } elseif ($role === 'qc') {
+            return redirect('/roll-inventory');
+        } elseif ($role === 'admin' || $role === 'ppic') {
+            return redirect('/dashboard');
+        } else {
+            return redirect('/profile');
+        }
+    }
+    return redirect('/login');
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -57,8 +69,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
 
-        Route::get('/shipments', [ShipmentController::class, 'index']);
-        Route::get('/shipment-history', [ShipmentController::class, 'history']);
         Route::post('/shipments', [ShipmentController::class, 'store']);
         Route::delete('/shipments/{id}/roll/{rollNo}', [ShipmentController::class, 'cancelRoll']);
         Route::delete('/shipments/{id}/cancel', [ShipmentController::class, 'cancelShipment']);
@@ -71,8 +81,14 @@ Route::middleware('auth')->group(function () {
         Route::delete('/production-schedule/{id}', [ProductionScheduleController::class, 'destroy']);
     });
 
-    // 4. ADMIN + PRODUCTION
-    Route::middleware('role:admin,production')->group(function () {
+    // 3b. ADMIN + PPIC + QC (Shipments View & History)
+    Route::middleware('role:admin,ppic,qc')->group(function () {
+        Route::get('/shipments', [ShipmentController::class, 'index']);
+        Route::get('/shipment-history', [ShipmentController::class, 'history']);
+    });
+
+    // 4. ADMIN + PRODUCTION (+ PPIC for Slot Recommendations)
+    Route::middleware('role:admin,ppic,production')->group(function () {
         Route::get('/incoming-roll', [IncomingRollController::class, 'index']);
         Route::post('/incoming-roll', [IncomingRollController::class, 'store']);
         Route::get('/incoming-roll/check-roll-number', [IncomingRollController::class, 'checkRollNumber']);
@@ -111,17 +127,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/shipments/{id}/qc-report', [ShipmentController::class, 'submitQcReport']);
     });
 
-    // 7. ADMIN + PPIC + QC + PRODUCTION (Roll History & Inventory)
+    // 7. ADMIN + PPIC + QC + PRODUCTION (Roll History & Inventory & Roll Update)
     Route::middleware('role:admin,ppic,qc,production')->group(function () {
         Route::get('/roll-inventory', [RollController::class, 'index']);
         Route::get('/roll-detail/{id?}', [RollController::class, 'show']);
+        Route::put('/rolls/{id}', [RollController::class, 'update']);
     });
 
     Route::middleware('role:admin,ppic,qc')->group(function () {
         Route::get('/shipments/{id}/print', [ShipmentController::class, 'print']);
         Route::get('/shipments/{id}/print-qc', [ShipmentController::class, 'printQc']);
-        
-        Route::put('/rolls/{id}', [RollController::class, 'update']);
+    });
+
+    Route::middleware('role:admin,ppic')->group(function () {
         Route::delete('/rolls/{id}', [RollController::class, 'destroy']);
         Route::post('/rolls/ship', [RollController::class, 'confirmShipments']);
     });

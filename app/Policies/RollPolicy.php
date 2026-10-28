@@ -13,6 +13,9 @@ class RollPolicy
     public function before(User $user, string $ability): ?bool
     {
         if (strtolower($user->role) === 'admin') {
+            if ($ability === 'delete') {
+                return null; // Enforce shipment safety check in delete()
+            }
             return true;
         }
 
@@ -65,18 +68,29 @@ class RollPolicy
 
     /**
      * Determine whether the user can delete the model.
-     * Only Admin or the creator can delete, and only if not part of an active/completed shipment.
+     * Prevents deletion if part of an active/completed shipment.
+     * Admin, PPIC, or creator can delete unqueued rolls.
      */
     public function delete(User $user, Roll $roll): bool
     {
-        if ($roll->users_id && (int)$user->id === (int)$roll->users_id) {
-            $inActiveShipment = $roll->shipmentRolls()
-                ->whereHas('shipment', function ($q) {
-                    $q->whereIn('status', ['pending', 'qc_in_progress', 'completed']);
-                })
-                ->exists();
+        $inActiveShipment = $roll->shipmentRolls()
+            ->whereHas('shipment', function ($q) {
+                $q->whereIn('status', ['pending', 'qc_in_progress', 'completed']);
+            })
+            ->exists();
 
-            return !$inActiveShipment;
+        if ($inActiveShipment) {
+            return false;
+        }
+
+        $role = strtolower($user->role);
+
+        if ($role === 'admin' || $role === 'ppic') {
+            return true;
+        }
+
+        if ($roll->users_id && (int)$user->id === (int)$roll->users_id) {
+            return true;
         }
 
         return false;

@@ -35,6 +35,7 @@ interface RollInventory_StorageTabProps {
   sort: (key: string) => void
   SortIcon: (props: { k: string }) => React.ReactNode
   isQC: boolean
+  isPpicOrAdmin?: boolean
   openEdit: (roll: RollItem) => void
   handleAssignClick: (roll: RollItem, mode: 'assign' | 'move') => void
   handleDelete: (roll: RollItem) => void
@@ -74,6 +75,7 @@ export default function RollInventory_StorageTab({
   sort,
   SortIcon,
   isQC,
+  isPpicOrAdmin = false,
   openEdit,
   handleAssignClick,
   handleDelete,
@@ -405,15 +407,13 @@ export default function RollInventory_StorageTab({
                   </td>
                   <td style={{ textAlign: 'center' }} className="whitespace-nowrap px-2 py-2">
                     <div className="flex gap-1.5 justify-center items-center">
-                      {!isQC && (
-                        <button
-                          className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
-                          onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
-                          title="View Roll Detail"
-                        >
-                          <Eye size={14} />
-                        </button>
-                      )}
+                      <button
+                        className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                        onClick={() => router.visit(`/roll-detail/${r.raw_id}`)}
+                        title="View Roll Detail"
+                      >
+                        <Eye size={14} />
+                      </button>
                       <button
                         className={`p-1.5 rounded transition-colors cursor-pointer border ${r.roll_status === 'HOLD'
                             ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 shadow-xs'
@@ -423,7 +423,7 @@ export default function RollInventory_StorageTab({
                       >
                         <Edit size={14} />
                       </button>
-                      {!isQC && (
+                      {isPpicOrAdmin && (
                         <>
                           <button
                             className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"

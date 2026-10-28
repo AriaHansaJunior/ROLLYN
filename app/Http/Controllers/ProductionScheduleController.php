@@ -109,6 +109,18 @@ class ProductionScheduleController extends Controller
     {
         $schedule = ProductionSchedule::findOrFail($id);
 
+        $userRole = strtolower(auth()->user()->role ?? '');
+        if ($userRole === 'production') {
+            $validated = $request->validate([
+                'status' => 'required|string|in:OPEN,CLOSED',
+            ]);
+            $schedule->update(['status' => $validated['status']]);
+            return response()->json([
+                'message' => 'Production schedule status updated.',
+                'data'    => $schedule,
+            ]);
+        }
+
         $validated = $request->validate([
             'jops_id'      => 'sometimes|exists:jops,id',
             'tonnage'      => 'sometimes|numeric|min:0.01',
