@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 import { Link, router, usePage } from "@inertiajs/react";
 import { SystemUI } from "@/Utils/SystemUI";
-import SpectrumSlotSelectorModal from "@/Components/SpectrumSlotSelectorModal";
-import QRCodeSVG from "@/Components/QRCodeSVG";
+import SpectrumSlotSelectorModal from "@/Components/AI/SpectrumSlotSelectorModal";
+import QRCodeSVG from "@/Components/Scanner/QRCodeSVG";
 
 interface RollDetailItem {
     id: string;

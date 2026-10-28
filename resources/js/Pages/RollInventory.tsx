@@ -4,8 +4,8 @@ import {
 } from 'lucide-react'
 import { router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
-import QRScannerModal from '@/Components/QRScannerModal'
-import SpectrumSlotSelectorModal from '@/Components/SpectrumSlotSelectorModal'
+import QRScannerModal from '@/Components/Scanner/QRScannerModal'
+import SpectrumSlotSelectorModal from '@/Components/AI/SpectrumSlotSelectorModal'
 import {
   RollItem, OptionItem, ShipmentRollItem, ShipmentData, Props
 } from '@/Components/RollInventory/RollInventory_types'

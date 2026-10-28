@@ -14,7 +14,9 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "paths": {
-      "@/*": ["./resources/js/*"]
+      "@/*": ["./resources/js/*"],
+      "@/AI/*": ["./resources/js/AI/*"],
+      "@/Components/*": ["./resources/js/Components/*"]
     }
   },
   "include": [

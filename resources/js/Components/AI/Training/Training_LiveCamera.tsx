@@ -1,6 +1,6 @@
 import React from "react";
 import { Camera, RotateCw, Sparkles, Check } from "lucide-react";
-import { type SpectrumResult } from "@/SPECTRUM/SpectrumService";
+import { type SpectrumResult } from "@/AI/Spectrum/SpectrumService";
 import { FrameSizeMode, RoiConfig } from "./Training_types";
 
 interface Props {

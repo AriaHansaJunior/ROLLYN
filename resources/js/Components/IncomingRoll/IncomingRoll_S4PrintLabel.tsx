@@ -1,6 +1,6 @@
 import React from "react";
 import { Clock, ArrowLeft, Printer, RefreshCw } from "lucide-react";
-import QRCodeSVG from "@/Components/QRCodeSVG";
+import QRCodeSVG from "@/Components/Scanner/QRCodeSVG";
 import { WeightState, IncomingRollFormState } from "./IncomingRoll_types";
 
 interface Step3PrintLabelProps {

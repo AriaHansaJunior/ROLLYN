@@ -26,7 +26,7 @@ import {
     detectSpectrumWeight,
     logSpectrumTest,
     type SpectrumResult,
-} from '@/SPECTRUM/SpectrumService';
+} from '@/AI/Spectrum/SpectrumService';
 
 import {
     DatasetStats,
@@ -34,9 +34,9 @@ import {
     FrameSizeMode,
     RoiConfig,
     strToBool,
-} from '@/Components/Training/Training_types';
-import Training_LiveCamera from '@/Components/Training/Training_LiveCamera';
-import Training_SampleHistory from '@/Components/Training/Training_SampleHistory';
+} from '@/Components/AI/Training/Training_types';
+import Training_LiveCamera from '@/Components/AI/Training/Training_LiveCamera';
+import Training_SampleHistory from '@/Components/AI/Training/Training_SampleHistory';
 
 
 interface StatCardProps {

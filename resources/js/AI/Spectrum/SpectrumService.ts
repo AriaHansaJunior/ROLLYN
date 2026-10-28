@@ -1,4 +1,4 @@
-import { getCsrfToken } from "../Utils/csrf";
+import { getCsrfToken } from "@/Utils/csrf";
 
 export interface SpectrumResult {
     status: "SUCCESS" | "WARNING_LOW_CONFIDENCE";

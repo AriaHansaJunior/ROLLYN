@@ -19,13 +19,16 @@ This project is built as a highly responsive, web-based administration system ut
 - **Database:** MySQL 8.4.3
 - **AI & Computer Vision:** Tesseract.js (Frontend native), YOLOv8, and custom Computer Vision pipelines.
 
-### Project Organization
-The application responsibilities remain separated and maintainable:
-- `app/` - Backend application logic (Controllers, Models, Services)
-- `resources/js/` - Frontend React components, Pages, and native CV pipelines
+### Project Organization & Foldering
+The application responsibilities remain cleanly separated and modular:
+- `app/` - Backend application logic (Controllers, Models, Services & AI Subsystems)
+- `resources/js/` - Frontend React components, Inertia Pages, and native AI/CV pipelines
+- `resources/js/AI/` - Centralized frontend AI, Computer Vision, and recommendation algorithms
 - `resources/views/` - Blade entry point for Inertia
-- `spectrum_engine/` - Advanced AI / Computer vision components
+- `spectrum_engine/` - Standalone AI microservice (FastAPI + MLP Neural Net on Port 8001)
 - `database/` - Migrations, seeders, and factories
+
+> **Detailed Folder Blueprint:** For complete map, file locations, and architectural relationships across Backend, Frontend, and AI, see [**`DIRECTORY_STRUCTURE.md`**](file:///c:/laragon/www/ROLLYN/DIRECTORY_STRUCTURE.md).
 
 ---
 

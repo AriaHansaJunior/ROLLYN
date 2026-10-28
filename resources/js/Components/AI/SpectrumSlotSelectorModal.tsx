@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { X, Check, MapPin, Layers, Info, CheckCircle2, Search, MoveRight } from 'lucide-react'
 import { SystemUI } from '@/Utils/SystemUI'
-import { evaluateSpectrumRecommendation, RollInput, MapSlot } from '@/SPECTRUM/SpectrumRecommendationEngine'
+import { evaluateSpectrumRecommendation, RollInput, MapSlot } from '@/AI/Recommendation/SpectrumRecommendationEngine'
 
 interface OptionItem {
   id: number

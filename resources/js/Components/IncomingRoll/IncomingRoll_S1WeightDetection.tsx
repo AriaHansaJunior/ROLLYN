@@ -6,7 +6,7 @@ import {
     Layers,
     Search,
 } from "lucide-react";
-import WeightDetectionEngine from "../../SPECTRUM/SpectrumWeightDetectionEngine";
+import WeightDetectionEngine from "@/AI/Spectrum/SpectrumWeightDetectionEngine";
 import { SystemUI } from "@/Utils/SystemUI";
 import { SCALE_ROI, IncomingRollFormState } from "./IncomingRoll_types";
 

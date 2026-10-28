@@ -4,7 +4,7 @@ import {
   Calendar, Printer, Ban, AlertTriangle, FileText, Camera,
   QrCode, XCircle, Scale, RotateCcw, Trash2, Package
 } from 'lucide-react'
-import EmbeddedQRScanner from '@/Components/EmbeddedQRScanner'
+import EmbeddedQRScanner from '@/Components/Scanner/EmbeddedQRScanner'
 import { ShipmentData, ShipmentRollItem } from './RollInventory_types'
 
 interface RollInventory_ShipmentsTabProps {

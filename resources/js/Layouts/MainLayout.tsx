@@ -1,7 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react'
 import { usePage } from '@inertiajs/react'
-import Sidebar from '../Components/Sidebar'
-import Header from '../Components/Header'
+import Sidebar from '../Components/Navigation/Sidebar'
+import Header from '../Components/Navigation/Header'
 
 interface MainLayoutProps {
   children: ReactNode;

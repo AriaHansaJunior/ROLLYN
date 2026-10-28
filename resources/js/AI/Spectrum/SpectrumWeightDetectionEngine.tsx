@@ -18,7 +18,7 @@ import {
     DEFAULT_ROI,
     type ROI,
     type PreprocessedVariant,
-} from "../OCR/ImageProcessor";
+} from "../Vision/ImageProcessor";
 import {
     initOCRWorker,
     recogniseWeight,
@@ -26,7 +26,7 @@ import {
     calibrateScaleFont,
     type OcrResult,
     type OcrError,
-} from "../OCR/OCRService";
+} from "../Vision/OCRService";
 import {
     detectSpectrumWeight,
     logSpectrumTest,
