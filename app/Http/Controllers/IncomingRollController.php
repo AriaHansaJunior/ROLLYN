@@ -117,26 +117,39 @@ class IncomingRollController extends Controller
         $widthVal = $request->input('width');
         $entryDate = $request->input('entry_date');
 
-        if ($jopCode && $gradeName && $widthVal) {
-            $jop = Jop::where('jop', trim($jopCode))->first();
-            $grade = Grade::where('grade', trim($gradeName))->first();
-            $width = RollsWidth::where('width', floatval($widthVal))->first();
+        if ($jopCode) {
+            $trimmedJop = trim($jopCode);
+            $jop = Jop::where('jop', $trimmedJop)->first();
+            if (!$jop && is_numeric($trimmedJop)) {
+                $jop = Jop::find(intval($trimmedJop));
+            }
 
-            if ($jop && $grade && $width) {
-                $query = Roll::where('jops_id', $jop->id)
-                    ->where('grades_id', $grade->id)
-                    ->where('rolls_widths_id', $width->id)
-                    ->whereNotNull('form');
+            if ($jop) {
+                if ($gradeName && $widthVal) {
+                    $grade = Grade::where('grade', trim($gradeName))->first();
+                    $width = RollsWidth::where('width', floatval($widthVal))->first();
 
-                if ($entryDate) {
-                    $query->where('entry_date', $entryDate);
+                    if ($grade && $width) {
+                        $query = Roll::where('jops_id', $jop->id)
+                            ->where('grades_id', $grade->id)
+                            ->where('rolls_widths_id', $width->id)
+                            ->whereNotNull('form');
+
+                        if ($entryDate) {
+                            $query->where('entry_date', $entryDate);
+                        }
+
+                        $existingRoll = $query->orderBy('created_at', 'desc')->first();
+
+                        if ($existingRoll) {
+                            return response()->json(['formNumber' => $existingRoll->form]);
+                        }
+                    }
                 }
 
-                $existingRoll = $query->orderBy('created_at', 'desc')->first();
-
-                if ($existingRoll) {
-                    return response()->json(['formNumber' => $existingRoll->form]);
-                }
+                // Per-JOP: form numbers reset from 1 if new, or continue max + 1
+                $maxForm = Roll::where('jops_id', $jop->id)->whereNotNull('form')->max('form') ?? 0;
+                return response()->json(['formNumber' => $maxForm + 1]);
             }
         }
 
@@ -329,6 +342,9 @@ class IncomingRollController extends Controller
             if ($request->jop) {
                 $jopCode = trim($request->jop);
                 $jopObj = Jop::where('jop', $jopCode)->first();
+                if (!$jopObj && is_numeric($jopCode)) {
+                    $jopObj = Jop::find(intval($jopCode));
+                }
                 if (!$jopObj) {
                     $defaultCustomer = Customer::firstOrCreate(['customer' => 'GENERAL']);
                     $jopObj = Jop::create([
@@ -420,18 +436,29 @@ class IncomingRollController extends Controller
             $entryDate = $request->entry_date ? trim($request->entry_date) : now()->toDateString();
             $formNum = $request->formNumber ? intval(preg_replace('/[^0-9]/', '', $request->formNumber)) : 1;
 
-            // Form Serah Terima Cross-Contamination Validation
+            // Form Serah Terima Cross-Contamination Validation (scoped per JOP)
+            // Each JOP resets form numbers starting from 1. Form numbers are validated within the same JOP.
             if ($formNum) {
-                $existingFormRoll = Roll::where('form', $formNum)->first();
+                $existingFormRollQuery = Roll::where('form', $formNum);
+                if ($jopId) {
+                    $existingFormRollQuery->where('jops_id', $jopId);
+                } else {
+                    $existingFormRollQuery->whereNull('jops_id');
+                }
+
+                if ($isUpdate && $existingRoll) {
+                    $existingFormRollQuery->where('id', '!=', $existingRoll->id);
+                }
+
+                $existingFormRoll = $existingFormRollQuery->first();
                 if ($existingFormRoll) {
-                    if ($existingFormRoll->jops_id !== $jopId ||
-                        $existingFormRoll->grades_id !== $grade->id ||
+                    if ($existingFormRoll->grades_id !== $grade->id ||
                         $existingFormRoll->rolls_widths_id !== $widthId ||
                         $existingFormRoll->entry_date !== $entryDate) {
                         DB::rollBack();
                         return response()->json([
                             'status' => 'error',
-                            'message' => "Form Number {$formNum} is already used for different specifications (Jumbo/Grade/Width/Date). Please use a different Form Number."
+                            'message' => "Form Number {$formNum} is already used for different specifications (Jumbo/Grade/Width/Date) in this JOP. Please use a different Form Number."
                         ], 422);
                     }
                 }
