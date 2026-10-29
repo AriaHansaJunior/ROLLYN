@@ -658,7 +658,7 @@ export default function WarehouseMap({ locations = [], unslottedRolls = [] }: Pr
                 <span className="sm:hidden">{multiSelectMode ? 'ON' : 'OFF'}</span>
               </button>
               <div className="hidden md:flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-full border border-blue-200 backdrop-blur-sm shadow-inner">
-                <span>Scroll right →</span>
+                <span>Scroll right</span>
                 <MoveRight size={13} />
               </div>
             </div>

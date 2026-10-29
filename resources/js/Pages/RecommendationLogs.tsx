@@ -6,7 +6,6 @@ import {
     Download,
     CheckCircle2,
     AlertTriangle,
-    ArrowRight,
     MapPin,
     Calendar,
     Clock,

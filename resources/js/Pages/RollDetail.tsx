@@ -9,7 +9,6 @@ import {
     Eye,
     AlertCircle,
     Sparkles,
-    MoveRight,
     CheckCircle,
     CheckCircle2,
     Package,

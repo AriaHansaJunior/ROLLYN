@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState, useRef } from 'react'
 import { useForm, router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, ArrowRight, Loader2, ShieldCheck, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Loader2, ShieldCheck, Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
   const { flash } = usePage<any>().props
@@ -220,15 +220,12 @@ export default function Login() {
             <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
             
             {processing ? (
-              <>
+              <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span>Authenticating...</span>
-              </>
+              </span>
             ) : (
-              <>
-                <span>LOGIN</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </>
+              <span>Login</span>
             )}
           </button>
         </FieldWrapper>
@@ -357,7 +354,7 @@ export default function Login() {
                     exit={{ opacity: 0 }}
                     className="hidden lg:block mt-8 text-blue-300/80 text-sm font-medium"
                   >
-                    Hover to login →
+                    Hover to expand
                   </motion.div>
                 )}
               </AnimatePresence>

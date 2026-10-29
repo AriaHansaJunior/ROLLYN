@@ -87,10 +87,10 @@ export default function Training_LiveCamera({
                     </span>
                     {(
                         [
-                            { id: "small", label: "📱 Small (50%)" },
-                            { id: "medium", label: "📷 Medium (65%)" },
-                            { id: "large", label: "🖼️ Large (80%)" },
-                            { id: "full", label: "🖥️ Full" },
+                            { id: "small", label: "Small (50%)" },
+                            { id: "medium", label: "Medium (65%)" },
+                            { id: "large", label: "Large (80%)" },
+                            { id: "full", label: "Full" },
                         ] as const
                     ).map((size) => (
                         <button
@@ -288,7 +288,7 @@ export default function Training_LiveCamera({
                                 </>
                             ) : (
                                 <>
-                                    <Camera size={16} /> 📸 Capture LED Photo
+                                    <Camera size={16} /> Capture LED Photo
                                 </>
                             )}
                         </button>
@@ -495,7 +495,7 @@ export default function Training_LiveCamera({
                                                 padding: 0,
                                             }}
                                         >
-                                            ✏️ Edit Number
+                                            Edit Number
                                         </button>
                                     </div>
                                 )}
@@ -539,7 +539,7 @@ export default function Training_LiveCamera({
                                 ) : (
                                     <>
                                         <Check size={16} />
-                                        💾 Save Sample & Update System
+                                        Save Sample & Update System
                                     </>
                                 )}
                             </button>
