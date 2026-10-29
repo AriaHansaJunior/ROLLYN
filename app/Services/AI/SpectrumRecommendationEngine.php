@@ -28,29 +28,43 @@ class SpectrumRecommendationEngine
         $columnGrades = [];
         $columnJops = [];
         $columnWeights = [];
+        $rackGrades = [];
+        $rackJops = [];
 
         foreach ($locations as $loc) {
             $code = $loc->location;
             $parts = explode('-', $code);
-            if (count($parts) === 3) {
-                $col = (int)$parts[1];
-                $tier = (int)$parts[2];
-                $isOccupied = ($loc->status !== 0) && ($loc->id !== $currentLocationId);
-                $occupiedMap[$col][$tier] = [
-                    'id' => $loc->id,
-                    'code' => $code,
-                    'isOccupied' => $isOccupied,
-                    'status' => $loc->status,
-                    'roll' => $loc->rolls->first(),
-                ];
+            $rack = $parts[0] ?? 'A17';
+            $col = isset($parts[1]) ? (int)$parts[1] : 1;
+            $rowOrTier = isset($parts[2]) ? (int)$parts[2] : 1;
 
-                if ($isOccupied && $loc->rolls->isNotEmpty()) {
-                    $r = $loc->rolls->first();
-                    $gradeName = $r->grade->grade ?? '';
-                    $jopName = $r->jop->jop ?? '';
-                    if ($gradeName) $columnGrades[$col][] = strtoupper(trim($gradeName));
-                    if ($jopName) $columnJops[$col][] = strtoupper(trim($jopName));
-                    $columnWeights[$col][] = $r->weight ?? 900;
+            $stackCount = $loc->rolls->count();
+            $isOccupied = ($loc->status !== 0 || $stackCount >= Location::MAX_CAPACITY) && ($loc->id !== $currentLocationId);
+
+            // Legacy unit-test compatibility map
+            $occupiedMap[$col][$rowOrTier] = [
+                'id' => $loc->id,
+                'code' => $code,
+                'isOccupied' => $isOccupied || ($loc->status !== 0),
+                'status' => $loc->status,
+                'roll' => $loc->rolls->first(),
+            ];
+
+            if ($loc->rolls->isNotEmpty()) {
+                foreach ($loc->rolls as $r) {
+                    $gradeName = $r->grade->grade ?? ($r->grade ?? '');
+                    $jopName = $r->jop->jop ?? ($r->jop ?? '');
+                    if ($gradeName) {
+                        $upGrade = strtoupper(trim($gradeName));
+                        $columnGrades[$col][] = $upGrade;
+                        $rackGrades[$rack][] = $upGrade;
+                    }
+                    if ($jopName) {
+                        $upJop = strtoupper(trim($jopName));
+                        $columnJops[$col][] = $upJop;
+                        $rackJops[$rack][] = $upJop;
+                    }
+                    $columnWeights[$col][] = (float)($r->weight ?? 900);
                 }
             }
         }
@@ -66,56 +80,93 @@ class SpectrumRecommendationEngine
 
         $candidates = [];
 
-        // 2. Evaluate every available physical slot (12 Columns x 4 Tiers)
-        for ($col = 1; $col <= 12; $col++) {
-            for ($tier = 1; $tier <= 4; $tier++) {
-                $slotInfo = $occupiedMap[$col][$tier] ?? null;
-                if (!$slotInfo || $slotInfo['isOccupied']) {
-                    continue;
-                }
-
-                // Check structural tier stacking constraint:
-                // Tier N can only be filled if Tier N-1 below is occupied
-                if ($tier > 1) {
-                    $belowSlot = $occupiedMap[$col][$tier - 1] ?? null;
-                    if (!$belowSlot || !$belowSlot['isOccupied']) {
-                        continue; // Invalid slot: lower tier is empty
-                    }
-                }
-
-                // Calculate multi-dimensional feature scores (0 - 100)
-                $scoreBreakdown = self::scoreSlot(
-                    $col,
-                    $tier,
-                    $slotInfo['id'],
-                    $rollGrade,
-                    $rollWeight,
-                    $rollGsm,
-                    $rollJop,
-                    $columnGrades,
-                    $columnJops,
-                    $columnWeights,
-                    $userHabitBayWeights,
-                    $actionType,
-                    $currentLocationId,
-                    $locations
-                );
-
-                $candidates[] = [
-                    'id' => $slotInfo['id'],
-                    'code' => $slotInfo['code'],
-                    'col' => $col,
-                    'tier' => $tier,
-                    'totalScore' => $scoreBreakdown['totalScore'],
-                    'gradeScore' => $scoreBreakdown['gradeScore'],
-                    'weightScore' => $scoreBreakdown['weightScore'],
-                    'habitScore' => $scoreBreakdown['habitScore'],
-                    'jopScore' => $scoreBreakdown['jopScore'],
-                    'proximityScore' => $scoreBreakdown['proximityScore'],
-                    'reasonings' => $scoreBreakdown['reasonings'],
-                    'tag' => $scoreBreakdown['tag'],
-                ];
+        // 2. Evaluate available physical slots across warehouse
+        foreach ($locations as $loc) {
+            if ($loc->id === $currentLocationId) {
+                continue;
             }
+
+            $code = $loc->location;
+            $parts = explode('-', $code);
+            $rack = $parts[0] ?? 'A17';
+            $col = isset($parts[1]) ? (int)$parts[1] : 1;
+            $rowOrTier = isset($parts[2]) ? (int)$parts[2] : 1;
+
+            $stackCount = $loc->rolls->count();
+            if ($loc->status !== 0 && $stackCount >= Location::MAX_CAPACITY) {
+                continue; // Slot full
+            }
+
+            // Determine candidate tier
+            // If location has rolls, tier is current stack + 1
+            // If location has no rolls but parts[2] represents tier (legacy unit test where A17-1-2 is tier 2):
+            $tier = $stackCount > 0 ? ($stackCount + 1) : min(4, $rowOrTier);
+
+            // Legacy structural tier stacking constraint (e.g. A17-1-2 requires A17-1-1 to be occupied)
+            if ($tier > 1 && $stackCount === 0) {
+                $belowSlot = $occupiedMap[$col][$tier - 1] ?? null;
+                if (!$belowSlot || !$belowSlot['isOccupied']) {
+                    continue; // Invalid slot: lower tier is empty
+                }
+            }
+
+            // --- ZERO-TOLERANCE GRAVITATIONAL SAFETY AUDIT RULE ---
+            // Heavy rolls (>= 1000 kg) CANNOT be placed on Tier 3 or Tier 4 under any circumstance
+            if ($rollWeight >= 1000 && $tier >= 3) {
+                continue;
+            }
+
+            // Inverted Pyramid Check: Roll above cannot be significantly heavier than roll below
+            if ($stackCount > 0) {
+                $underRoll = $loc->rolls->last();
+                if ($underRoll && ($rollWeight - ($underRoll->weight ?? 900)) > 100) {
+                    continue; // Crushing/toppling risk
+                }
+            }
+
+            // Calculate ML feature scores using pure PHP LightGBM model
+            $scoreBreakdown = self::scoreSlot(
+                $col,
+                $tier,
+                $loc->id,
+                $rollGrade,
+                $rollWeight,
+                $rollGsm,
+                $rollJop,
+                $columnGrades,
+                $columnJops,
+                $columnWeights,
+                $userHabitBayWeights,
+                $actionType,
+                $currentLocationId,
+                $locations,
+                $occupiedMap
+            );
+
+            // Add Rack & JOP Area consolidation bonus
+            $totalScore = $scoreBreakdown['totalScore'];
+            if ($rollJop && isset($rackJops[$rack]) && in_array($rollJop, $rackJops[$rack])) {
+                $totalScore += 25.0;
+            }
+            if ($rollGrade && isset($rackGrades[$rack]) && in_array($rollGrade, $rackGrades[$rack])) {
+                $totalScore += 15.0;
+            }
+
+            $candidates[] = [
+                'id' => $loc->id,
+                'code' => $code,
+                'rack' => $rack,
+                'col' => $col,
+                'tier' => $tier,
+                'totalScore' => round($totalScore, 1),
+                'gradeScore' => $scoreBreakdown['gradeScore'],
+                'weightScore' => $scoreBreakdown['weightScore'],
+                'habitScore' => $scoreBreakdown['habitScore'],
+                'jopScore' => $scoreBreakdown['jopScore'],
+                'proximityScore' => $scoreBreakdown['proximityScore'],
+                'reasonings' => $scoreBreakdown['reasonings'],
+                'tag' => $scoreBreakdown['tag'],
+            ];
         }
 
         // Sort candidates by total score descending
@@ -140,6 +191,7 @@ class SpectrumRecommendationEngine
             'recommendedSlot' => [
                 'id' => $top['id'],
                 'code' => $top['code'],
+                'rack' => $top['rack'] ?? explode('-', $top['code'])[0],
                 'col' => $top['col'],
                 'tier' => $top['tier'],
             ],
@@ -147,11 +199,12 @@ class SpectrumRecommendationEngine
             'reasonings' => $top['reasonings'],
             'topCandidates' => array_slice($candidates, 0, 3),
             'featureWeights' => self::getFeatureWeights($actionType),
+            'model_info' => LightGBMSlotRanker::getModelInfo(),
         ];
     }
 
     /**
-     * Compute slot score based on physical characteristics and user habits
+     * Compute slot score using pure PHP LightGBM model and structural rules
      */
     private static function scoreSlot(
         int $col,
@@ -167,7 +220,8 @@ class SpectrumRecommendationEngine
         array $userHabitBayWeights,
         string $actionType,
         ?int $currentLocationId,
-        $allLocations
+        $allLocations,
+        array $occupiedMap = []
     ): array {
         $reasonings = [];
         $tags = [];
@@ -266,17 +320,28 @@ class SpectrumRecommendationEngine
             }
         }
 
-        // Compute Weighted Sum
-        $weights = self::getFeatureWeights($actionType);
-        $totalScore = (
-            ($gradeScore * $weights['grade']) +
-            ($weightScore * $weights['weight']) +
-            ($habitScore * $weights['habit']) +
-            ($jopScore * $weights['jop']) +
-            ($proximityScore * $weights['proximity'])
+        // 6. Execute Pure-PHP LightGBM Model Inference (Zero-Python runtime)
+        $features = SlotFeatureExtractor::extract(
+            $col,
+            $tier,
+            $grade,
+            $weight,
+            $gsm,
+            $jop,
+            $columnGrades,
+            $columnJops,
+            $columnWeights,
+            $userHabitBayWeights,
+            $actionType,
+            $currentLocationId,
+            $allLocations,
+            $occupiedMap
         );
 
-        $primaryTag = !empty($tags) ? $tags[0] : 'SPECTRUM Recommendation';
+        $lgbResult = LightGBMSlotRanker::predict($features);
+        $totalScore = $lgbResult['score'];
+        $combinedReasonings = array_values(array_unique(array_merge($lgbResult['reasons'], $reasonings)));
+        $primaryTag = $lgbResult['tag'] ?? (!empty($tags) ? $tags[0] : 'LightGBM Recommendation');
 
         return [
             'totalScore' => round($totalScore, 1),
@@ -285,9 +350,19 @@ class SpectrumRecommendationEngine
             'habitScore' => round($habitScore, 1),
             'jopScore' => round($jopScore, 1),
             'proximityScore' => round($proximityScore, 1),
-            'reasonings' => array_slice(array_unique($reasonings), 0, 4),
+            'reasonings' => array_slice($combinedReasonings, 0, 4),
             'tag' => $primaryTag,
+            'model' => LightGBMSlotRanker::MODEL_NAME,
+            'feature_contributions' => $lgbResult['feature_contributions'] ?? [],
         ];
+    }
+
+    /**
+     * Get model architecture and runtime metadata
+     */
+    public static function getModelInfo(): array
+    {
+        return LightGBMSlotRanker::getModelInfo();
     }
 
     /**

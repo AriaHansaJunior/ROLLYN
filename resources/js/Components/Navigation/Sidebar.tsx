@@ -19,6 +19,7 @@ import {
     History,
     Calendar,
     Disc,
+    Gauge,
 } from "lucide-react";
 import { Link, usePage } from "@inertiajs/react";
 
@@ -65,6 +66,11 @@ const navSections = [
                 label: "Recommendation Logs",
                 icon: Sparkles,
             },
+            {
+                id: "spectrum-benchmark",
+                label: "AI Benchmarking",
+                icon: Gauge,
+            },
             { id: "profile", label: "Profile", icon: User },
         ],
     },
@@ -107,6 +113,8 @@ export default function Sidebar({
             "production-schedule",
             "shipment-history",
             "reports",
+            "spectrum-benchmark",
+            "profile",
         ], // Removed 'user-management'
     };
 

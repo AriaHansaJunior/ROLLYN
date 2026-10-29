@@ -5,6 +5,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
+    // Public / External SPECTRUM AI Benchmarking API (Open for manual & team benchmarking)
+    Route::prefix('spectrum')->group(function () {
+        Route::post('/recommend', [\App\Http\Controllers\SpectrumEngineController::class, 'apiExternalRecommend']);
+        Route::post('/benchmark', [\App\Http\Controllers\SpectrumEngineController::class, 'apiExternalBatch']);
+        Route::get('/sample-rolls', [\App\Http\Controllers\SpectrumEngineController::class, 'apiSampleRolls']);
+    });
+
     Route::post('/auth/login', [\App\Http\Controllers\Api\V1\AuthController::class, 'login'])->middleware('throttle:10,1');
 
     Route::middleware('auth:sanctum')->group(function () {

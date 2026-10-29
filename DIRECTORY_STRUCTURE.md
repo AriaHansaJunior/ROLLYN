@@ -35,7 +35,7 @@ This project features **three primary AI systems** and **one continuous learning
 | AI System | Frontend (Client) | Backend (Laravel) | AI Microservice (Python) | Data & Models |
 | :--- | :--- | :--- | :--- | :--- |
 | **1. Computer Vision & Weight Detection** | [`resources/js/AI/Vision/`](resources/js/AI/Vision/)<br>[`resources/js/AI/Spectrum/`](resources/js/AI/Spectrum/) | [`app/Http/Controllers/SpectrumEngineController.php`](app/Http/Controllers/SpectrumEngineController.php) | [`spectrum_engine/app.py`](spectrum_engine/app.py) (FastAPI :8001) | [`spectrum_engine/best_mlp.pkl`](spectrum_engine/best_mlp.pkl)<br>[`public/tesseract/lang-data/`](public/tesseract/lang-data/) |
-| **2. Warehouse Slot Recommendation AI** | [`resources/js/AI/Recommendation/`](resources/js/AI/Recommendation/)<br>[`resources/js/Components/AI/SpectrumSlotSelectorModal.tsx`](resources/js/Components/AI/SpectrumSlotSelectorModal.tsx) | [`app/Services/AI/SpectrumRecommendationEngine.php`](app/Services/AI/SpectrumRecommendationEngine.php)<br>[`app/Models/LocationRecommendationLog.php`](app/Models/LocationRecommendationLog.php) | N/A (Algorithmic / Heuristic Clustering) | Real-time rack occupancy map + Operator habitual Bayes distribution |
+| **2. Warehouse Slot Recommendation AI** | [`resources/js/AI/Recommendation/`](resources/js/AI/Recommendation/)<br>[`resources/js/Components/AI/SpectrumSlotSelectorModal.tsx`](resources/js/Components/AI/SpectrumSlotSelectorModal.tsx) | [`app/Services/AI/LightGBMSlotRanker.php`](app/Services/AI/LightGBMSlotRanker.php)<br>[`app/Services/AI/SlotFeatureExtractor.php`](app/Services/AI/SlotFeatureExtractor.php)<br>[`app/Services/AI/SpectrumRecommendationEngine.php`](app/Services/AI/SpectrumRecommendationEngine.php) | N/A (100% Pure PHP Native LightGBM GBDT Model) | 20-Tree Gradient Boosted Decision Forest + Real-time Rack State |
 | **3. Continuous Learning & Retraining Pipeline** | [`resources/js/Pages/Training.tsx`](resources/js/Pages/Training.tsx)<br>[`resources/js/Components/AI/Training/`](resources/js/Components/AI/Training/) | [`app/Http/Controllers/SpectrumEngineController.php`](app/Http/Controllers/SpectrumEngineController.php) (`retrain`, `saveDataset`) | [`spectrum_engine/train_spectrum_led.py`](spectrum_engine/train_spectrum_led.py) | [`spectrum_engine/dataset_digits/`](spectrum_engine/dataset_digits/) (0–9 digits)<br>[`storage/app/dataset/labels.csv`](storage/app/dataset/labels.csv) |
 | **4. AI Monitoring & Audit Logs** | [`resources/js/Pages/OcrMonitoring.tsx`](resources/js/Pages/OcrMonitoring.tsx)<br>[`resources/js/Pages/RecommendationLogs.tsx`](resources/js/Pages/RecommendationLogs.tsx) | [`app/Http/Controllers/RecommendationLogController.php`](app/Http/Controllers/RecommendationLogController.php)<br>[`app/Models/SpectrumTestLog.php`](app/Models/SpectrumTestLog.php) | `/api/spectrum/stats`<br>`/api/spectrum/retrain-status` | Database tables: `spectrum_test_logs`, `location_recommendation_logs` |
 
@@ -72,7 +72,9 @@ app/
 │
 ├── Services/
 │   ├── AI/                              # [AI CORE] Dedicated AI Services
-│   │   └── SpectrumRecommendationEngine.php # Core slot allocation algorithm & scoring heuristics
+│   │   ├── LightGBMSlotRanker.php       # Pure-PHP LightGBM 20-Tree Decision Forest Model (Zero Python Runtime)
+│   │   ├── SlotFeatureExtractor.php     # 10-Dimensional domain feature extractor & normalizer
+│   │   └── SpectrumRecommendationEngine.php # Core slot allocation orchestrator combining physical rules & ML
 │   └── SpectrumRecommendationEngine.php     # Backward-compatible proxy class
 │
 ├── Models/                              # Eloquent Models (Database entities)

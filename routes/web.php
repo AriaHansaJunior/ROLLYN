@@ -52,6 +52,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/ocr-monitoring', [SpectrumEngineController::class, 'ocrMonitoring']);
         Route::get('/training', [SpectrumEngineController::class, 'trainingPage']);
         Route::get('/recommendation-logs', [RecommendationLogController::class, 'index']);
+        Route::get('/spectrum-benchmark', [SpectrumEngineController::class, 'benchmarkPage']);
+        Route::post('/api/spectrum/run-benchmark', [SpectrumEngineController::class, 'runBenchmark']);
+        Route::get('/api/spectrum/benchmark/export-csv', [SpectrumEngineController::class, 'exportBenchmarkCsv']);
         Route::post('/api/spectrum/retrain', [SpectrumEngineController::class, 'retrain'])
             ->middleware('throttle:5,1');
     });
