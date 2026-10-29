@@ -109,4 +109,18 @@ class Roll extends Model
     {
         return $this->belongsTo(JumboRoll::class, 'jumbo_roll_id');
     }
+
+    /**
+     * Find roll by primary key 'no' or roll identifier 'no_roll'.
+     */
+    public static function findByRollNumber(int|string|null $identifier): ?self
+    {
+        if ($identifier === null || $identifier === '') {
+            return null;
+        }
+
+        return self::where('no', $identifier)
+            ->orWhere('no_roll', $identifier)
+            ->first();
+    }
 }

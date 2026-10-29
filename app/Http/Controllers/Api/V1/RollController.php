@@ -72,6 +72,8 @@ class RollController extends Controller
             'entry_date' => 'required|date',
             'jops_id' => 'nullable|exists:jops,id',
             'grades_id' => 'required|exists:grades,id',
+            'gsms_id' => 'nullable|exists:gsms,id',
+            'rolls_widths_id' => 'nullable|exists:rolls_widths,id',
             'plybonds_id' => 'nullable|exists:plybonds,id',
             'thicknesses_id' => 'nullable|exists:thicknesses,id',
             'bulk' => 'nullable|numeric',
@@ -81,6 +83,8 @@ class RollController extends Controller
             'cobbs_id' => 'nullable|exists:cobbs,id',
             'exmaterial' => 'nullable|in:IMPORT,LOCAL',
             'visual' => 'nullable|string',
+            'status' => 'nullable|in:OK,HOLD',
+            'jumbo_roll_id' => 'nullable|exists:jumbo_rolls,id',
             'locations_id' => 'nullable|exists:locations,id',
         ]);
 
@@ -93,6 +97,14 @@ class RollController extends Controller
 
             $data = $validator->validated();
 
+            if (!empty($data['locations_id'])) {
+                $targetLoc = Location::find($data['locations_id']);
+                if ($targetLoc && $targetLoc->isFull()) {
+                    DB::rollBack();
+                    return $this->errorResponse('This slot is already full (maximum 4 rolls).', 422);
+                }
+            }
+
             $maxNo = Roll::max('no');
             $data['no'] = $maxNo ? $maxNo + 1 : 1;
 
@@ -104,6 +116,10 @@ class RollController extends Controller
 
             $roll = Roll::create($data);
 
+            if (!empty($roll->locations_id)) {
+                Location::find($roll->locations_id)?->syncState();
+            }
+
             \App\Models\SystemNotification::create([
                 'type' => 'incoming',
                 'title' => 'Incoming Roll',
@@ -113,7 +129,7 @@ class RollController extends Controller
 
             DB::commit();
 
-            $roll->load(['shift', 'grade', 'jop']);
+            $roll->load(['shift', 'grade', 'gsm', 'rollsWidth', 'rollsDiameter', 'jop']);
 
             return $this->successResponse($roll, 'Roll transaction saved successfully', 201);
 
@@ -125,8 +141,7 @@ class RollController extends Controller
 
     public function show($id)
     {
-
-        $roll = Roll::with(['shift', 'grade', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop'])->find($id);
+        $roll = Roll::with(['shift', 'grade', 'gsm', 'rollsWidth', 'rollsDiameter', 'plybond', 'thickness', 'core', 'cobb', 'location', 'user', 'jop', 'jumboRoll'])->where('no', $id)->orWhere('no_roll', $id)->first();
 
         if (!$roll) {
             return $this->errorResponse('Roll not found', 404);
@@ -137,19 +152,21 @@ class RollController extends Controller
 
     public function update(Request $request, $id)
     {
-        $roll = Roll::find($id);
+        $roll = Roll::findByRollNumber($id);
 
         if (!$roll) {
             return $this->errorResponse('Roll not found', 404);
         }
 
         $validator = Validator::make($request->all(), [
-            'no_roll' => 'required|string|max:45|unique:rolls,no_roll,' . $id . ',no',
+            'no_roll' => 'required|string|max:45|unique:rolls,no_roll,' . $roll->no . ',no',
             'form' => 'nullable|integer',
             'shifts_id' => 'required|exists:shifts,id',
             'entry_date' => 'required|date',
             'jops_id' => 'nullable|exists:jops,id',
             'grades_id' => 'required|exists:grades,id',
+            'gsms_id' => 'nullable|exists:gsms,id',
+            'rolls_widths_id' => 'nullable|exists:rolls_widths,id',
             'plybonds_id' => 'nullable|exists:plybonds,id',
             'thicknesses_id' => 'nullable|exists:thicknesses,id',
             'bulk' => 'nullable|numeric',
@@ -159,6 +176,8 @@ class RollController extends Controller
             'cobbs_id' => 'nullable|exists:cobbs,id',
             'exmaterial' => 'nullable|in:IMPORT,LOCAL',
             'visual' => 'nullable|string',
+            'status' => 'nullable|in:OK,HOLD',
+            'jumbo_roll_id' => 'nullable|exists:jumbo_rolls,id',
             'locations_id' => 'nullable|exists:locations,id',
         ]);
 
@@ -171,17 +190,18 @@ class RollController extends Controller
 
             $validated = $validator->validated();
 
+            $oldLocationId = $roll->locations_id;
+            $newLocationId = array_key_exists('locations_id', $validated) ? $validated['locations_id'] : $oldLocationId;
+
+            if ($newLocationId && $newLocationId != $oldLocationId) {
+                $targetLoc = Location::find($newLocationId);
+                if ($targetLoc && $targetLoc->isFull($roll->no)) {
+                    DB::rollBack();
+                    return $this->errorResponse('This slot is already full (maximum 4 rolls). Please select another slot.', 422);
+                }
+            }
+
             if (array_key_exists('locations_id', $validated) && $validated['locations_id'] != $roll->locations_id) {
-                $oldLocationId = $roll->locations_id;
-                $newLocationId = $validated['locations_id'];
-
-                if ($oldLocationId) {
-                    Location::where('id', $oldLocationId)->update(['status' => 0]);
-                }
-                if ($newLocationId) {
-                    Location::where('id', $newLocationId)->update(['status' => 1]);
-                }
-
                 if ($newLocationId) {
                     $recommendedLocationId = $request->input('recommended_locations_id');
                     $actionTypeInput = $request->input('action_type');
@@ -207,6 +227,15 @@ class RollController extends Controller
             }
 
             $roll->update($validated);
+
+            if ($oldLocationId != $newLocationId) {
+                Location::find($oldLocationId)?->syncState();
+                Location::find($newLocationId)?->syncState();
+            }
+
+            DB::commit();
+
+            return $this->successResponse($roll, 'Roll updated successfully');
 
             DB::commit();
 

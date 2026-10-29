@@ -313,7 +313,7 @@ class SpectrumEngineController extends Controller
         $actionType = strtoupper($request->input('action_type', 'ASSIGN'));
         $currentLocationId = $request->input('current_locations_id');
 
-        $result = \App\Services\SpectrumRecommendationEngine::recommend(
+        $result = \App\Services\AI\SpectrumRecommendationEngine::recommend(
             $rollData,
             $userId,
             $actionType,
@@ -336,7 +336,7 @@ class SpectrumEngineController extends Controller
             'status' => 'SUCCESS',
             'accuracy_rate' => $matchRate,
             'total_evaluations' => $totalLogs,
-            'feature_weights' => \App\Services\SpectrumRecommendationEngine::getFeatureWeights(),
+            'feature_weights' => \App\Services\AI\SpectrumRecommendationEngine::getFeatureWeights(),
         ]);
     }
 }

@@ -26,27 +26,6 @@ class IncomingRollController extends Controller
     {
         $jops = Jop::with(['customer', 'grade', 'gsm', 'rollsWidth', 'plybond', 'thickness', 'core', 'rolls', 'productionSchedules', 'jumboRolls'])->latest()->get();
 
-        // Auto-start SPECTRUM Engine if it's not running (non-blocking)
-        if (!app()->environment('testing')) {
-            $connection = @fsockopen('127.0.0.1', 8001, $errno, $errstr, 0.2);
-            if (is_resource($connection)) {
-                fclose($connection);
-            } else {
-                $engineDir = base_path('spectrum_engine');
-                try {
-                    if (class_exists('COM')) {
-                        $shell = new \COM("WScript.Shell");
-                        $cmd = "cmd /c cd /d " . escapeshellarg($engineDir) . " && python -m uvicorn app:app --host 127.0.0.1 --port 8001";
-                        $shell->Run($cmd, 0, false); // 0 = hidden window, false = do not wait
-                    } else {
-                        @pclose(@popen('start "" /B cmd /c "cd /d ' . escapeshellarg($engineDir) . ' && python -m uvicorn app:app --host 127.0.0.1 --port 8001 > NUL 2>&1"', 'r'));
-                    }
-                } catch (\Throwable $e) {
-                    @pclose(@popen('start "" /B cmd /c "cd /d ' . escapeshellarg($engineDir) . ' && python -m uvicorn app:app --host 127.0.0.1 --port 8001 > NUL 2>&1"', 'r'));
-                }
-            }
-        }
-
         $lastSavedRollNumber = session('last_saved_roll_number');
         $recommendedRollNumber = $lastSavedRollNumber 
             ? self::getNextRollNumber($lastSavedRollNumber) 

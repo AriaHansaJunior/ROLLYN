@@ -17,9 +17,9 @@ class ReportController extends Controller
     {
         $totalRolls = Roll::count();
         $totalWeight = Roll::sum('weight');
-        $occupiedSlots = Location::where('status', 1)->count();
         $totalSlots = Location::count();
-        $availableSlots = $totalSlots - $occupiedSlots;
+        $availableSlots = Location::where('status', 0)->count();
+        $occupiedSlots = $totalSlots - $availableSlots;
         $activeJops = Jop::count();
 
         $kpis = [
@@ -88,8 +88,8 @@ class ReportController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
-                    'date' => $item->entry_date ? \Carbon\Carbon::parse($item->entry_date)->format('Y-m-d') : '—',
-                    'shift' => $item->shift->shift ?? '—',
+                    'date' => $item->entry_date ? \Carbon\Carbon::parse($item->entry_date)->format('Y-m-d') : '-',
+                    'shift' => $item->shift->shift ?? '-',
                     'shifts_id' => $item->shifts_id,
                     'total_rolls' => $item->total_rolls,
                     'total_weight' => $item->total_weight ?? 0,
@@ -112,9 +112,9 @@ class ReportController extends Controller
             return [
                 'id' => $shipment->id,
                 'shipment_number' => $shipment->shipment_number,
-                'customer' => $shipment->customers->pluck('customer')->join(', ') ?: '—',
-                'admin' => $shipment->admin->username ?? '—',
-                'qc' => $shipment->qc->username ?? '—',
+                'customer' => $shipment->customers->pluck('customer')->join(', ') ?: '-',
+                'admin' => $shipment->admin->username ?? '-',
+                'qc' => $shipment->qc->username ?? '-',
                 'date' => $shipment->shipment_date,
                 'status' => $shipment->status,
                 'total_rolls' => $shipment->shipmentRolls->count(),
@@ -123,9 +123,9 @@ class ReportController extends Controller
                     if (!$r) return null;
                     return [
                         'no_roll' => $r->no_roll ?? ('R-' . $r->no),
-                        'jop' => $r->jop->jop ?? '—',
-                        'grade' => $r->grade->grade ?? '—',
-                        'gsm' => $r->gsm->gsm ?? ($r->jop->gsm->gsm ?? '—'),
+                        'jop' => $r->jop->jop ?? '-',
+                        'grade' => $r->grade->grade ?? '-',
+                        'gsm' => $r->gsm->gsm ?? ($r->jop->gsm->gsm ?? '-'),
                         'weight' => $r->weight ?? 0,
                         'entry_date' => $r->entry_date,
                         'qc_status' => $sr->qc_status,

@@ -26,11 +26,11 @@ class LocationController extends Controller
                     'id' => $r->no_roll ?? ('R-' . $r->no),
                     'raw_id' => $r->no,
                     'no_roll' => $r->no_roll,
-                    'grade' => $r->grade->grade ?? '—',
+                    'grade' => $r->grade->grade ?? '-',
                     'gsm' => $r->jop->gsm->gsm ?? ($r->gsm ?? 150),
                     'weight' => $r->weight ?? 0,
-                    'date' => $r->entry_date ? Carbon::parse($r->entry_date)->format('Y-m-d') : '—',
-                    'jop' => $r->jop->jop ?? '—',
+                    'date' => $r->entry_date ? Carbon::parse($r->entry_date)->format('Y-m-d') : '-',
+                    'jop' => $r->jop->jop ?? '-',
                 ];
             });
 

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Location extends Model
 {
+    public const MAX_CAPACITY = 4;
+
     protected $fillable = [
         'location',
         'status',
@@ -14,6 +16,24 @@ class Location extends Model
     public function rolls()
     {
         return $this->hasMany(Roll::class, 'locations_id');
+    }
+
+    public function isFull(int|string|null $excludeRollNo = null): bool
+    {
+        $query = $this->rolls();
+        if ($excludeRollNo !== null) {
+            $query->where('no', '!=', $excludeRollNo);
+        }
+        return $query->count() >= self::MAX_CAPACITY;
+    }
+
+    public function getRemainingCapacity(int|string|null $excludeRollNo = null): int
+    {
+        $query = $this->rolls();
+        if ($excludeRollNo !== null) {
+            $query->where('no', '!=', $excludeRollNo);
+        }
+        return max(0, self::MAX_CAPACITY - $query->count());
     }
 
     public function syncState()
