@@ -227,9 +227,7 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
                             </span>
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
-                            Evaluate accuracy and operator compliance regarding
-                            warehouse slot location recommendations (Assign &
-                            Move)
+                            Warehouse slot location recommendation accuracy and operator compliance.
                         </p>
                     </div>
                 </div>
@@ -260,135 +258,146 @@ export default function RecommendationLogs({ logs = [], stats }: Props) {
             </div>
 
             {/* KPI Evaluation Analytics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
                 {/* Card 1: Overall Match Rate */}
-                <div className="card p-4.5 bg-gradient-to-br from-white to-blue-50/40 border border-blue-100 shadow-xs relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Overall Match Rate
-                        </span>
-                        <div className="w-8 h-8 rounded-lg bg-blue-100/80 text-blue-700 flex items-center justify-center">
-                            <TrendingUp size={16} />
+                <div className="card p-3 sm:p-4.5 bg-gradient-to-br from-white to-blue-50/40 border border-blue-100 shadow-xs relative overflow-hidden flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
+                                Overall Match
+                            </span>
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-100/80 text-blue-700 flex items-center justify-center shrink-0">
+                                <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-baseline gap-1.5">
+                            <span className="text-xl sm:text-3xl font-extrabold text-blue-700">
+                                {computedStats.overall_match_rate}%
+                            </span>
+                            <span className="text-[10px] sm:text-xs font-semibold text-slate-500">
+                                ({computedStats.match_count}/{computedStats.total_evaluations})
+                            </span>
                         </div>
                     </div>
-                    <div className="mt-2.5 flex items-baseline gap-2">
-                        <span className="text-2xl sm:text-3xl font-extrabold text-blue-700">
-                            {computedStats.overall_match_rate}%
-                        </span>
-                        <span className="text-xs font-semibold text-slate-500">
-                            ({computedStats.match_count} /{" "}
-                            {computedStats.total_evaluations} match)
-                        </span>
-                    </div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
-                        <div
-                            className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                            style={{
-                                width: `${Math.min(computedStats.overall_match_rate, 100)}%`,
-                            }}
-                        />
-                    </div>
-                    <div className="flex justify-between text-[11px] text-slate-400 mt-1.5 font-medium">
-                        <span>
-                            Boolean True (1): {computedStats.match_count}
-                        </span>
-                        <span>
-                            Override (0): {computedStats.override_count}
-                        </span>
+                    <div>
+                        <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                            <div
+                                className="bg-blue-600 h-full rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${Math.min(computedStats.overall_match_rate, 100)}%`,
+                                }}
+                            />
+                        </div>
+                        <div className="flex justify-between text-[10px] sm:text-[11px] text-slate-400 mt-1 font-medium">
+                            <span>True: {computedStats.match_count}</span>
+                            <span>Override: {computedStats.override_count}</span>
+                        </div>
                     </div>
                 </div>
 
                 {/* Card 2: Initial Assign Accuracy */}
-                <div className="card p-4.5 bg-gradient-to-br from-white to-emerald-50/40 border border-emerald-100 shadow-xs">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Assign Match Rate
-                        </span>
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100/80 text-emerald-700 flex items-center justify-center">
-                            <CheckCircle2 size={16} />
+                <div className="card p-3 sm:p-4.5 bg-gradient-to-br from-white to-emerald-50/40 border border-emerald-100 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
+                                Assign Match
+                            </span>
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100/80 text-emerald-700 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-baseline gap-1.5">
+                            <span className="text-xl sm:text-3xl font-extrabold text-emerald-700">
+                                {computedStats.assign_match_rate}%
+                            </span>
+                            <span className="text-[10px] sm:text-xs font-semibold text-slate-500">
+                                ({computedStats.assign_total} total)
+                            </span>
                         </div>
                     </div>
-                    <div className="mt-2.5 flex items-baseline gap-2">
-                        <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700">
-                            {computedStats.assign_match_rate}%
-                        </span>
-                        <span className="text-xs font-semibold text-slate-500">
-                            ({computedStats.assign_total} total assigns)
-                        </span>
+                    <div>
+                        <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                            <div
+                                className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${Math.min(computedStats.assign_match_rate, 100)}%`,
+                                }}
+                            />
+                        </div>
+                        <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 font-medium truncate">
+                            Initial slot accuracy
+                        </p>
                     </div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
-                        <div
-                            className="bg-emerald-600 h-full rounded-full transition-all duration-500"
-                            style={{
-                                width: `${Math.min(computedStats.assign_match_rate, 100)}%`,
-                            }}
-                        />
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-1.5 font-medium">
-                        Accuracy of initial slot assignments
-                    </p>
                 </div>
 
                 {/* Card 3: Move / Relocation Accuracy */}
-                <div className="card p-4.5 bg-gradient-to-br from-white to-amber-50/40 border border-amber-100 shadow-xs">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Move Match Rate
-                        </span>
-                        <div className="w-8 h-8 rounded-lg bg-amber-100/80 text-amber-700 flex items-center justify-center">
-                            <Layers size={16} />
+                <div className="card p-3 sm:p-4.5 bg-gradient-to-br from-white to-amber-50/40 border border-amber-100 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
+                                Move Match
+                            </span>
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100/80 text-amber-700 flex items-center justify-center shrink-0">
+                                <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-baseline gap-1.5">
+                            <span className="text-xl sm:text-3xl font-extrabold text-amber-700">
+                                {computedStats.move_match_rate}%
+                            </span>
+                            <span className="text-[10px] sm:text-xs font-semibold text-slate-500">
+                                ({computedStats.move_total} total)
+                            </span>
                         </div>
                     </div>
-                    <div className="mt-2.5 flex items-baseline gap-2">
-                        <span className="text-2xl sm:text-3xl font-extrabold text-amber-700">
-                            {computedStats.move_match_rate}%
-                        </span>
-                        <span className="text-xs font-semibold text-slate-500">
-                            ({computedStats.move_total} total moves)
-                        </span>
+                    <div>
+                        <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                            <div
+                                className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${Math.min(computedStats.move_match_rate, 100)}%`,
+                                }}
+                            />
+                        </div>
+                        <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 font-medium truncate">
+                            Relocation accuracy
+                        </p>
                     </div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
-                        <div
-                            className="bg-amber-500 h-full rounded-full transition-all duration-500"
-                            style={{
-                                width: `${Math.min(computedStats.move_match_rate, 100)}%`,
-                            }}
-                        />
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-1.5 font-medium">
-                        Accuracy during slot relocation processes
-                    </p>
                 </div>
 
                 {/* Card 4: Overrides / Discrepancies */}
-                <div className="card p-4.5 bg-gradient-to-br from-white to-rose-50/40 border border-rose-100 shadow-xs">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            Manual Overrides
-                        </span>
-                        <div className="w-8 h-8 rounded-lg bg-rose-100/80 text-rose-700 flex items-center justify-center">
-                            <AlertTriangle size={16} />
+                <div className="card p-3 sm:p-4.5 bg-gradient-to-br from-white to-rose-50/40 border border-rose-100 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">
+                                Overrides
+                            </span>
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-100/80 text-rose-700 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-baseline gap-1.5">
+                            <span className="text-xl sm:text-3xl font-extrabold text-rose-700">
+                                {computedStats.override_count}
+                            </span>
+                            <span className="text-[10px] sm:text-xs font-semibold text-rose-600">
+                                Overridden
+                            </span>
                         </div>
                     </div>
-                    <div className="mt-2.5 flex items-baseline gap-2">
-                        <span className="text-2xl sm:text-3xl font-extrabold text-rose-700">
-                            {computedStats.override_count}
-                        </span>
-                        <span className="text-xs font-semibold text-rose-600">
-                            Boolean 0 (False)
-                        </span>
+                    <div>
+                        <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                            <div
+                                className="bg-rose-500 h-full rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${computedStats.total_evaluations > 0 ? (computedStats.override_count / computedStats.total_evaluations) * 100 : 0}%`,
+                                }}
+                            />
+                        </div>
+                        <p className="text-[10px] sm:text-[11px] text-slate-500 mt-1 font-medium truncate">
+                            Manual adjustments
+                        </p>
                     </div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
-                        <div
-                            className="bg-rose-500 h-full rounded-full transition-all duration-500"
-                            style={{
-                                width: `${computedStats.total_evaluations > 0 ? (computedStats.override_count / computedStats.total_evaluations) * 100 : 0}%`,
-                            }}
-                        />
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-1.5 font-medium">
-                        User selected a slot different from the recommendation
-                    </p>
                 </div>
             </div>
 

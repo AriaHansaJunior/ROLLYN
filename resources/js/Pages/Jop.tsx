@@ -489,7 +489,7 @@ ${pageBlocks.join('\n')}
       <div className="flex flex-wrap justify-between items-center gap-2">
         <div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Job Order Production (JOP)</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Manufacturing execution tracking and completion status by production order</p>
+          <p className="text-xs text-slate-500 mt-0.5">Job order tracking and production completion status</p>
         </div>
         <div className="flex items-center gap-2">
           {!isProduksi && (

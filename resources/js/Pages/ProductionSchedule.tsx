@@ -395,14 +395,13 @@ export default function ProductionSchedule() {
                         Production Schedule
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        Schedule production runs based on existing SPK / Job
-                        Order Production data
+                        Production schedules and machine allocation by SPK / JOP.
                     </p>
                 </div>
                 {!isProduksi && (
                     <button
                         onClick={openAddModal}
-                        className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0"
+                        className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0 text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-3.5"
                     >
                         <Plus size={15} />
                         <span>Add Schedule</span>
@@ -411,69 +410,69 @@ export default function ProductionSchedule() {
             </div>
 
             {/* Summary Cards */}
-            <div className={`grid grid-cols-1 ${isProduksi ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-3`}>
+            <div className={`grid grid-cols-2 ${isProduksi ? 'min-[640px]:grid-cols-3' : 'min-[640px]:grid-cols-4'} gap-2.5 sm:gap-3`}>
                 {!isProduksi && (
-                    <div className="card p-4 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                            <Settings size={18} />
+                    <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
-                        <div className="w-full">
-                            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                        <div className="w-full min-w-0">
+                            <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
                                 Default TPH
                             </div>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
                                 <input
                                     type="number"
                                     step="0.01"
                                     min="0"
                                     value={globalTph}
                                     onChange={(e) => updateGlobalTph(e.target.value)}
-                                    className="form-input text-xs w-20 py-1"
+                                    className="form-input text-xs w-16 sm:w-20 py-1 px-1.5"
                                     placeholder="20"
                                 />
-                                <span className="text-[10px] font-semibold text-slate-500">Ton/Hour</span>
+                                <span className="text-[9px] sm:text-[10px] font-semibold text-slate-500 truncate">Ton/H</span>
                             </div>
                         </div>
                     </div>
                 )}
-                <div className="card p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                        <Calendar size={18} />
+                <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    <div className="min-w-0">
+                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
                             Total Schedules
                         </div>
-                        <div className="text-xl font-extrabold text-slate-900">
+                        <div className="text-lg sm:text-xl font-extrabold text-slate-900">
                             {rows.length}
                         </div>
                     </div>
                 </div>
-                <div className="card p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                        <TrendingUp size={18} />
+                <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                        <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    <div className="min-w-0">
+                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
                             Total Tonnage
                         </div>
-                        <div className="text-xl font-extrabold text-slate-900">
+                        <div className="text-lg sm:text-xl font-extrabold text-slate-900 truncate">
                             {Number(totalTonnage).toFixed(2)}{" "}
-                            <span className="text-sm font-semibold text-slate-500">
+                            <span className="text-xs sm:text-sm font-semibold text-slate-500">
                                 MT
                             </span>
                         </div>
                     </div>
                 </div>
-                <div className="card p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0">
-                        <Clock size={18} />
+                <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0">
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    <div className="min-w-0">
+                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
                             Open Schedules
                         </div>
-                        <div className="text-xl font-extrabold text-slate-900">
+                        <div className="text-lg sm:text-xl font-extrabold text-slate-900">
                             {rows.filter((r) => r.status === "OPEN").length}
                         </div>
                     </div>

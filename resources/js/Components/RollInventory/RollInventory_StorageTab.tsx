@@ -186,18 +186,18 @@ export default function RollInventory_StorageTab({
 
         {/* Shipment Queue Switch Filter Pills */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg text-xs gap-1 border border-slate-200">
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg text-xs gap-1 border border-slate-200 overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => { setQueueFilter('all'); setPage(1) }}
-              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${queueFilter === 'all' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${queueFilter === 'all' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
             >
               All Rolls ({rolls.length})
             </button>
             <button
               type="button"
               onClick={() => { setQueueFilter('not_queued'); setPage(1) }}
-              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${queueFilter === 'not_queued' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${queueFilter === 'not_queued' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               Available ({unqueuedRollsCount})
@@ -205,7 +205,7 @@ export default function RollInventory_StorageTab({
             <button
               type="button"
               onClick={() => { setQueueFilter('queued'); setPage(1) }}
-              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${queueFilter === 'queued' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${queueFilter === 'queued' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
             >
               <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
               Shipment Queued ({queuedRollsCount})
@@ -216,7 +216,7 @@ export default function RollInventory_StorageTab({
                 setQcStatusFilter(qcStatusFilter === 'HOLD' ? 'All' : 'HOLD');
                 setPage(1);
               }}
-              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${qcStatusFilter === 'HOLD'
+              className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${qcStatusFilter === 'HOLD'
                   ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'}`}
             >
