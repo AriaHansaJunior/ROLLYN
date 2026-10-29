@@ -517,7 +517,7 @@ export default function Training() {
                             }}
                         >
                             {isCameraOpen ? <VideoOff size={16} /> : <Camera size={16} />}
-                            {isCameraOpen ? 'Close Camera' : '📷 Open Live Camera'}
+                            {isCameraOpen ? 'Close Camera' : 'Open Live Camera'}
                         </button>
 
                         <button
@@ -546,7 +546,7 @@ export default function Training() {
                             ) : (
                                 <>
                                     <Sparkles size={15} />
-                                    🔄 Update Scale Reader
+                                    Update Scale Reader
                                 </>
                             )}
                         </button>

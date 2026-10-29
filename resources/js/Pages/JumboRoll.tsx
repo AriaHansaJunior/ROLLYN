@@ -416,7 +416,7 @@ export default function JumboRoll() {
                         </h2>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                        Track raw paper jumbo rolls, cutting/rewinding outputs, and associated incoming rolls.
+                        Master jumbo rolls, slitting outputs, and roll links.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -424,15 +424,15 @@ export default function JumboRoll() {
                         href={`/jumbo-roll/export-excel?search=${encodeURIComponent(searchTerm)}&status=${encodeURIComponent(statusFilter)}&date_from=${encodeURIComponent(dateFilter)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn btn-secondary flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm text-slate-700 bg-white border border-slate-300 hover:bg-slate-50"
+                        className="btn btn-secondary flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-3.5"
                     >
                         <FileText size={15} className="text-slate-500" />
-                        <span className="font-semibold text-sm">Export</span>
+                        <span className="font-semibold">Export</span>
                     </a>
                     {canManage && (
                         <button
                             onClick={handleOpenCreate}
-                            className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm"
+                            className="btn btn-primary flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-3.5"
                         >
                             <Plus size={15} />
                             <span>New Jumbo Roll</span>
@@ -442,34 +442,34 @@ export default function JumboRoll() {
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
                 {/* Total Jumbo Rolls */}
-                <div className="card p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                        <Disc size={20} />
+                <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                        <Disc className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    <div className="min-w-0">
+                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
                             Total Jumbo Rolls
                         </div>
-                        <div className="text-xl font-extrabold text-slate-900">
+                        <div className="text-lg sm:text-xl font-extrabold text-slate-900">
                             {summary.totalJumboRolls}
                         </div>
                     </div>
                 </div>
 
                 {/* Total Jumbo Weight */}
-                <div className="card p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                        <Scale size={20} />
+                <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                        <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                            Total Jumbo Weight
+                    <div className="min-w-0">
+                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
+                            Total Weight
                         </div>
-                        <div className="text-xl font-extrabold text-slate-900">
+                        <div className="text-lg sm:text-xl font-extrabold text-slate-900 truncate">
                             {formatTonnage(summary.totalJumboWeight)}
-                            <span className="text-xs font-medium text-slate-500 ml-1.5">
+                            <span className="hidden sm:inline text-xs font-medium text-slate-500 ml-1.5">
                                 ({formatWeight(summary.totalJumboWeight)})
                             </span>
                         </div>
@@ -477,35 +477,35 @@ export default function JumboRoll() {
                 </div>
 
                 {/* Rewinders / Incoming Rolls Cut */}
-                <div className="card p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                        <TruckIcon size={20} />
+                <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                        <TruckIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                            Rewinder Rolls Cut
+                    <div className="min-w-0">
+                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
+                            Produced Rolls
                         </div>
-                        <div className="text-xl font-extrabold text-slate-900">
+                        <div className="text-lg sm:text-xl font-extrabold text-slate-900 truncate">
                             {summary.totalCutRolls}
-                            <span className="text-xs font-medium text-slate-500 ml-1.5">
-                                Rolls Produced
+                            <span className="text-[11px] sm:text-xs font-medium text-slate-500 ml-1">
+                                Rolls
                             </span>
                         </div>
                     </div>
                 </div>
 
                 {/* Total Cut Weight & Average Yield */}
-                <div className="card p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                        <TrendingUp size={20} />
+                <div className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                        <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                    <div className="min-w-0">
+                        <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">
                             Cut Weight & Yield
                         </div>
-                        <div className="text-xl font-extrabold text-slate-900">
+                        <div className="text-lg sm:text-xl font-extrabold text-slate-900 truncate">
                             {formatTonnage(summary.totalCutWeight)}
-                            <span className="text-xs font-bold text-emerald-600 ml-1.5">
+                            <span className="text-[11px] sm:text-xs font-bold text-emerald-600 ml-1">
                                 ({summary.averageYield}%)
                             </span>
                         </div>

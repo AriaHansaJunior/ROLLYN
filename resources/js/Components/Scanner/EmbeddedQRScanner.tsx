@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
+import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle, Sparkles, Video, VideoOff, ArrowRight } from 'lucide-react'
 import jsQR from 'jsqr'
 import { SystemUI } from '@/Utils/SystemUI'
 
@@ -288,7 +288,7 @@ export default function EmbeddedQRScanner({
           {inactiveMessage || 'Choose a shipment first'}
         </h4>
         <p className="text-xs text-slate-200 font-medium mt-1.5 max-w-xs leading-relaxed">
-          Pilih shipment pada daftar di bawah untuk mengaktifkan pemindai kamera
+          Select an assigned shipment below to activate the camera scanner
         </p>
         <div className="mt-3.5 inline-flex items-center gap-2 text-xs font-semibold text-white bg-slate-800/90 px-3.5 py-1.5 rounded-full border border-slate-600 shadow-xs">
           <span className="w-2 h-2 rounded-full bg-amber-400" />

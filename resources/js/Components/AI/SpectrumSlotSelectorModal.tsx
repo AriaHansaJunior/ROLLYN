@@ -440,7 +440,7 @@ export default function SpectrumSlotSelectorModal({
             </div>
 
             <div className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-              <span>Scroll right →</span>
+              <span>Scroll right</span>
               <MoveRight size={12} />
             </div>
           </div>

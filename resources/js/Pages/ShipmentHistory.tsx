@@ -285,7 +285,7 @@ export default function ShipmentHistory({
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs overflow-x-auto max-w-full">
           {[
             { id: 'all', label: 'All', count: statusCounts.all ?? 0 },
             { id: 'completed', label: 'Completed', count: statusCounts.completed ?? 0 },
@@ -297,7 +297,7 @@ export default function ShipmentHistory({
               <button
                 key={tab.id}
                 onClick={() => handleStatusChange(tab.id)}
-                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer select-none shrink-0 whitespace-nowrap ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'

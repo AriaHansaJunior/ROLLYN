@@ -355,7 +355,7 @@ export default function RollInventory_ShipmentsTab({
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <FileText size={18} />
-              Buat Laporan QC
+              <span>Generate QC Report</span>
             </button>
           </div>
         )}
