@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState, useRef } from 'react'
 import { useForm, router, usePage } from '@inertiajs/react'
 import { SystemUI } from '@/Utils/SystemUI'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, ArrowRight, Loader2, ShieldCheck, ChevronRight } from 'lucide-react'
+import { Mail, Lock, ArrowRight, Loader2, ShieldCheck, Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
   const { flash } = usePage<any>().props
@@ -10,6 +10,26 @@ export default function Login() {
   const focusedFieldRef = useRef<string | null>(null)
   const isHovering = useRef(false)
   const [showForm, setShowForm] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Track desktop breakpoint (1024px)
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(min-width: 1024px)').matches
+    }
+    return false
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsDesktop(e.matches)
+    }
+    setIsDesktop(mediaQuery.matches)
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
 
   useEffect(() => {
     if (flash?.success) {
@@ -99,6 +119,170 @@ export default function Login() {
     visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
   }
 
+  const isSuspended = typeof window !== 'undefined' && Boolean(new URLSearchParams(window.location.search).get('suspended'))
+
+  const renderFormFields = (isMobileView: boolean) => {
+    const FieldWrapper = isMobileView ? 'div' : motion.div
+    const fieldWrapperProps = isMobileView ? {} : { variants: itemVariants }
+
+    return (
+      <form onSubmit={handleLogin} className="space-y-5">
+        <FieldWrapper {...fieldWrapperProps}>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+          <div className={`relative flex items-center rounded-xl border ${focusedField === 'email' ? 'border-blue-500 ring-4 ring-blue-500/10' : errors.email ? 'border-red-400 ring-4 ring-red-400/10' : 'border-slate-200'} bg-white transition-all duration-200`}>
+            <div className="pl-4 pr-3 text-slate-400">
+              <Mail className={`w-5 h-5 transition-colors ${focusedField === 'email' ? 'text-blue-500' : ''}`} />
+            </div>
+            <input
+              type="email"
+              placeholder="admin@spectacore.id"
+              value={data.email}
+              onFocus={() => handleInputFocus('email')}
+              onBlur={handleInputBlur}
+              onChange={e => {
+                setData('email', e.target.value)
+                if (errors.email) clearErrors('email')
+              }}
+              className="w-full py-3.5 pr-4 bg-transparent border-none focus:ring-0 outline-none text-slate-900 placeholder:text-slate-400 text-sm font-medium"
+            />
+          </div>
+          {errors.email && (
+            <p className="text-red-500 text-xs mt-1.5 font-medium ml-1">
+              {errors.email}
+            </p>
+          )}
+        </FieldWrapper>
+
+        <FieldWrapper {...fieldWrapperProps}>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-semibold text-slate-700">Password</label>
+            <a href="#" className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">Forgot password?</a>
+          </div>
+          <div className={`relative flex items-center rounded-xl border ${focusedField === 'password' ? 'border-blue-500 ring-4 ring-blue-500/10' : errors.password ? 'border-red-400 ring-4 ring-red-400/10' : 'border-slate-200'} bg-white transition-all duration-200`}>
+            <div className="pl-4 pr-3 text-slate-400">
+              <Lock className={`w-5 h-5 transition-colors ${focusedField === 'password' ? 'text-blue-500' : ''}`} />
+            </div>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={data.password}
+              onFocus={() => handleInputFocus('password')}
+              onBlur={handleInputBlur}
+              onChange={e => {
+                setData('password', e.target.value)
+                if (errors.password) clearErrors('password')
+              }}
+              className="w-full py-3.5 pr-2 bg-transparent border-none focus:ring-0 outline-none text-slate-900 placeholder:text-slate-400 text-sm font-medium"
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setShowPassword(prev => !prev)}
+              className="pr-4 pl-2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors cursor-pointer"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="text-red-500 text-xs mt-1.5 font-medium ml-1">
+              {errors.password}
+            </p>
+          )}
+        </FieldWrapper>
+
+        <FieldWrapper {...fieldWrapperProps} className="flex items-center gap-3 pt-1">
+          <div className="relative flex items-center">
+            <input 
+              type="checkbox" 
+              id={isMobileView ? 'remember-mobile' : 'remember'} 
+              checked={data.remember}
+              onChange={e => setData('remember', e.target.checked)} 
+              className="peer w-5 h-5 rounded-[6px] border-slate-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer transition-all" 
+            />
+          </div>
+          <label htmlFor={isMobileView ? 'remember-mobile' : 'remember'} className="text-sm text-slate-600 font-medium cursor-pointer select-none">
+            Keep me signed in
+          </label>
+        </FieldWrapper>
+
+        <FieldWrapper {...fieldWrapperProps} className="pt-4">
+          <button
+            type="submit"
+            disabled={processing}
+            className="group relative w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-4 rounded-xl font-semibold shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 transition-all active:scale-[0.98] overflow-hidden disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed"
+          >
+            <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+            
+            {processing ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Authenticating...</span>
+              </>
+            ) : (
+              <>
+                <span>LOGIN</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
+          </button>
+        </FieldWrapper>
+      </form>
+    )
+  }
+
+  // --- MOBILE VIEW (HP) ---
+  // Lightweight, instant, no heavy blur motion divs, no infinite background repaints, direct data entry (Screenshot 2)
+  if (!isDesktop) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0b1120]">
+        {/* Subtle static grid pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgMGg0MHY0MEgwVjB6bTIwIDIwaDIwdjIwSDIwdi0yMHptLTIwIDBoMjB2MjBIMHYtMjB6bTIwLTIwaDIwdjIwSDIwdjIweiIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIwLjAzIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=')] opacity-20 pointer-events-none"></div>
+
+        {/* Clean white login card (Screenshot 2 without Back button) */}
+        <div className="w-full max-w-sm sm:max-w-md bg-white rounded-[2rem] shadow-2xl shadow-blue-950/50 p-7 sm:p-9 z-10 relative">
+          {/* Logo & Brand title without Back button */}
+          <div className="flex items-center gap-3 mb-8">
+            <img src="/images/logo-rollyn.png" alt="Rollyn Logo" className="w-10 h-10 object-contain" />
+            <span className="text-xl font-black tracking-widest text-slate-900">ROLLYN</span>
+          </div>
+
+          <div className="mb-8 text-left">
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Welcome back</h2>
+            <p className="text-slate-500 text-sm">Please enter your credentials to access the console.</p>
+          </div>
+
+          {isSuspended && (
+            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl text-red-900 text-sm flex items-start gap-3 shadow-sm">
+              <div className="mt-0.5 w-5 h-5 flex items-center justify-center rounded-full bg-red-100 text-red-600 shrink-0">
+                <span className="font-bold">!</span>
+              </div>
+              <div className="leading-relaxed">
+                <strong className="block font-bold mb-1">Account Suspended</strong>
+                10 consecutive scanning errors detected. Please contact the Administrator to restore your access.
+              </div>
+            </div>
+          )}
+
+          {renderFormFields(true)}
+
+          <div className="mt-8 text-center">
+            <p className="text-xs font-medium text-slate-400">
+              &copy; {new Date().getFullYear()} SPECTACORE Internal System. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --- DESKTOP VIEW (Laptop) ---
+  // Preserved interactive hover animations, branding card, and visual effects
   return (
     <div className="min-h-screen dynamic-bg flex items-center justify-center p-4 sm:p-8 lg:p-0 xl:p-8 relative overflow-hidden font-sans">
       
@@ -163,26 +347,6 @@ export default function Login() {
               <p className="text-slate-300 text-lg max-w-md leading-relaxed mb-10">
                 Streamline your inventory, monitor shipments in real-time, and optimize your entire supply chain with our cutting-edge administration system.
               </p>
-              
-              <AnimatePresence>
-                {!showForm && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex justify-center lg:hidden"
-                  >
-                    <button
-                      onClick={() => setShowForm(true)}
-                      className="group relative inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-4 px-10 rounded-xl font-semibold shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 transition-all active:scale-[0.98] overflow-hidden"
-                    >
-                      <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                      <span>Login</span>
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {/* Desktop hint text (visible only when not expanded on desktop) */}
               <AnimatePresence>
@@ -217,23 +381,8 @@ export default function Login() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20, transition: { duration: 0.3 } }}
               transition={{ duration: 0.4 }}
-              className="absolute inset-0 lg:static z-20 lg:z-auto w-full lg:w-[32rem] shrink-0 p-8 sm:p-12 lg:p-16 bg-white flex flex-col justify-center rounded-[2rem] lg:rounded-none lg:rounded-r-[2rem] overflow-y-auto"
+              className="w-full lg:w-[32rem] shrink-0 p-8 sm:p-12 lg:p-16 bg-white flex flex-col justify-center rounded-[2rem] lg:rounded-none lg:rounded-r-[2rem] overflow-y-auto"
             >
-              
-              {/* Mobile Logo & Back button */}
-              <div className="lg:hidden flex items-center justify-between mb-10 mt-4">
-                <div className="flex items-center gap-3">
-                  <img src="/images/logo-rollyn.png" alt="Rollyn Logo" className="w-10 h-10 object-contain" />
-                  <h1 className="text-xl font-black tracking-widest text-slate-900">ROLLYN</h1>
-                </div>
-                <button 
-                  onClick={() => setShowForm(false)}
-                  className="text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-                >
-                  Back
-                </button>
-              </div>
-
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
@@ -245,7 +394,7 @@ export default function Login() {
                   <p className="text-slate-500">Please enter your credentials to access the console.</p>
                 </motion.div>
 
-                {new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('suspended') && (
+                {isSuspended && (
                   <motion.div 
                     initial={{ opacity: 0, height: 0, scale: 0.9 }}
                     animate={{ opacity: 1, height: 'auto', scale: 1 }}
@@ -261,113 +410,7 @@ export default function Login() {
                   </motion.div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-5">
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
-                    <div className={`relative flex items-center rounded-xl border ${focusedField === 'email' ? 'border-blue-500 ring-4 ring-blue-500/10' : errors.email ? 'border-red-400 ring-4 ring-red-400/10' : 'border-slate-200'} bg-white transition-all duration-200`}>
-                      <div className="pl-4 pr-3 text-slate-400">
-                        <Mail className={`w-5 h-5 transition-colors ${focusedField === 'email' ? 'text-blue-500' : ''}`} />
-                      </div>
-                      <input
-                        type="email"
-                        placeholder="admin@spectacore.id"
-                        value={data.email}
-                        onFocus={() => handleInputFocus('email')}
-                        onBlur={handleInputBlur}
-                        onChange={e => {
-                          setData('email', e.target.value)
-                          if (errors.email) clearErrors('email')
-                        }}
-                        className="w-full py-3.5 pr-4 bg-transparent border-none focus:ring-0 outline-none text-slate-900 placeholder:text-slate-400 text-sm font-medium"
-                      />
-                    </div>
-                    <AnimatePresence>
-                      {errors.email && (
-                        <motion.p 
-                          initial={{ opacity: 0, y: -10 }} 
-                          animate={{ opacity: 1, y: 0 }} 
-                          exit={{ opacity: 0, y: -10 }}
-                          className="text-red-500 text-xs mt-1.5 font-medium ml-1"
-                        >
-                          {errors.email}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-semibold text-slate-700">Password</label>
-                      <a href="#" className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">Forgot password?</a>
-                    </div>
-                    <div className={`relative flex items-center rounded-xl border ${focusedField === 'password' ? 'border-blue-500 ring-4 ring-blue-500/10' : errors.password ? 'border-red-400 ring-4 ring-red-400/10' : 'border-slate-200'} bg-white transition-all duration-200`}>
-                      <div className="pl-4 pr-3 text-slate-400">
-                        <Lock className={`w-5 h-5 transition-colors ${focusedField === 'password' ? 'text-blue-500' : ''}`} />
-                      </div>
-                      <input
-                        type="password"
-                        placeholder="••••••••"
-                        value={data.password}
-                        onFocus={() => handleInputFocus('password')}
-                        onBlur={handleInputBlur}
-                        onChange={e => {
-                          setData('password', e.target.value)
-                          if (errors.password) clearErrors('password')
-                        }}
-                        className="w-full py-3.5 pr-4 bg-transparent border-none focus:ring-0 outline-none text-slate-900 placeholder:text-slate-400 text-sm font-medium"
-                      />
-                    </div>
-                    <AnimatePresence>
-                      {errors.password && (
-                        <motion.p 
-                          initial={{ opacity: 0, y: -10 }} 
-                          animate={{ opacity: 1, y: 0 }} 
-                          exit={{ opacity: 0, y: -10 }}
-                          className="text-red-500 text-xs mt-1.5 font-medium ml-1"
-                        >
-                          {errors.password}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="flex items-center gap-3 pt-1">
-                    <div className="relative flex items-center">
-                      <input 
-                        type="checkbox" 
-                        id="remember" 
-                        checked={data.remember}
-                        onChange={e => setData('remember', e.target.checked)} 
-                        className="peer w-5 h-5 rounded-[6px] border-slate-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer transition-all" 
-                      />
-                    </div>
-                    <label htmlFor="remember" className="text-sm text-slate-600 font-medium cursor-pointer select-none">
-                      Keep me signed in
-                    </label>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="pt-4">
-                    <button
-                      type="submit"
-                      disabled={processing}
-                      className="group relative w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-4 rounded-xl font-semibold shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 transition-all active:scale-[0.98] overflow-hidden disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed"
-                    >
-                      <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                      
-                      {processing ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Authenticating...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>LOGIN</span>
-                          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                        </>
-                      )}
-                    </button>
-                  </motion.div>
-                </form>
+                {renderFormFields(false)}
 
                 <motion.div variants={itemVariants} className="mt-10 text-center lg:text-left">
                   <p className="text-xs font-medium text-slate-400">
