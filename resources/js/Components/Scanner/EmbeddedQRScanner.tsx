@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle, Sparkles, Video, VideoOff, ArrowRight } from 'lucide-react'
+import { Camera, RefreshCw, Upload, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
 import jsQR from 'jsqr'
 import { SystemUI } from '@/Utils/SystemUI'
 
 interface EmbeddedQRScannerProps {
-  onScanSuccess: (scannedData: string) => void
+  onScanSuccess: (scannedData: string) => boolean | Promise<boolean> | void
   isActive?: boolean
   inactiveMessage?: string
+  existingRollIds?: string[]
   lastScannedRoll?: {
     id: string
     grade: string
@@ -16,10 +17,13 @@ interface EmbeddedQRScannerProps {
   } | null
 }
 
+let isGlobalProcessing = false;
+
 export default function EmbeddedQRScanner({
   onScanSuccess,
   isActive = true,
   inactiveMessage = 'Choose a shipment first',
+  existingRollIds = [],
   lastScannedRoll
 }: EmbeddedQRScannerProps) {
   const onScanSuccessRef = useRef(onScanSuccess)
@@ -39,7 +43,6 @@ export default function EmbeddedQRScanner({
   const [lastScannedResult, setLastScannedResult] = useState<string | null>(null)
   const [scanFeedbackMsg, setScanFeedbackMsg] = useState<string | null>(null)
 
-  // Stop camera stream
   const stopCamera = () => {
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current)
@@ -55,7 +58,6 @@ export default function EmbeddedQRScanner({
     setIsCameraActive(false)
   }
 
-  // Start camera stream
   const startCamera = async (deviceId?: string) => {
     stopCamera()
     setScanFeedbackMsg(null)
@@ -89,7 +91,6 @@ export default function EmbeddedQRScanner({
     }
   }
 
-  // Real-time Auto Scanning loop using native BarcodeDetector + jsQR fallback
   const startScanningLoop = () => {
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current)
 
@@ -99,8 +100,8 @@ export default function EmbeddedQRScanner({
       const video = videoRef.current
       if (video.videoWidth === 0 || video.videoHeight === 0) return
 
-      // 1. Try native BarcodeDetector if available
       let detectedCode: string | null = null
+
       if ('BarcodeDetector' in window) {
         try {
           const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
@@ -109,11 +110,10 @@ export default function EmbeddedQRScanner({
             detectedCode = barcodes[0].rawValue
           }
         } catch (e) {
-          // Ignore intermittent detector errors
+          // Ignore
         }
       }
 
-      // 2. High-accuracy software fallback via jsQR on video canvas
       if (!detectedCode) {
         try {
           if (!canvasRef.current) {
@@ -134,13 +134,12 @@ export default function EmbeddedQRScanner({
             }
           }
         } catch (e) {
-          // Ignore frame processing error
+          // Ignore
         }
       }
 
       if (detectedCode) {
         const now = Date.now()
-        // Prevent duplicate trigger for same code within 2.5 seconds
         if (detectedCode !== lastScannedResult || (now - lastScannedTimestampRef.current > 2500)) {
           lastScannedTimestampRef.current = now
           handleDetectedResult(detectedCode)
@@ -149,37 +148,63 @@ export default function EmbeddedQRScanner({
     }, 250)
   }
 
-  const handleDetectedResult = (data: string) => {
-    setLastScannedResult(data)
-    setScanFeedbackMsg(`Scanned: ${data.slice(0, 45)}`)
+  // --- PEMUTAR AUDIO SUKSES / GAGAL ---
+  const playSoundEffect = (isSuccess: boolean) => {
+    return new Promise<void>((resolve) => {
+      // Sesuaikan path jika file berada di public/storage/sound/
+      const soundPath = isSuccess 
+        ? '/storage/sound/qr_success_sound.mp3'       // Atau qr_success_sound.mp3
+        : '/storage/sound/qr_error_sound.mp3';    // Atau qr_error_sound.mp3
 
-    // Audio tone feedback
+      const audio = new Audio(soundPath);
+
+      audio.onended = () => resolve();
+      audio.onerror = () => {
+        console.error('Audio load error for path:', soundPath);
+        resolve();
+      };
+
+      audio.play().catch((error) => {
+        console.error('Audio playback failed:', error);
+        resolve();
+      });
+    });
+  };
+
+  const handleDetectedResult = async (data: string) => {
+    if (isGlobalProcessing) return;
+    isGlobalProcessing = true;
+
+    const trimmedData = data.trim();
+    setLastScannedResult(trimmedData);
+    setScanFeedbackMsg(`Scanned: ${trimmedData.slice(0, 45)}`);
+
+    let isSuccess = false;
+
+    // 1. Eksekusi callback parent dan Dapatkan status return (true / false)
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const osc = audioCtx.createOscillator()
-      const gain = audioCtx.createGain()
-      osc.type = 'sine'
-      osc.frequency.value = 880
-      gain.gain.value = 0.12
-      osc.connect(gain)
-      gain.connect(audioCtx.destination)
-      osc.start()
-      osc.stop(audioCtx.currentTime + 0.15)
-    } catch (e) {
-      // Audio context restricted or unavailable
+      if (onScanSuccessRef.current) {
+        const result = await onScanSuccessRef.current(trimmedData);
+        // HANYA jika parent secara eksplisit mengembalikan true, anggap sukses
+        if (result === true) {
+          isSuccess = true;
+        }
+      }
+    } catch (err) {
+      console.error('Error processing scanned result:', err);
+      isSuccess = false;
     }
 
-    if (onScanSuccessRef.current) {
-      onScanSuccessRef.current(data)
-    }
+    // 2. Putar suara setelah status hasil scan didapatkan dari parent
+    await playSoundEffect(isSuccess);
 
-    // Reset last scanned result cache after 2.5 seconds to allow rescanning
+    // 3. Reset dan Buka pengunci
     setTimeout(() => {
-      setLastScannedResult(null)
-    }, 2500)
-  }
+      setLastScannedResult(null);
+      isGlobalProcessing = false;
+    }, 2500);
+  };
 
-  // Handle camera start/stop dynamically based on isActive prop
   useEffect(() => {
     if (isActive) {
       startCamera(selectedDeviceId)
@@ -191,7 +216,6 @@ export default function EmbeddedQRScanner({
     }
   }, [isActive])
 
-  // Handle image upload with dual detection
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -200,42 +224,47 @@ export default function EmbeddedQRScanner({
     reader.onload = async (evt) => {
       const img = new Image()
       img.onload = async () => {
-        // 1. Try native BarcodeDetector
+        let detected: string | null = null;
+
         if ('BarcodeDetector' in window) {
           try {
             const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
             const barcodes = await detector.detect(img)
             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-              handleDetectedResult(barcodes[0].rawValue)
-              return
+              detected = barcodes[0].rawValue;
             }
           } catch (err) {
             console.error('Barcode detection on file failed', err)
           }
         }
 
-        // 2. Try jsQR
-        try {
-          const canvas = document.createElement('canvas')
-          canvas.width = img.width
-          canvas.height = img.height
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            ctx.drawImage(img, 0, 0)
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-            const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth'
-            })
-            if (qrResult && qrResult.data) {
-              handleDetectedResult(qrResult.data)
-              return
+        if (!detected) {
+          try {
+            const canvas = document.createElement('canvas')
+            canvas.width = img.width
+            canvas.height = img.height
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+              ctx.drawImage(img, 0, 0)
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+              const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: 'attemptBoth'
+              })
+              if (qrResult && qrResult.data) {
+                detected = qrResult.data;
+              }
             }
+          } catch (err) {
+            console.error('jsQR file decoding failed', err)
           }
-        } catch (err) {
-          console.error('jsQR file decoding failed', err)
         }
 
-        SystemUI.toast({ message: 'Could not detect QR code in uploaded image.', type: 'warning' })
+        if (detected) {
+          handleDetectedResult(detected);
+        } else {
+          await playSoundEffect(false);
+          SystemUI.toast({ message: 'Could not detect QR code in uploaded image.', type: 'warning' })
+        }
       }
       img.src = evt.target?.result as string
     }
@@ -249,8 +278,6 @@ export default function EmbeddedQRScanner({
     setManualCode('')
   }
 
-  // --- INACTIVE STANDBY VIEW ---
-  // When no shipment is selected or scanning is in standby
   if (!isActive) {
     return (
       <div className="card bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-700/80 mb-4 flex flex-col items-center justify-center text-center min-h-[210px] animate-fade-in">
@@ -271,12 +298,9 @@ export default function EmbeddedQRScanner({
     )
   }
 
-  // --- ACTIVE CAMERA SCANNER VIEW ---
   return (
     <div className="card bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-xl border border-slate-700/80 mb-4 animate-fade-in">
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch">
-        
-        {/* Left: Camera Feed Viewfinder */}
         <div className="relative w-full lg:w-[380px] shrink-0 bg-black rounded-xl overflow-hidden min-h-[220px] max-h-[260px] flex items-center justify-center border border-slate-700 shadow-inner">
           <video
             ref={videoRef}
@@ -286,7 +310,6 @@ export default function EmbeddedQRScanner({
             muted
           />
 
-          {/* Scanner Overlay Guide */}
           {isCameraActive && hasCameraPermission !== false && (
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
               <div className="relative w-40 h-40 border-2 border-dashed border-blue-400/70 rounded-xl flex items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]">
@@ -295,17 +318,15 @@ export default function EmbeddedQRScanner({
                 <div className="absolute bottom-0 left-0 w-4 h-4 border-b-3 border-l-3 border-blue-500 rounded-bl" />
                 <div className="absolute bottom-0 right-0 w-4 h-4 border-b-3 border-r-3 border-blue-500 rounded-br" />
 
-                {/* Laser animation */}
                 <div className="w-full h-0.5 bg-blue-400 shadow-[0_0_8px_#60a5fa] animate-pulse" />
               </div>
-              
+
               <span className="absolute bottom-2 bg-slate-900/95 text-white text-[11px] font-bold px-3 py-1 rounded-full border border-blue-400/60 shadow-md">
                 Align QR Code Here
               </span>
             </div>
           )}
 
-          {/* Camera Permission / Error Fallback */}
           {hasCameraPermission === false && (
             <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-3 text-center space-y-2">
               <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center">
@@ -325,14 +346,12 @@ export default function EmbeddedQRScanner({
             </div>
           )}
 
-          {/* Top Camera Indicator Badge */}
           <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-xs px-2.5 py-1 rounded-full border border-slate-600 text-[11px]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="font-bold text-white">LIVE SCANNER</span>
           </div>
         </div>
 
-        {/* Right: Info & Controls Panel */}
         <div className="flex-1 flex flex-col justify-between space-y-3 min-w-0">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/80 pb-2.5">
@@ -362,7 +381,6 @@ export default function EmbeddedQRScanner({
               )}
             </div>
 
-            {/* Last Scanned Roll Info Card */}
             {lastScannedRoll ? (
               <div className="mt-3 p-3 rounded-xl bg-emerald-950/60 border border-emerald-400/50 text-xs flex flex-wrap items-center justify-between gap-2 animate-fade-in shadow-sm">
                 <div className="flex items-center gap-2.5">
@@ -393,7 +411,6 @@ export default function EmbeddedQRScanner({
             ) : null}
           </div>
 
-          {/* Quick Manual Code Input & Image Upload */}
           <div className="pt-2.5 border-t border-slate-700/80 flex flex-col sm:flex-row gap-2 items-center">
             <form onSubmit={handleManualSubmit} className="flex-1 flex gap-2 w-full">
               <input

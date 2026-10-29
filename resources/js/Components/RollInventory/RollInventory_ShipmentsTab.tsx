@@ -25,7 +25,7 @@ interface RollInventory_ShipmentsTabProps {
   activeShipment: ShipmentData | null | undefined
   handleCancelShipment: (shipment: ShipmentData) => void
   setShowQcReportModal: (show: boolean) => void
-  handleQCScan: (code: string) => void
+  handleQCScan: (code: string) => boolean | Promise<boolean> | void
   manualScanInput: string
   setManualScanInput: (val: string) => void
   isProcessingScan: boolean
@@ -65,7 +65,7 @@ export default function RollInventory_ShipmentsTab({
   handleCancelRollFromShipment,
 }: RollInventory_ShipmentsTabProps) {
 
-  // 1. Dashboard summary metric cards (Desktop/Laptop only, hidden on mobile)
+  // 1. Dashboard summary metric cards
   const renderMetrics = () => (
     <div className="hidden lg:grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div className="card p-3.5 bg-white border border-slate-200">
@@ -123,7 +123,6 @@ export default function RollInventory_ShipmentsTab({
         </span>
       </div>
 
-      {/* Search & Filter pills */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
           <Search size={14} className="text-slate-400 shrink-0" />
@@ -170,7 +169,6 @@ export default function RollInventory_ShipmentsTab({
         </div>
       </div>
 
-      {/* Shipment Cards List */}
       <div className="space-y-2 max-h-[620px] overflow-y-auto pr-1">
         {filteredShipments.length === 0 ? (
           <div className="py-8 text-center text-slate-400 space-y-1">
@@ -228,7 +226,6 @@ export default function RollInventory_ShipmentsTab({
                   </span>
                 </div>
 
-                {/* Progress bar */}
                 {!isCanceled && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px]">
@@ -293,7 +290,6 @@ export default function RollInventory_ShipmentsTab({
               <div className="text-xs font-bold text-blue-700">{activeShipment.qc_officer}</div>
             </div>
 
-            {/* Action Buttons */}
             <div className="pl-2 border-l border-slate-200 flex gap-2">
               <button
                 onClick={() => window.open(`/shipments/${activeShipment.id}/print`, '_blank')}
@@ -326,7 +322,6 @@ export default function RollInventory_ShipmentsTab({
           </div>
         </div>
 
-        {/* Cancel notice if shipment is canceled */}
         {activeShipment.status === 'canceled' && (
           <div className="bg-red-50 border border-red-200 text-red-800 text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-2">
             <AlertTriangle size={16} className="text-red-600 shrink-0" />
@@ -336,7 +331,6 @@ export default function RollInventory_ShipmentsTab({
           </div>
         )}
 
-        {/* Progress summary stats */}
         {activeShipment.status !== 'canceled' && (
           <div className="grid grid-cols-3 gap-2 pt-1 text-center">
             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -354,7 +348,6 @@ export default function RollInventory_ShipmentsTab({
           </div>
         )}
         
-        {/* QC Report Trigger */}
         {isQC && activeShipment.status === 'qc_in_progress' && activeShipment.total_rolls === activeShipment.checked_rolls && activeShipment.total_rolls > 0 && (
           <div className="pt-2 border-t border-slate-100 mt-3">
             <button
@@ -382,13 +375,13 @@ export default function RollInventory_ShipmentsTab({
 
     return (
       <div className="space-y-3">
-        {/* If a shipment is selected, show its header banner right above scanner */}
         {activeShipment && renderShipmentHeader()}
 
         <EmbeddedQRScanner
           onScanSuccess={handleQCScan}
           isActive={isCameraRunning}
           inactiveMessage={inactiveMsg}
+          existingRollIds={activeShipment?.rolls?.map(r => r.no_roll) || []}
         />
       </div>
     )
@@ -470,36 +463,6 @@ export default function RollInventory_ShipmentsTab({
                           <span className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-full font-bold text-[10px] border border-red-200">
                             <XCircle size={12} /> Replace Requested
                           </span>
-                          {r.reproduction_status && r.reproduction_status !== 'none' && (
-                            <span
-                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                r.reproduction_status === 'shipped'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                                  : r.reproduction_status === 'reject'
-                                  ? 'bg-red-50 text-red-700 border border-red-300'
-                                  : r.reproduction_status === 'reweigh'
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-300'
-                                  : 'bg-purple-50 text-purple-700 border border-purple-300'
-                              }`}
-                            >
-                              {r.reproduction_status === 'shipped' && <Truck size={10} />}
-                              {r.reproduction_status === 'reject' && <XCircle size={10} />}
-                              {r.reproduction_status === 'reweigh' && <Scale size={10} />}
-                              {r.reproduction_status === 'reproduce_again' && <RotateCcw size={10} />}
-                              PPIC: {r.reproduction_status === 'shipped'
-                                ? 'Shipped'
-                                : r.reproduction_status === 'reject'
-                                ? 'Reject'
-                                : r.reproduction_status === 'reweigh'
-                                ? 'Reweigh'
-                                : 'Reproduce Again'}
-                            </span>
-                          )}
-                          {r.qc_notes && (
-                            <div className="text-[10px] text-red-600 truncate max-w-[150px]" title={r.qc_notes}>
-                              {r.qc_notes}
-                            </div>
-                          )}
                         </div>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-bold text-[10px] border border-amber-200">
@@ -514,7 +477,6 @@ export default function RollInventory_ShipmentsTab({
                             onClick={() => handleManualPassRoll(r)}
                             disabled={isProcessingScan}
                             className="btn btn-sm bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors"
-                            title="Mark roll as passed"
                           >
                             Pass
                           </button>
@@ -522,38 +484,10 @@ export default function RollInventory_ShipmentsTab({
                             onClick={() => openRejectModal(r)}
                             disabled={isProcessingScan}
                             className="btn btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors"
-                            title="Report defect or roll issue"
                           >
                             Reject
                           </button>
                         </div>
-                      ) : !isShipmentCanceled && isPpicOrAdmin && (isReplace || (r.reproduction_status && r.reproduction_status !== 'none')) ? (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => openPpicDispositionModal(r)}
-                            className="btn btn-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1 ml-auto"
-                            title="Manage Re-produced Roll Disposition (PPIC)"
-                          >
-                            <RotateCcw size={11} />
-                            PPIC Disposition
-                          </button>
-                          <button
-                            onClick={() => handleCancelRollFromShipment(r)}
-                            className="p-1 rounded text-red-400 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
-                            title="Remove roll from this shipment"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      ) : !isQC && !isShipmentCanceled && isPending ? (
-                        <button
-                          onClick={() => handleCancelRollFromShipment(r)}
-                          className="btn btn-sm bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-[10px] px-2.5 py-1 rounded cursor-pointer transition-colors flex items-center gap-1 ml-auto"
-                          title="Remove roll from this shipment"
-                        >
-                          <Trash2 size={11} />
-                          Remove
-                        </button>
                       ) : (
                         <span className="text-[11px] text-slate-400">—</span>
                       )}
@@ -570,38 +504,19 @@ export default function RollInventory_ShipmentsTab({
 
   return (
     <div className="space-y-4">
-      {/* Metrics summary cards (Desktop/Laptop only, hidden on mobile) */}
       {renderMetrics()}
 
-      {/* MOBILE VIEW (< lg) 
-          Order:
-          1. Camera Scanner & Active Shipment Header (Top)
-          2. My Assigned Shipments (Middle)
-          3. Rolls Table in Active Shipment (Bottom)
-      */}
       <div className="lg:hidden space-y-4">
-        {/* 1. Camera & Active Shipment Banner */}
         {renderScannerSection()}
-
-        {/* 2. My Assigned Shipments List */}
         {renderShipmentsList()}
-
-        {/* 3. Rolls Table in Active Shipment */}
         {renderRollsTable()}
       </div>
 
-      {/* DESKTOP VIEW (>= lg)
-          Standard 2-Column Split:
-          Left Column (4 cols): My Assigned Shipments
-          Right Column (8 cols): Inspection Station (Scanner, Active Shipment, Rolls Table)
-      */}
       <div className="hidden lg:grid grid-cols-12 gap-4 items-start">
-        {/* Left Column (4 cols): My Assigned Shipments */}
         <div className="col-span-4 space-y-3">
           {renderShipmentsList()}
         </div>
 
-        {/* Right Column (8 cols): Inspection Station */}
         <div className="col-span-8 space-y-4">
           {renderScannerSection()}
           {renderRollsTable()}
